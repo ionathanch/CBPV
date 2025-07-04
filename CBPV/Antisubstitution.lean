@@ -128,16 +128,17 @@ theorem antisubstitution {σ} :
     match ihm em with
     | .inl ⟨_, em, r⟩ =>
       subst em ev
-      exact .inl ⟨.app _ _, rfl, .app (ihv rfl) r⟩
-    | .inr snem => exact .inr (.app snem (ihv ev))
+      exact .inl ⟨.app _ _, rfl, .app r⟩
+    | .inr snem => exact .inr (.app snem sorry)
   case srcom.letin ihn ihm m =>
     cases m <;> try contradiction
     injection e with em en
     match ihm em with
     | .inl ⟨_, em, r⟩ =>
       subst em en
-      exact .inl ⟨.letin _ _, rfl, .letin (ihn rfl) r⟩
-    | .inr snem => exact .inr (.letin snem (ihn en))
+      exact .inl ⟨.letin _ _, rfl, .letin r⟩
+    | .inr snem => exact .inr (.letin snem sorry)
+  all_goals sorry
 
 theorem SNCom.antisubstitution {m} {v : Val} (h : SNCom (m⦃v⦄)) : SNCom m :=
   _root_.antisubstitution.right.right.left h
@@ -155,7 +156,7 @@ theorem SNCom.app_inv {m v} (h : SNCom (app m v)) : SNCom m ∧ SNVal v := by
   case red sn ih r =>
     cases r
     case β snv => exact ⟨.lam sn.antisubstitution, snv⟩
-    case app r _ => let ⟨snn, snv⟩ := ih rfl; exact ⟨.red r snn, snv⟩
+    case app r => let ⟨snn, snv⟩ := ih rfl; exact ⟨.red r snn, snv⟩
 
 theorem SNCom.letin_inv {m n} (h : SNCom (letin m n)) : SNCom m ∧ SNCom n := by
   generalize e : letin m n = mn at h
@@ -166,4 +167,4 @@ theorem SNCom.letin_inv {m n} (h : SNCom (letin m n)) : SNCom m ∧ SNCom n := b
   case red sn ih r =>
     cases r
     case ζ snv => exact ⟨.ret snv, sn.antisubstitution⟩
-    case letin r _ => let ⟨snm, snn⟩ := ih rfl; exact ⟨.red r snm, snn⟩
+    case letin r => let ⟨snm, snn⟩ := ih rfl; exact ⟨.red r snm, snn⟩

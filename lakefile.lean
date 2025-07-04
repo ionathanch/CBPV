@@ -2,19 +2,14 @@ import Lake
 
 open Lake DSL
 
-package «MutualInduction» where
+require "ionathanch" / "MutualInduction" @ git "main"
+  from git "https://github.com/ionathanch/MutualInduction" @ "main"
+
+package «CBPV» where
 
 @[default_target]
-lean_lib «MutualInduction» where
-  leanOptions := #[⟨`autoImplicit, false⟩]
-
-@[default_target]
-lean_lib «MkAll» where
-  leanOptions := #[⟨`autoImplicit, false⟩]
-
-@[test_driver]
-lean_lib «Test» where
-  globs := #[`MutualInductionTest.+, `AllTest.+, `CBPV.+]
+lean_lib «CBPV» where
+  globs := #[`CBPV.+]
   leanOptions := #[
     ⟨`autoImplicit, false⟩,
     ⟨`pp.fieldNotation, false⟩,
