@@ -8,21 +8,18 @@ open ValType ComType Val Com
 --------------------------*-/
 
 mutual
-@[simp]
 def 𝒱 (A : ValType) (v : Val) : Prop :=
   match A with
   | .Unit => v = unit
   | .Sum A₁ A₂ => (∃ w, 𝒱 A₁ w ∧ v = inl w) ∨ (∃ w, 𝒱 A₂ w ∧ v = inr w)
   | U B => ∃ m, ℰ B m ∧ v = thunk m
 
-@[simp]
 def 𝒞 (B : ComType) (m : Com) : Prop :=
   match B with
   | F A => ∃ v, 𝒱 A v ∧ m = ret v
   | Arr A B => ∃ n, (∀ v, 𝒱 A v → ℰ B (n⦃v⦄)) ∧ m = lam n
   | .Prod B₁ B₂ => ∃ n₁ n₂, ℰ B₁ n₁ ∧ ℰ B₂ n₂ ∧ m = prod n₁ n₂
 
-@[simp]
 def ℰ (B : ComType) (m : Com) := ∃ n, m ⇓ₙ n ∧ 𝒞 B n
 end
 notation:40 v:41 "∈" "⟦" A:41 "⟧ᵛ" => 𝒱 A v
@@ -30,25 +27,25 @@ notation:40 m:41 "∈" "⟦" B:41 "⟧ᶜ" => 𝒞 B m
 notation:40 m:41 "∈" "⟦" B:41 "⟧ᵉ" => ℰ B m
 
 -- Convenient constructors for the logical relation
-theorem 𝒱.unit : 𝒱 Unit unit := by simp
-theorem 𝒱.inl {v A₁ A₂} (h : 𝒱 A₁ v) : 𝒱 (Sum A₁ A₂) (inl v) := by simp; assumption
-theorem 𝒱.inr {v A₁ A₂} (h : 𝒱 A₂ v) : 𝒱 (Sum A₁ A₂) (inr v) := by simp; assumption
-theorem 𝒱.thunk {m B} (h : ℰ B m) : 𝒱 (U B) (thunk m) := by simp at *; assumption
-theorem 𝒞.ret {v A} (h : 𝒱 A v) : 𝒞 (F A) (ret v) := by simp; assumption
-theorem 𝒞.lam {n A B} (h : ∀ v, 𝒱 A v → ℰ B (n⦃v⦄)) : 𝒞 (Arr A B) (lam n) := by simp at *; assumption
-theorem 𝒞.prod {m n B₁ B₂} (hm : ℰ B₁ m) (hn : ℰ B₂ n) : 𝒞 (Prod B₁ B₂) (prod m n) := by simp at *; constructor <;> assumption
+theorem 𝒱.unit : 𝒱 Unit unit := by simp [𝒱]
+theorem 𝒱.inl {v A₁ A₂} (h : 𝒱 A₁ v) : 𝒱 (Sum A₁ A₂) (inl v) := by simp [𝒱]; assumption
+theorem 𝒱.inr {v A₁ A₂} (h : 𝒱 A₂ v) : 𝒱 (Sum A₁ A₂) (inr v) := by simp [𝒱]; assumption
+theorem 𝒱.thunk {m B} (h : ℰ B m) : 𝒱 (U B) (thunk m) := by simp [𝒱]; assumption
+theorem 𝒞.ret {v A} (h : 𝒱 A v) : 𝒞 (F A) (ret v) := by simp [𝒞]; assumption
+theorem 𝒞.lam {n A B} (h : ∀ v, 𝒱 A v → ℰ B (n⦃v⦄)) : 𝒞 (Arr A B) (lam n) := by simp [𝒞]; assumption
+theorem 𝒞.prod {m n B₁ B₂} (hm : ℰ B₁ m) (hn : ℰ B₂ n) : 𝒞 (Prod B₁ B₂) (prod m n) := by simp [𝒞]; constructor <;> assumption
 
 -- Semantic computations are normal
 theorem 𝒞nf {B m} (h : m ∈ ⟦ B ⟧ᶜ) : nf m :=
   match (generalizing := true) B with
   | F _ | Arr _ _ =>
-    by simp at h; let ⟨_, _, e⟩ := h; subst e; exact ⟨⟩
+    by unfold 𝒞 at h; let ⟨_, _, e⟩ := h; subst e; exact ⟨⟩
   | .Prod _ _ =>
-    by simp at h; let ⟨_, _, _, _, e⟩ := h; subst e; exact ⟨⟩
+    by unfold 𝒞 at h; let ⟨_, _, _, _, e⟩ := h; subst e; exact ⟨⟩
 
 -- Semantic computations embed into semantic evaluations
 theorem 𝒞ℰ {B m} (h : m ∈ ⟦ B ⟧ᶜ) : m ∈ ⟦ B ⟧ᵉ :=
-  by simp; exact ⟨m, ⟨.refl, 𝒞nf h⟩, h⟩
+  by unfold ℰ; exact ⟨m, ⟨.refl, 𝒞nf h⟩, h⟩
 
 -- Semantic evaluations are backward closed under reduction
 theorem ℰbwd {B m n} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᵉ) : m ∈ ⟦ B ⟧ᵉ := by
@@ -72,8 +69,8 @@ theorem semCtxtCons {Γ σ v A} (h : v ∈ ⟦ A ⟧ᵛ) (hσ : Γ ⊨ σ) : Γ 
   | _, _, .there mem => hσ mem
 
 -- Semantic typing of values and computations
-@[reducible, simp] def semVal Γ v A := ∀ σ, Γ ⊨ σ → v⦃σ⦄ ∈ ⟦ A ⟧ᵛ
-@[reducible, simp] def semCom Γ m B := ∀ σ, Γ ⊨ σ → m⦃σ⦄ ∈ ⟦ B ⟧ᵉ
+@[simp] def semVal Γ v A := ∀ σ, Γ ⊨ σ → v⦃σ⦄ ∈ ⟦ A ⟧ᵛ
+@[simp] def semCom Γ m B := ∀ σ, Γ ⊨ σ → m⦃σ⦄ ∈ ⟦ B ⟧ᵉ
 notation:40 Γ:41 "⊨" v:41 "∶" A:41 => semVal Γ v A
 notation:40 Γ:41 "⊨" m:41 "∶" B:41 => semCom Γ m B
 
@@ -94,7 +91,7 @@ theorem soundness {Γ} :
   case inr ih => exact 𝒱.inr (ih σ hσ)
   case thunk ih => exact 𝒱.thunk (ih σ hσ)
   case force ih =>
-    simp at ih
+    simp [𝒱, ℰ] at ih
     let ⟨_, ⟨_, ⟨r, _⟩, h⟩, e⟩ := ih σ hσ
     let rf : _ ⇒⋆ _ := .trans .π r
     rw [← e] at rf
@@ -104,19 +101,19 @@ theorem soundness {Γ} :
     intro v hv; rw [← substUnion]
     exact ih (v +: σ) (semCtxtCons hv hσ)
   case app ihm ihv =>
-    simp at ihm
+    simp [ℰ, 𝒞] at ihm
     let ⟨_, ⟨rlam, _⟩, _, h, e⟩ := ihm σ hσ; subst e
     let ⟨_, ⟨rval, _⟩, h⟩ := h _ (ihv σ hσ)
     exact 𝒞bwd (Trans.trans (Evals.app rlam) (Trans.trans Eval.β rval)) h
   case ret ih => exact 𝒞ℰ (𝒞.ret (ih σ hσ))
   case letin ihret ih =>
-    simp at ihret ih
+    simp [ℰ, 𝒞] at ihret ih
     let ⟨_, ⟨rret, _⟩, v, hv, e⟩ := ihret σ hσ; subst e
     let ⟨_, ⟨rlet, nflet⟩, h⟩ := ih (v +: σ) (semCtxtCons hv hσ)
     rw [substUnion] at rlet
     exact 𝒞bwd (Trans.trans (Evals.let rret) (Trans.trans Eval.ζ rlet)) h
   case case m n _ _ _ _ _ _ ihv ihm ihn =>
-    simp at ihv
+    simp [𝒱] at ihv
     match ihv σ hσ with
     | .inl ⟨v, hv, e⟩ =>
       let hm := ihm (v +: σ) (semCtxtCons hv hσ)
@@ -127,17 +124,17 @@ theorem soundness {Γ} :
       simp only [substCom]; rw [e]; rw [substUnion] at hn
       exact ℰbwd (.once .ιr) hn
   case prod m n _ _ _ _ ihm ihn =>
-    simp at ihm ihn
+    simp [ℰ, 𝒞] at ihm ihn
     let ⟨_, ⟨rm, _⟩, hm⟩ := ihm σ hσ
     let ⟨_, ⟨rn, _⟩, hn⟩ := ihn σ hσ
     apply 𝒞ℰ; exact 𝒞.prod (𝒞bwd rm hm) (𝒞bwd rn hn)
   case fst ih =>
-    simp [-𝒞] at ih; unfold 𝒞 at ih
+    simp [ℰ] at ih; unfold 𝒞 at ih
     let ⟨_, ⟨rprod, nfprod⟩, n₁, n₂, hm, _, e⟩ := ih σ hσ; subst e
     let r : fst (_⦃σ⦄) ⇒⋆ n₁ := Trans.trans (Evals.fst rprod) Eval.π1
     exact ℰbwd r hm
   case snd ih =>
-    simp [-𝒞] at ih; unfold 𝒞 at ih
+    simp [ℰ] at ih; unfold 𝒞 at ih
     let ⟨_, ⟨rprod, nfprod⟩, n₁, n₂, _, hn, e⟩ := ih σ hσ; subst e
     let r : snd (_⦃σ⦄) ⇒⋆ n₂ := Trans.trans (Evals.snd rprod) Eval.π2
     exact ℰbwd r hn
@@ -146,7 +143,7 @@ theorem soundness {Γ} :
 theorem normal {m B} (nr : ∀ {n}, ¬ m ⇒ n) (h : ⬝ ⊢ m ∶ B) : nf m := by
   let ⟨_, soundCom⟩ := soundness (Γ := ⬝)
   let mB := soundCom m B h
-  simp at mB
+  simp [ℰ] at mB
   let ⟨_, ⟨r, nfm⟩, _⟩ := mB var semCtxtNil
   rw [substComId] at r
   cases r with | refl => exact nfm | trans r _ => cases nr r
@@ -155,7 +152,7 @@ theorem normal {m B} (nr : ∀ {n}, ¬ m ⇒ n) (h : ⬝ ⊢ m ∶ B) : nf m := 
 theorem normalization {m : Com} {B : ComType} (h : ⬝ ⊢ m ∶ B) : SN m := by
   let ⟨_, soundCom⟩ := soundness (Γ := ⬝)
   let mB := soundCom m B h
-  simp at mB
+  simp [ℰ] at mB
   let ⟨_, ⟨r, nfm⟩, _⟩ := mB var semCtxtNil
   rw [substComId] at r
   exact r.sn nfm

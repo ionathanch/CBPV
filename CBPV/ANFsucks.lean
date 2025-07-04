@@ -91,25 +91,24 @@ def renameCfgComp {ξ ζ ς : Nat → Nat} {v} (h : ∀ x, (ξ ∘ ζ) x = ς x)
 
 /-* Substitution *-/
 
-@[simp]
 def up (σ : Nat → Val) : Nat → Val :=
   var 0 +: (renameVal succ ∘ σ)
 prefix:95 "⇑" => up
 
 theorem upId (σ : Nat → Val) (h : ∀ x, σ x = var x) : ∀ x, (⇑ σ) x = var x := by
-  intro n; cases n <;> simp [h]
+  intro n; cases n <;> simp [up, h]
 
 theorem upExt (σ τ : Nat → Val) (h : ∀ x, σ x = τ x) : ∀ x, (⇑ σ) x = (⇑ τ) x := by
-  intro n; cases n <;> simp [h]
+  intro n; cases n <;> simp [up, h]
 
 theorem upLift ξ (σ τ : Nat → Val) (h : ∀ x, (σ ∘ ξ) x = τ x) : ∀ x, (⇑ σ ∘ lift ξ) x = (⇑ τ) x := by
-  intro n; cases n <;> simp [← h]
+  intro n; cases n <;> simp [lift, up, ← h]
 
 theorem upSucc (σ : Nat → Val) : ∀ x, (⇑ σ ∘ succ) x = (renameVal succ ∘ σ) x := by
-  intro n; cases n <;> simp
+  intro n; cases n <;> simp [up]
 
 theorem upRename ξ (σ τ : Nat → Val) (h : ∀ x, (renameVal ξ ∘ σ) x = τ x) : ∀ x, (renameVal (lift ξ) ∘ ⇑ σ) x = (⇑ τ) x := by
-  intro n; cases n; simp
+  intro n; cases n; simp [lift, up]
   case succ n => calc
     (renameVal (lift ξ) ∘ renameVal succ) (σ n)
       = renameVal (lift ξ ∘ succ) (σ n)      := by rw [renameValComp (λ _ ↦ rfl)]
@@ -346,13 +345,13 @@ def renameK (ξ : Nat → Nat) : K → K
   | .snd k => .snd (renameK ξ k)
 
 theorem renameKExt {ξ ζ k} (h : ∀ x, ξ x = ζ x) : renameK ξ k = renameK ζ k := by
-  induction k <;> simp [-lift]
+  induction k <;> simp
   case app ih => exact ⟨ANF.renameValExt h, ih⟩
   case letin => exact ANF.renameCfgExt (liftExt ξ ζ h)
   case fst ih | snd ih => exact ih
 
 theorem renameKComp {ξ ζ k} : (renameK ξ ∘ renameK ζ) k = renameK (ξ ∘ ζ) k := by
-  induction k <;> simp [-lift]
+  induction k <;> simp
   case app ih => exact ⟨ANF.renameValComp (λ _ ↦ rfl), ih⟩
   case letin => exact ANF.renameCfgComp (liftComp _ _ _ (λ _ ↦ rfl))
   case fst ih | snd ih => exact ih
@@ -381,29 +380,29 @@ theorem substKId {k} : substK .var k = k := by
   induction k
   case nil => rfl
   case app ih => simp [substValId _, ih]
-  case letin => simp [-up, substCfgExt (upId _ (λ _ ↦ rfl)), substCfgId]
+  case letin => simp [substCfgExt (upId _ (λ _ ↦ rfl)), substCfgId]
   case fst ih | snd ih => simp [ih]
 
 theorem substKExt {σ τ k} (h : ∀ x, σ x = τ x) : substK σ k = substK τ k := by
-  induction k <;> simp [-lift]
+  induction k <;> simp
   case app ih => exact ⟨ANF.substValExt h, ih⟩
   case letin => exact ANF.substCfgExt (upExt σ τ h)
   case fst ih | snd ih => exact ih
 
 theorem substKComp {σ τ k} : (substK σ ∘ substK τ) k = substK (substVal σ ∘ τ) k := by
-  induction k <;> simp [-lift, -up]
+  induction k <;> simp
   case app ih => exact ⟨ANF.substValComp (λ _ ↦ rfl), ih⟩
   case letin => refine ANF.substCfgComp (upSubst _ _ _ (λ _ ↦ rfl))
   case fst ih | snd ih => exact ih
 
 theorem substRenameK {ξ σ k} : substK σ (renameK ξ k) = substK (σ ∘ ξ) k := by
-  induction k <;> simp [-lift, -up]
+  induction k <;> simp
   case app ih => exact ⟨substRenameVal (λ _ ↦ rfl), ih⟩
   case letin => exact substRenameCfg (upLift _ _ _ (λ _ ↦ rfl))
   case fst ih | snd ih => exact ih
 
 theorem renameSubstK {ξ σ k} : renameK ξ (substK σ k) = substK (renameVal ξ ∘ σ) k := by
-  induction k <;> simp [-lift, -up]
+  induction k <;> simp
   case app ih => exact ⟨renameSubstVal (λ _ ↦ rfl), ih⟩
   case letin => exact renameSubstCfg (upRename _ _ _ (λ _ ↦ rfl))
   case fst ih | snd ih => exact ih
@@ -549,7 +548,7 @@ notation:1023 "⟦" v "⟧ᵥ" => Aval v
 notation:1023 "⟦" m "⟧ₘ" => Acom ANF.K.nil m
 notation:1022 "⟦" m "⟧ₘ" k => Acom k m
 
-@[reducible, simp] def Asubst (σ : Nat → Val) : Nat → ANF.Val := λ x ↦ ⟦ σ x ⟧ᵥ
+@[simp] def Asubst (σ : Nat → Val) : Nat → ANF.Val := λ x ↦ ⟦ σ x ⟧ᵥ
 notation:1023 "⟦" σ "⟧ₛ" => Asubst σ
 
 /-* Translation is type preserving *-/
@@ -587,12 +586,12 @@ theorem renameA {ξ} :
   case force ih | ret ih => simp [ih, ANF.renamePlug]
   case lam ih =>
     have e := ih (ξ := lift ξ) .nil
-    simp [-lift] at *; rw [e]; simp [ANF.renamePlug]
-  case app ihm ihv => simp [-lift, ihv, ← ihm]
+    simp at *; rw [e]; simp [ANF.renamePlug]
+  case app ihm ihv => simp [ihv, ← ihm]
   case letin ihn ihm =>
-    simp [-lift, ← ihn, ← ihm, ANF.renameKLiftSucc]
+    simp [← ihn, ← ihm, ANF.renameKLiftSucc]
   case case ihv ihm₁ ihm₂ =>
-    simp [-lift, ihv, ← ihm₁, ← ihm₂, ANF.renameKLiftSucc]
+    simp [ihv, ← ihm₁, ← ihm₂, ANF.renameKLiftSucc]
   case prod ihm₁ ihm₂ => simp [← ihm₁, ← ihm₂, ANF.renamePlug]
   case fst ih | snd ih => simp [← ih]
 
@@ -602,10 +601,10 @@ theorem renameAcom {ξ m k} : (⟦ renameCom ξ m ⟧ₘ ANF.renameK ξ k) = ANF
 /-* Substitution commutes with translation *-/
 
 theorem substAupCfg {σ m} : ANF.substCfg ⟦ ⇑ σ ⟧ₛ m = ANF.substCfg (⇑ ⟦ σ ⟧ₛ) m := by
-  apply ANF.substCfgExt; intro n; cases n <;> simp [renameAval]
+  apply ANF.substCfgExt; intro n; cases n <;> simp [up, renameAval] <;> rfl
 
 theorem substAupK {σ k} : ANF.substK ⟦ ⇑ σ ⟧ₛ k = ANF.substK (⇑ ⟦ σ ⟧ₛ) k := by
-  apply ANF.substKExt; intro n; cases n <;> simp [renameAval]
+  apply ANF.substKExt; intro n; cases n <;> simp [up, renameAval] <;> rfl
 
 theorem substA {σ} :
   (∀ v, ⟦ substVal σ v ⟧ᵥ = ANF.substVal ⟦ σ ⟧ₛ ⟦ v ⟧ᵥ) ∧
@@ -618,13 +617,13 @@ theorem substA {σ} :
   case force ih | ret ih => simp [ih, ANF.substPlug]
   case lam ih =>
     have e := ih (σ := ⇑ σ) .nil
-    simp [-lift, -up] at *; rw [e]; simp [-up, ANF.substPlug, substAupCfg]
-  case app ihm ihv => simp [-up, ← ihv, ← ihm]
+    simp at *; rw [e]; simp [ANF.substPlug, substAupCfg]
+  case app ihm ihv => simp [← ihv, ← ihm]
   case letin ihn ihm =>
-    simp [-lift, -up, -ANF.up, ← ihn, ← substAupCfg, ← ihm, ANF.substKLiftSucc, substAupK]
+    simp [← ihn, ← substAupCfg, ← ihm, ANF.substKLiftSucc, substAupK]
   case case ihv ihm₁ ihm₂ =>
     have eσ {σ} : (.var 0 +: ANF.renameVal succ ∘ σ) = ⇑ σ := rfl
-    simp [-lift, -up, -ANF.up, ihv, ANF.substKLiftSucc, ← substAupCfg, ← substAupK, ihm₁, ihm₂]
+    simp [ihv, ANF.substKLiftSucc, ← substAupCfg, ← substAupK, ihm₁, ihm₂]
   case prod ihm₁ ihm₂ => simp [← ihm₁, ← ihm₂, ANF.substPlug]
   case fst ih | snd ih => simp [← ih]
 
@@ -717,13 +716,13 @@ theorem renameSK {k} (ξ : Nat → Nat) : SK (renameS ξ k) = ANF.renameK ξ (SK
   induction k
   case nil => simp
   case cons f _ ih =>
-    cases f <;> simp [-lift, ih, renameAval, ← renameAcom, ← ANF.renameKLiftSucc]
+    cases f <;> simp [ih, renameAval, ← renameAcom, ← ANF.renameKLiftSucc]
 
 theorem renameSSₐ {k} (ξ : Nat → Nat) : ⟦ renameS ξ k ⟧ₛₛ = ANF.renameKₐ ξ ⟦ k ⟧ₛₛ := by
   induction k
   case nil => simp
   case cons f _ ih =>
-    cases f <;> simp [-lift, ih, renameAval, ← renameAcom, ← ANF.renameKLiftSucc, renameSK]
+    cases f <;> simp [ih, renameAval, ← renameAcom, ← ANF.renameKLiftSucc, renameSK]
 
 /-* Translation preserves machine semantics *-/
 

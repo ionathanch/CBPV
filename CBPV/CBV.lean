@@ -54,7 +54,6 @@ def rename (ξ : Nat → Nat) : Term → Term
   | snd t => snd (rename ξ t)
 end
 
-@[simp]
 def up (σ : Nat → Value) : Nat → Value :=
   var 0 +: (renameVal succ ∘ σ)
 prefix:95 "⇑" => up
@@ -312,17 +311,17 @@ theorem transRename {ξ} :
   mutual_induction v, t generalizing ξ
   case var n => cases n <;> rfl
   case unit => rfl
-  case lam ih | inl ih | inr ih | val ih | fst ih | snd ih => simp [ih]
+  case lam ih | inl ih | inr ih | val ih | fst ih | snd ih => simp [lift, ih]
   case pair ihv ihw => simp [ihv, ihw]
-  case app iht ihu => simp [iht, ← ihu, renameLiftRenameCom]
+  case app iht ihu => simp [lift, iht, ← ihu, renameLiftRenameCom]
   case case ihs iht ihu =>
-    simp [-lift, ihs, ← iht, ← ihu, renameLiftLiftRename]; rfl
+    simp [ihs, ← iht, ← ihu, renameLiftLiftRename]; rfl
 
 def transRenameVal {ξ v} := (transRename (ξ := ξ)).left (v := v)
 def transRenameCom {ξ t} := (transRename (ξ := ξ)).right (t := t)
 
 theorem transUp {σ m} : substCom (⇑ (⟦ σ ⟧ˢ)) m = substCom (⟦ ⇑ σ ⟧ˢ) m := by
-  apply substComExt; intro n; cases n <;> simp [transRenameVal]
+  apply substComExt; intro n; cases n <;> simp [up, transRenameVal] <;> rfl
 
 theorem transSubst {σ} :
   (∀ {v}, ((⟦ v ⟧ᵛ) ⦃ ⟦ σ ⟧ˢ ⦄) = (⟦ CBV.substVal σ v ⟧ᵛ)) ∧
@@ -331,12 +330,12 @@ theorem transSubst {σ} :
   mutual_induction v, t generalizing σ
   case var n => cases n <;> simp
   case unit => rfl
-  case lam ih => simp [-lift, -up, ← ih, transUp]
-  case inl ih | inr ih | val ih | fst ih | snd ih => simp [ih]
+  case lam ih => simp [← ih, transUp]
+  case inl ih | inr ih | val ih | fst ih | snd ih => simp [up, ih]
   case pair ihv ihw => simp [ihv, ihw]
-  case app iht ihu => simp [-lift, -up, iht, ← ihu, ← renameUpSubstCom]; simp
+  case app iht ihu => simp [iht, ← ihu, ← renameUpSubstCom]; simp [up]
   case case ihs iht ihu =>
-    simp [-lift, -up, -CBV.up, ihs, ← iht, ← ihu]; repeat' constructor
+    simp [ihs, ← iht, ← ihu]; repeat' constructor
     all_goals rw [← transUp, ← renameUpLiftSubst]
 
 def transSubstVal {σ v} := (transSubst (σ := σ)).left (v := v)
@@ -353,7 +352,7 @@ theorem simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨⟦ t ⟧
   case β v =>
     calc
       _ ⤳ _ := Step.ζ
-      _ ⤳ _ := by simp [-lift, -up]; exact Step.app
+      _ ⤳ _ := by exact Step.app
       _ ⤳ _ := Step.π
       _ ⤳ _ := Step.β
       _ = _ := by
@@ -362,14 +361,14 @@ theorem simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨⟦ t ⟧
   case ιl =>
     calc
       _ ⤳ _ := Step.ζ
-      _ ⤳ _ := by simp [-lift, -up]; exact Step.ιl
+      _ ⤳ _ := by exact Step.ιl
       _ = _ := by
         rw [← substUnion, substDrop₂, ← transSubstCom, substComExt]
         intro n; cases n <;> rfl
   case ιr =>
     calc
       _ ⤳ _ := Step.ζ
-      _ ⤳ _ := by simp [-lift, -up]; exact Step.ιr
+      _ ⤳ _ := by exact Step.ιr
       _ = _ := by
         rw [← substUnion, substDrop₂, ← transSubstCom, substComExt]
         intro n; cases n <;> rfl
@@ -377,22 +376,22 @@ theorem simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨⟦ t ⟧
     simp
     calc
       _ ⤳ _ := Step.ζ
-      _ ⤳ _ := by simp; exact Step.fst
+      _ ⤳ _ := by exact Step.fst
       _ ⤳ _ := Step.π
       _ ⤳ _ := Step.π1
   case π2 =>
     simp
     calc
       _ ⤳ _ := Step.ζ
-      _ ⤳ _ := by simp; exact Step.snd
+      _ ⤳ _ := by exact Step.snd
       _ ⤳ _ := Step.π
       _ ⤳ _ := Step.π2
   case app₁ => exact .once .letin
   case app₂ =>
     calc
       _ ⤳ _ := Step.ζ
-      _ ⤳ _ := by simp; exact Step.letin
-      _ = _ := by simp [← substDropCom]
+      _ ⤳ _ := by exact Step.letin
+      _ = _ := by simp [up, ← substDropCom]
   case case => exact .once .letin
   case fst => exact .once .letin
   case snd => exact .once .letin

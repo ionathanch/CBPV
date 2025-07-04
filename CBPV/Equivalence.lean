@@ -8,7 +8,6 @@ open Nat ValType ComType Val Com
 ----------------------------------*-/
 
 mutual
-@[simp]
 def 𝒱 (A : ValType) (v : Val) (w : Val) : Prop :=
   match A with
   | .Unit => v = unit ∧ w = unit
@@ -17,7 +16,6 @@ def 𝒱 (A : ValType) (v : Val) (w : Val) : Prop :=
     (∃ v' w', 𝒱 A₂ v' w' ∧ v = inr v' ∧ w = inr w')
   | U B => ∃ m n, ℰ B m n ∧ v = thunk m ∧ w = thunk n
 
-@[simp]
 def 𝒞 (B : ComType) (m : Com) (n : Com) : Prop :=
   match B with
   | F A => ∃ v w, 𝒱 A v w ∧ m = ret v ∧ n = ret w
@@ -26,7 +24,6 @@ def 𝒞 (B : ComType) (m : Com) (n : Com) : Prop :=
   | .Prod B₁ B₂ => ∃ m₁ m₂ n₁ n₂, ℰ B₁ m₁ n₁ ∧ ℰ B₂ m₂ n₂ ∧
     m = prod m₁ m₂ ∧ n = prod n₁ n₂
 
-@[simp]
 def ℰ (B : ComType) (m : Com) (n : Com) :=
   ∃ m' n', m ⇓ₙ m' ∧ n ⇓ₙ n' ∧ 𝒞 B m' n'
 end
@@ -39,9 +36,9 @@ notation:40 "(" m:41 "," n:41 ")" "∈" "⟦" B:41 "⟧ᵉ" => ℰ B m n
   Convenient constructors for LE
 -------------------------------*-/
 
-theorem 𝒱.unit : 𝒱 Unit unit unit := by simp
-theorem 𝒱.inl {v w A₁ A₂} (h : (v, w) ∈ ⟦A₁⟧ᵛ) : (inl v, inl w) ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [h]
-theorem 𝒱.inr {v w A₁ A₂} (h : (v, w) ∈ ⟦A₂⟧ᵛ) : (inr v, inr w) ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [h]
+theorem 𝒱.unit : 𝒱 Unit unit unit := by simp [𝒱]
+theorem 𝒱.inl {v w A₁ A₂} (h : (v, w) ∈ ⟦A₁⟧ᵛ) : (inl v, inl w) ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [𝒱, h]
+theorem 𝒱.inr {v w A₁ A₂} (h : (v, w) ∈ ⟦A₂⟧ᵛ) : (inr v, inr w) ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [𝒱, h]
 
 theorem 𝒱.thunk {m n B} (h : (m, n) ∈ ⟦B⟧ᵉ) : (thunk m, thunk n) ∈ ⟦U B⟧ᵛ := by
   unfold 𝒱; exact ⟨_, _, h, rfl, rfl⟩
@@ -232,8 +229,8 @@ theorem semCtxt.rename {ξ σ τ} {Γ Δ : Ctxt} (hξ : Γ ⊢ ξ ∶ Δ) (h : �
 
 /-* Semantic equivalence of values and computations *-/
 
-@[reducible, simp] def semVal Γ v w A := ∀ σ τ, Γ ⊨ σ ~ τ → (v⦃σ⦄, w⦃τ⦄) ∈ ⟦ A ⟧ᵛ
-@[reducible, simp] def semCom Γ m n B := ∀ σ τ, Γ ⊨ σ ~ τ → (m⦃σ⦄, n⦃τ⦄) ∈ ⟦ B ⟧ᵉ
+@[simp] def semVal Γ v w A := ∀ σ τ, Γ ⊨ σ ~ τ → (v⦃σ⦄, w⦃τ⦄) ∈ ⟦ A ⟧ᵛ
+@[simp] def semCom Γ m n B := ∀ σ τ, Γ ⊨ σ ~ τ → (m⦃σ⦄, n⦃τ⦄) ∈ ⟦ B ⟧ᵉ
 notation:40 Γ:41 "⊨" v:41 "~" w:41 "∶" A:41 => semVal Γ v w A
 notation:40 Γ:41 "⊨" m:41 "~" n:41 "∶" B:41 => semCom Γ m n B
 
@@ -269,9 +266,9 @@ theorem soundness {Γ} :
   case inr ih => exact 𝒱.inr (ih σ τ hστ)
   case thunk ih => exact 𝒱.thunk (ih σ τ hστ)
   case force ih =>
-    unfold semVal 𝒱 at ih
+    simp [𝒱] at ih
     let ⟨_, _, h, em, en⟩ := ih σ τ hστ
-    simp [-ℰ, em, en]; exact ℰ.bwd .π .π h
+    simp [em, en]; exact ℰ.bwd .π .π h
   case lam ih =>
     refine ℰ.lam (λ v w hA ↦ ?_)
     rw [← substUnion, ← substUnion]
@@ -288,14 +285,14 @@ theorem soundness {Γ} :
     . exact .trans' (Evals.let r₁) (.once .ζ)
     . exact .trans' (Evals.let r₂) (.once .ζ)
   case case ihv ihm ihn =>
-    unfold semVal 𝒱 at ihv
+    simp [𝒱] at ihv
     match ihv σ τ hστ with
     | .inl ⟨v, w, hA₁, ev, ew⟩ =>
-      simp [-up, -ℰ, ev, ew]
+      simp [ev, ew]
       refine ℰ.bwd ?_ ?_ (ihm (v +: σ) (w +: τ) (semCtxt.cons hA₁ hστ))
       all_goals rw [substUnion]; exact .ιl
     | .inr ⟨v, w, hA₂, ev, ew⟩ =>
-      simp [-up, -ℰ, ev, ew]
+      simp [ev, ew]
       refine ℰ.bwd ?_ ?_ (ihn (v +: σ) (w +: τ) (semCtxt.cons hA₂ hστ))
       all_goals rw [substUnion]; exact .ιr
   case prod ihm ihn => exact ℰ.prod (ihm σ τ hστ) (ihn σ τ hστ)

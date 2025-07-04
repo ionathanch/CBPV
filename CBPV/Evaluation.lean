@@ -117,7 +117,7 @@ theorem nf.steps {m n} (nfm : nf m) (r : m ⇒⋆ n) : m = n := by
   case refl => rfl
   case trans r _ => cases nfm.stepn't r
 
-@[reducible] def Norm (m n : Com) := m ⇒⋆ n ∧ nf n
+def Norm (m n : Com) := m ⇒⋆ n ∧ nf n
 infix:40 "⇓ₙ" => Norm
 
 @[refl] theorem Norm.refl {m} (nfm : nf m) : m ⇓ₙ m := by exists .refl

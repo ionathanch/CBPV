@@ -63,31 +63,30 @@ theorem prodCong {m m' n n'} : m = m' → n = n' → prod m n = prod m' n'
   Lifting renamings
 ------------------*-/
 
-@[simp]
 def lift (ξ : Nat → Nat) : Nat → Nat :=
   zero +: (succ ∘ ξ)
 
 -- Lifting respects renaming extensionality
 theorem liftExt ξ ζ (h : ∀ x, ξ x = ζ x) : ∀ x, lift ξ x = lift ζ x := by
-  intro x; cases x <;> simp [h]
+  intro x; cases x <;> simp [lift, h]
 
 -- Lifting identity renaming does nothing
 theorem liftId ξ (h : ∀ x, ξ x = x) : ∀ x, lift ξ x = x := by
-  intro x; cases x <;> simp [h]
+  intro x; cases x <;> simp [lift, h]
 
 -- Lifting composes
 theorem liftComp ξ ζ ς (h : ∀ x, (ξ ∘ ζ) x = ς x) :
   ∀ x, (lift ξ ∘ lift ζ) x = lift ς x := by
-  intro x; cases x <;> simp
+  intro x; cases x <;> simp [lift]
   case succ => apply h
 
 -- Lifting commutes with succ
 theorem liftSucc ξ : ∀ x, (lift ξ ∘ succ) x = (succ ∘ ξ) x := by
-  intro x; cases x <;> simp
+  intro x; cases x <;> simp [lift]
 
 -- Lifting twice commutes with lifted succ
 theorem liftLiftSucc ξ : ∀ (x : Nat), (lift (lift ξ) ∘ lift succ) x = (lift succ ∘ (lift ξ)) x := by
-  intro x; cases x <;> simp
+  intro x; cases x <;> simp [lift]
 
 /-*-------------------
   Applying renamings
@@ -135,7 +134,7 @@ theorem renameId :
   mutual_induction v, m
   all_goals simp; try repeat' constructor
   all_goals try assumption
-  all_goals rw [renameComExt (0 +: succ) id]
+  all_goals rw [renameComExt (lift id) id]
   all_goals apply_rules [liftId]
 
 def renameValId := renameId.left
@@ -160,7 +159,6 @@ def renameComComp ξ ζ m : renameCom ξ (renameCom ζ m) = renameCom (ξ ∘ ζ
   Lifting substitutions
 ----------------------*-/
 
-@[simp]
 def up (σ : Nat → Val) : Nat → Val :=
   var 0 +: (renameVal succ ∘ σ)
 prefix:95 "⇑" => up
@@ -172,23 +170,23 @@ theorem upUp σ x : (⇑ ⇑ σ) x = (var 0 +: var 1 +: (renameVal succ ∘ rena
 
 -- Lifting var "substitution" does nothing
 theorem upId σ (h : ∀ x, σ x = var x) : ∀ x, (⇑ σ) x = var x := by
-  intro n; cases n <;> simp [h]
+  intro n; cases n <;> simp [h, up]
 
 -- Lifting respects subsitution extensionality
 theorem upExt σ τ (h : ∀ x, σ x = τ x) : ∀ x, (⇑ σ) x = (⇑ τ) x := by
-  intro n; cases n <;> simp [h]
+  intro n; cases n <;> simp [h, up]
 
 -- Lifting commutes with composition
 theorem upLift ξ σ τ (h : ∀ x, (σ ∘ ξ) x = τ x) : ∀ x, (⇑ σ ∘ lift ξ) x = (⇑ τ) x := by
-  intro n; cases n <;> simp [← h]
+  intro n; cases n <;> simp [lift, up, ← h]
 
 -- Lifting commutes with succ
 theorem upSucc σ : ∀ x, (⇑ σ ∘ succ) x = (renameVal succ ∘ σ) x := by
-  intro n; cases n <;> simp
+  intro n; cases n <;> simp [up]
 
 -- Lifting twice commutes with lifted succ
 theorem upUpSucc σ : ∀ x, (⇑ ⇑ σ ∘ lift succ) x = (renameVal (lift succ) ∘ ⇑ σ) x := by
-  intro n; cases n; simp
+  intro n; cases n; simp [lift, up]
   case succ n =>
     calc renameVal succ (renameVal succ (σ n))
       _ = renameVal (succ ∘ succ) (σ n)                       := by rw [renameValComp]
@@ -197,11 +195,11 @@ theorem upUpSucc σ : ∀ x, (⇑ ⇑ σ ∘ lift succ) x = (renameVal (lift suc
 
 -- Lifting commutes with injection of renamings into substitutions
 theorem upVar ξ : ∀ x, (var ∘ lift ξ) x = (⇑ (var ∘ ξ)) x := by
-  intro n; cases n <;> simp
+  intro n; cases n <;> simp [lift, up]
 
 -- Lifting commutes with renaming
 theorem upRename ξ σ τ (h : ∀ x, (renameVal ξ ∘ σ) x = τ x) : ∀ x, (renameVal (lift ξ) ∘ ⇑ σ) x = (⇑ τ) x := by
-  intro n; cases n; simp
+  intro n; cases n; simp [lift, up]
   case succ n => calc
     (renameVal (lift ξ) ∘ renameVal succ) (σ n)
       = renameVal (lift ξ ∘ succ) (σ n)      := by simp [renameValComp]
@@ -316,7 +314,7 @@ theorem renameToSubst ξ :
   (∀ m, renameCom ξ m = substCom (var ∘ ξ) m) := by
   refine ⟨λ v ↦ ?val, λ m ↦ ?com⟩
   mutual_induction v, m generalizing ξ
-  all_goals simp [-up] <;> try repeat' constructor
+  all_goals simp <;> try repeat' constructor
   all_goals try rw [← substComExt _ _ (upVar ξ)]
   all_goals apply_rules
 

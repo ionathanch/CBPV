@@ -42,7 +42,6 @@ def rename (ξ : Nat → Nat) : Term → Term
   | fst t => fst (rename ξ t)
   | snd t => snd (rename ξ t)
 
-@[simp]
 def up (σ : Nat → Term) : Nat → Term :=
   var 0 +: (rename succ ∘ σ)
 prefix:95 "⇑" => up
@@ -202,9 +201,6 @@ def transTerm : CBN.Term → Com
 end
 notation:40 "⟦" t:41 "⟧ᵗ" => transTerm t
 
-@[simp] def transSubst' (σ : Nat → CBN.Term) : Nat → Val := λ x ↦ .thunk (⟦ σ x ⟧ᵗ)
-notation:40 "⟦" σ:41 "⟧ˢ" => transSubst' σ
-
 /-* Translation of stacks *-/
 section
 set_option hygiene false
@@ -276,7 +272,7 @@ theorem preservation {Γ t A} (h : Γ ⊢ₛ t ∶ A) : (⟦ Γ ⟧ᶜ) ⊢ (⟦
 theorem transRename {ξ t m} (h : t ↦ₙ m) : CBN.rename ξ t ↦ₙ renameCom ξ m := by
   induction h generalizing ξ
   case case ihs iht ihu =>
-    simp [-lift]; rw [renameLiftLiftRename, renameLiftLiftRename]
+    simp; rw [renameLiftLiftRename, renameLiftLiftRename]
     exact .case ihs iht ihu
   all_goals constructor <;> apply_assumption
 
@@ -285,14 +281,14 @@ theorem transUp {σ : Nat → CBN.Term} {σ' : Nat → Val}
   have e {ξ v} : .force (renameVal ξ v) = renameCom ξ (.force v) := rfl
   intro n; cases n
   case zero => exact .var
-  case succ n => simp; rw [e]; exact transRename (h n)
+  case succ n => simp [up]; rw [e]; exact transRename (h n)
 
 theorem transSubst {σ σ' t} (h : ∀ x, σ x ↦ₙ .force (σ' x)) : CBN.subst σ t ↦ₙ substCom σ' (⟦t⟧ᵗ) := by
   induction t generalizing σ σ'
   case var => exact h _
   case lam ih => exact .lam (ih (transUp h))
   case case ihs iht ihu =>
-    simp [-up, -lift]; rw [← renameUpLiftSubst, ← renameUpLiftSubst]
+    simp [transTerm]; rw [← renameUpLiftSubst, ← renameUpLiftSubst]
     exact .case (ihs h) (iht (transUp h)) (ihu (transUp h))
   all_goals constructor <;> apply_rules
 
@@ -312,18 +308,14 @@ theorem simulation {t u k k'} (r : ⟨t, k⟩ ⤳ₙ ⟨u, k'⟩) : ∃ m, ⟨�
     refine ⟨⟦ t ⟧ᵗ ⦃ .thunk (⟦ s ⟧ᵗ)⦄, ?_, transSubstSingle⟩
     calc
       _ ⤳ _ := .ζ
-      _ ⤳ _ := by simp [-lift]; exact .ιl
-      _ = _ := by
-        have e {σ} : (.var 0 +: renameVal succ ∘ σ) = ⇑ σ := rfl
-        rw [e, ← substUnion, substDropCom₂]
+      _ ⤳ _ := by exact .ιl
+      _ = _ := by rw [← substUnion, substDropCom₂]
   case ιr s _ u =>
     refine ⟨⟦ u ⟧ᵗ ⦃ .thunk (⟦ s ⟧ᵗ)⦄, ?_, transSubstSingle⟩
     calc
       _ ⤳ _ := .ζ
-      _ ⤳ _ := by simp [-lift]; exact .ιr
-      _ = _ := by
-        have e {σ} : (.var 0 +: renameVal succ ∘ σ) = ⇑ σ := rfl
-        rw [e, ← substUnion, substDropCom₂]
+      _ ⤳ _ := by exact .ιr
+      _ = _ := by rw [← substUnion, substDropCom₂]
   case π1 => exact ⟨_, .once .π1, transTransTerm⟩
   case π2 => exact ⟨_, .once .π2, transTransTerm⟩
   case app => exact ⟨_, .once .app, transTransTerm⟩

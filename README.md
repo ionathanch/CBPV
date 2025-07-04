@@ -83,3 +83,36 @@ Evaluation    Typing    NormalInd    Reduction
   Commutation ─┴─╼ ANF    ╽           ╽
                           Normalization
 ```
+
+## When to `@[simp]` and `@[reducible]`
+
+Not all definitions are added to the default `simp` set.
+As a general rule, a definition should be added if it is not a type-level term
+and:
+
+* It matches on an argument; or
+* It does not match on an argument, but is not used in other definitions.
+
+For instance, `Syntax.cons` matches on naturals,
+and we want it to be in the simp set so that it reduces on constructors.
+However, `Syntax.lift` doesn't match on an argument and is used in `Syntax.renameCom`,
+so we don't want it to be in the simp set,
+since it will always reduce too far when simplifying `renameCom`,
+and prevent theorems about `renameCom` and `lift` from applying.
+As another example, `ClosedSemantics.semCtxt` is used within `ClosedSemantics.semCom`,
+so it shouldn't be in the simp set, but `semCom` itself can be.
+
+Type-level definitions, especially recursive ones,
+often represent predicates that could otherwise be encoded as inductives.
+`ClosedSemantics.𝒱` and `ClosedSemantics.𝒞` are such definitions,
+in contrast with the inductives `OpenSemantics.𝒱` and `OpenSemantics.𝒞`.
+The definitions should be explicitly unfolded as needed,
+corresponding with invoking `cases` on the corresponding inductives.
+Otherwise, simplification may again reduce too far
+and prevent theorems from applying.
+
+Type-level definitions which are just type aliases
+should be marked as `@[reducible]` so that instances for typeclasses
+on the aliased types can be used.
+In particular, definitions consisting of applications of `RTC.RTC`
+need to be `@[reducible]` so that `calc` can find the `Trans` instances.
