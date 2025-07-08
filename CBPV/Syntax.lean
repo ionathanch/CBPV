@@ -47,6 +47,8 @@ inductive Com : Type where
   | prod : Com → Com → Com
   | fst : Com → Com
   | snd : Com → Com
+  | join : String → Com → Com → Com
+  | jump : String → Val → Com
 end
 open Val Com
 
@@ -57,6 +59,9 @@ theorem letinCong {m m' n n'} : m = m' → n = n' → letin m n = letin m' n'
   | rfl, rfl => rfl
 
 theorem prodCong {m m' n n'} : m = m' → n = n' → prod m n = prod m' n'
+  | rfl, rfl => rfl
+
+theorem joinCong {j m m' n n'} : m = m' → n = n' → join j m n = join j m' n'
   | rfl, rfl => rfl
 
 /-*------------------
@@ -112,6 +117,8 @@ def renameCom (ξ : Nat → Nat) : Com → Com
   | prod m n => prod (renameCom ξ m) (renameCom ξ n)
   | fst m => fst (renameCom ξ m)
   | snd m => snd (renameCom ξ m)
+  | join j m n => join j (renameCom (lift ξ) m) (renameCom ξ n)
+  | jump j v => jump j (renameVal ξ v)
 end
 
 -- Renaming extensionality
@@ -232,6 +239,8 @@ def substCom (σ : Nat → Val) : Com → Com
   | prod m n => prod (substCom σ m) (substCom σ n)
   | fst m => fst (substCom σ m)
   | snd m => snd (substCom σ m)
+  | join j m n => join j (substCom (⇑ σ) m) (substCom σ n)
+  | jump j v => jump j (substVal σ v)
 end
 notation:50 v "⦃" σ "⦄" => substVal σ v
 notation:50 m "⦃" σ "⦄" => substCom σ m
@@ -437,11 +446,24 @@ inductive In : Nat → ValType → Ctxt → Prop where
   | there {Γ x A B} : In x A Γ → In (succ x) A (Γ ∷ B)
 notation:40 Γ:41 "∋" x:41 "∶" A:41 => In x A Γ
 
+inductive Dtxt : Type where
+  | nil : Dtxt
+  | cons : Dtxt → String → ValType → Dtxt
+notation:50 "⬝" => Dtxt.nil
+notation:50 Δ:51 "∷" j:51 "∶" "¬" A:51 => Dtxt.cons Δ j A
+
+@[simp]
+def Jn (j : String) (A : ValType) : Dtxt → Prop
+  | .nil => False
+  | .cons Δ j' A' =>
+    if j == j' then A = A' else Jn j A Δ
+notation:40 Δ:41 "∋" j:41 "∶" "¬" A:41 => Jn j A Δ
+
 /-*----------------------
   Well-scoped renamings
 ----------------------*-/
 
-def wRename (ξ : Nat → Nat) Γ Δ := ∀ x A, Γ ∋ x ∶ A → Δ ∋ ξ x ∶ A
+def wRename (ξ : Nat → Nat) (Γ Δ : Ctxt) := ∀ x A, Γ ∋ x ∶ A → Δ ∋ ξ x ∶ A
 notation:40 Δ:41 "⊢" ξ:41 "∶" Γ:41 => wRename ξ Γ Δ
 
 theorem wRenameSucc {Γ A} : Γ ∷ A ⊢ succ ∶ Γ := by

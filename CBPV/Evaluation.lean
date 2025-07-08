@@ -11,6 +11,7 @@ section
 set_option hygiene false
 local infix:40 "⇒" => Eval
 inductive Eval : Com → Com → Prop where
+  -- reduction steps
   | π {m} : force (thunk m) ⇒ m
   | β {m v} : app (lam m) v ⇒ m⦃v⦄
   | ζ {v m} : letin (ret v) m ⇒ m⦃v⦄
@@ -18,6 +19,18 @@ inductive Eval : Com → Com → Prop where
   | ιr {v m n} : case (inr v) m n ⇒ n⦃v⦄
   | π1 {m n} : fst (prod m n) ⇒ m
   | π2 {m n} : snd (prod m n) ⇒ n
+  | γ {j m v} : join j m (jump j v) ⇒ m⦃v⦄
+  -- drop joins
+  | ret {j m v} : join j m (ret v) ⇒ ret v
+  | lam {j m n} : join j m (lam n) ⇒ lam n
+  | prod {j m n₁ n₂} : join j m (prod n₁ n₂) ⇒ prod n₁ n₂
+  -- drop jump contexts
+  | join't {j j' m v} : j ≠ j' → join j' m (jump j v) ⇒ jump j v
+  | appn't {j v w} : app (jump j v) w ⇒ jump j v
+  | letn't {j m v} : letin (jump j v) m ⇒ jump j v
+  | fstn't {j v} : fst (jump j v) ⇒ jump j v
+  | sndn't {j v} : snd (jump j v) ⇒ jump j v
+  -- congruence rules
   | app {m m' v} :
     m ⇒ m' →
     ------------------
@@ -34,6 +47,10 @@ inductive Eval : Com → Com → Prop where
     m ⇒ m' →
     ----------------
     snd m ⇒ snd m'
+  | join {j m n n'} :
+    n ⇒ n' →
+    ------------------------
+    join j m n ⇒ join j m n'
 end
 infix:40 "⇒" => Eval
 
@@ -42,7 +59,8 @@ theorem evalDet {m n₁ n₂} (r₁ : m ⇒ n₁) (r₂ : m ⇒ n₂) : n₁ = n
   induction r₁ generalizing n₂
   all_goals cases r₂; try rfl
   case fst.fst ih _ r | snd.snd ih _ r => rw [ih r]
-  all_goals try apply_rules [appCong, letinCong, prodCong]
+  case γ.join't | join't.γ => contradiction
+  all_goals try apply_rules [appCong, letinCong, prodCong, joinCong]
   all_goals rename _ ⇒ _ => r; cases r
 
 /-*----------------------
@@ -106,7 +124,7 @@ theorem confluence {m n₁ n₂} (r₁ : m ⇒⋆ n₁) (r₂ : m ⇒⋆ n₂) :
 @[simp]
 def nf : Com → Prop
   | lam _ | ret _ | prod _ _ => True
-  | force _ | app _ _ | letin _ _ | case _ _ _ | fst _ | snd _ => False
+  | _ => False
 
 theorem nf.stepn't {m n} (nfm : nf m) : ¬ m ⇒ n := by
   cases m <;> simp at *
