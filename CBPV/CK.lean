@@ -92,30 +92,30 @@ inductive BStep : Com → Com → Prop where
   | β {n t m} {v : Val} :
     n ⇓ lam m →
     m⦃v⦄ ⇓ t →
-    ---------------------------
+    -----------
     app n v ⇓ t
   | ζ {n t v m} :
     n ⇓ ret v →
     m⦃v⦄ ⇓ t →
-    ---------------------------
+    -------------
     letin n m ⇓ t
   | ιl {m₁ m₂ t} {v : Val}:
     m₁⦃v⦄ ⇓ t →
-    ----------------------------
+    ----------------------
     case (inl v) m₁ m₂ ⇓ t
   | ιr {m₁ m₂ t} {v : Val}:
     m₂⦃v⦄ ⇓ t →
-    ----------------------------
+    ----------------------
     case (inr v) m₁ m₂ ⇓ t
   | π1 {n t m₁ m₂} :
     n ⇓ prod m₁ m₂ →
     m₁ ⇓ t →
-    ----------------
+    ---------
     fst n ⇓ t
   | π2 {n t m₁ m₂} :
     n ⇓ prod m₁ m₂ →
     m₂ ⇓ t →
-    ----------------
+    ---------
     snd n ⇓ t
   | γ {j m n v t} :
     n ⇓ jump j v →
