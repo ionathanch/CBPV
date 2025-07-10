@@ -36,10 +36,10 @@ section
 set_option hygiene false
 local infix:40 "⤳" => Step
 inductive Step : CK → CK → Prop where
-  | β {m v k} :     ⟨lam m, app v :: k⟩   ⤳ ⟨substCom (v +: var) m, k⟩
-  | ζ {v m k} :     ⟨ret v, letin m :: k⟩ ⤳ ⟨substCom (v +: var) m, k⟩
-  | ιl {v m n k} :  ⟨case (inl v) m n, k⟩ ⤳ ⟨substCom (v +: var) m, k⟩
-  | ιr {v m n k} :  ⟨case (inr v) m n, k⟩ ⤳ ⟨substCom (v +: var) n, k⟩
+  | β {m v k} :     ⟨lam m, app v :: k⟩   ⤳ ⟨m⦃v⦄, k⟩
+  | ζ {v m k} :     ⟨ret v, letin m :: k⟩ ⤳ ⟨m⦃v⦄, k⟩
+  | ιl {v m n k} :  ⟨case (inl v) m n, k⟩ ⤳ ⟨m⦃v⦄, k⟩
+  | ιr {v m n k} :  ⟨case (inr v) m n, k⟩ ⤳ ⟨n⦃v⦄, k⟩
   | π {m k} :       ⟨force (thunk m), k⟩  ⤳ ⟨m, k⟩
   | π1 {m n k} :    ⟨prod m n, fst :: k⟩  ⤳ ⟨m, k⟩
   | π2 {m n k} :    ⟨prod m n, snd :: k⟩  ⤳ ⟨n, k⟩
@@ -68,33 +68,33 @@ inductive BStep : Com → Com → Prop where
     m ⇓ t →
     -------------------
     force (thunk m) ⇓ t
-  | β {n t m v} :
+  | β {n t m} {v : Val} :
     n ⇓ lam m →
-    substCom (v +: var) m ⇓ t →
-    ---------------------------
+    m⦃v⦄ ⇓ t →
+    -----------
     app n v ⇓ t
   | ζ {n t v m} :
     n ⇓ ret v →
-    substCom (v +: var) m ⇓ t →
-    ---------------------------
+    m⦃v⦄ ⇓ t →
+    -------------
     letin n m ⇓ t
-  | ιl {v m₁ m₂ t}:
-    substCom (v +: var) m₁ ⇓ t →
-    ----------------------------
+  | ιl {m₁ m₂ t} {v : Val} :
+    m₁⦃v⦄ ⇓ t →
+    ----------------------
     case (inl v) m₁ m₂ ⇓ t
-  | ιr {v m₁ m₂ t}:
-    substCom (v +: var) m₂ ⇓ t →
-    ----------------------------
+  | ιr {m₁ m₂ t} {v : Val} :
+    m₂⦃v⦄ ⇓ t →
+    ----------------------
     case (inr v) m₁ m₂ ⇓ t
   | π1 {n t m₁ m₂} :
     n ⇓ prod m₁ m₂ →
     m₁ ⇓ t →
-    ----------------
+    ---------
     fst n ⇓ t
   | π2 {n t m₁ m₂} :
     n ⇓ prod m₁ m₂ →
     m₂ ⇓ t →
-    ----------------
+    ---------
     snd n ⇓ t
 end
 infix:40 "⇓" => BStep
