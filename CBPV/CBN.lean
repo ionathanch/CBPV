@@ -253,7 +253,7 @@ theorem transTransTerm {t} : t ↦ₙ (⟦ t ⟧ᵗ) := by
 theorem presIn {x A Γ} (h : CBN.In x A Γ) : (⟦ Γ ⟧ᶜ) ∋ x ∶ .U (⟦ A ⟧ᵀ) := by
   induction h <;> constructor; assumption
 
-theorem preservation {Γ t A} (h : Γ ⊢ₛ t ∶ A) : (⟦ Γ ⟧ᶜ) ⊢ (⟦ t ⟧ᵗ) ∶ (⟦ A ⟧ᵀ) := by
+theorem preservation {Γ t A} (h : Γ ⊢ₛ t ∶ A) : (⟦ Γ ⟧ᶜ) ∣ ⬝ ⊢ (⟦ t ⟧ᵗ) ∶ (⟦ A ⟧ᵀ) := by
   induction h
   case var ih => exact .force (.var (presIn ih))
   case unit => exact .ret .unit
