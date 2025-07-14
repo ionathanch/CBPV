@@ -24,12 +24,7 @@ inductive Eval : Com → Com → Prop where
   | ret {j m v} : join j m (ret v) ⇒ ret v
   | lam {j m n} : join j m (lam n) ⇒ lam n
   | prod {j m n₁ n₂} : join j m (prod n₁ n₂) ⇒ prod n₁ n₂
-  -- drop jump contexts
-  | join't {j j' m v} : j ≠ j' → join j' m (jump j v) ⇒ jump j v
-  | appn't {j v w} : app (jump j v) w ⇒ jump j v
-  | letn't {j m v} : letin (jump j v) m ⇒ jump j v
-  | fstn't {j v} : fst (jump j v) ⇒ jump j v
-  | sndn't {j v} : snd (jump j v) ⇒ jump j v
+  | join't {j j' m v} : j ≠ j' → join j m (jump j' v) ⇒ jump j' v
   -- congruence rules
   | app {m m' v} :
     m ⇒ m' →
@@ -90,6 +85,11 @@ theorem Evals.snd {m m'} (r : m ⇒⋆ m') : snd m ⇒⋆ snd m' := by
   case refl => exact .refl
   case trans r _ ih => exact .trans (.snd r) ih
 
+theorem Evals.join {j m n n'} (r : n ⇒⋆ n') : join j m n ⇒⋆ join j m n' := by
+  induction r
+  case refl => exact .refl
+  case trans r _ ih => exact .trans (.join r) ih
+
 theorem Evals.ret_inv {v m} (r : ret v ⇒⋆ m) : ret v = m := by
   generalize e : ret v = n at r
   induction r generalizing v <;> subst e
@@ -147,6 +147,11 @@ theorem Norm.join {m n₁ n₂} : m ⇓ₙ n₁ → m ⇓ₙ n₂ → n₁ = n�
   | ⟨rn₁, nfn₁⟩, ⟨rn₂, nfn₂⟩ =>
     let ⟨n', rn₁', rn₂'⟩ := confluence rn₁ rn₂
     by rw [nfn₁.steps rn₁', nfn₂.steps rn₂']
+
+theorem Norm.dropJoin {n n'} : n ⇓ₙ n' → ∀ j m, .join j m n ⇓ₙ n'
+  | ⟨rn, nfn⟩, j, m => by
+    cases n' <;> simp at nfn
+    all_goals refine ⟨.trans' (Evals.join rn) (.once ?_), nfn⟩; constructor
 
 /-*---------------------
   Strong normalization

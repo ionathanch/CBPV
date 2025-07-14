@@ -8,6 +8,11 @@ def cons {A : Type} (x : A) (ξ : Nat → A) : Nat → A
   | n + 1 => ξ n
 infixr:50 "+:" => cons
 
+@[simp]
+def dons {A : Type} (j : String) (x : A) (ξ : String → A) : String → A :=
+  λ j' ↦ if j == j' then x else ξ j'
+notation:50 j:51 "≔" x:51 "+:" ξ => dons j x ξ
+
 /-*------
   Types
 ------*-/
@@ -448,16 +453,16 @@ notation:40 Γ:41 "∋" x:41 "∶" A:41 => In x A Γ
 
 inductive Dtxt : Type where
   | nil : Dtxt
-  | cons : Dtxt → String → ValType → Dtxt
+  | cons : Dtxt → String → ValType → ComType → Dtxt
 notation:50 "⬝" => Dtxt.nil
-notation:50 Δ:51 "∷" j:51 "∶" "¬" A:51 => Dtxt.cons Δ j A
+notation:50 Δ:51 "∷" j:51 "∶" A:51 "↗" B:51 => Dtxt.cons Δ j A B
 
 @[simp]
-def Jn (j : String) (A : ValType) : Dtxt → Prop
+def Jn (j : String) (A : ValType) (B : ComType) : Dtxt → Prop
   | .nil => False
-  | .cons Δ j' A' =>
-    if j == j' then A = A' else Jn j A Δ
-notation:40 Δ:41 "∋" j:41 "∶" "¬" A:41 => Jn j A Δ
+  | .cons Δ j' A' B' =>
+    if j == j' then A = A' ∧ B = B' else Jn j A B Δ
+notation:40 Δ:41 "∋" j:41 "∶" A:41 "↗" B:41 => Jn j A B Δ
 
 /-*----------------------
   Well-scoped renamings

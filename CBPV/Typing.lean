@@ -37,7 +37,7 @@ inductive ComWt : Ctxt → Dtxt → Com → ComType → Prop where
     -----------------------
     Γ ∣ Δ ⊢ lam m ∶ Arr A B
   | app {Γ Δ m v A B} :
-    Γ ∣ Δ ⊢ m ∶ Arr A B →
+    Γ ∣ ⬝ ⊢ m ∶ Arr A B →
     Γ ⊢ v ∶ A →
     -------------------
     Γ ∣ Δ ⊢ app m v ∶ B
@@ -46,7 +46,7 @@ inductive ComWt : Ctxt → Dtxt → Com → ComType → Prop where
     -------------------
     Γ ∣ Δ ⊢ ret v ∶ F A
   | letin {Γ Δ m n A} {B : ComType} :
-    Γ ∣ Δ ⊢ m ∶ F A →
+    Γ ∣ ⬝ ⊢ m ∶ F A →
     Γ ∷ A ∣ Δ ⊢ n ∶ B →
     ---------------------
     Γ ∣ Δ ⊢ letin m n ∶ B
@@ -62,20 +62,20 @@ inductive ComWt : Ctxt → Dtxt → Com → ComType → Prop where
     -----------------------------
     Γ ∣ Δ ⊢ prod m n ∶ Prod B₁ B₂
   | fst {Γ Δ m} {B₁ B₂ : ComType} :
-    Γ ∣ Δ ⊢ m ∶ Prod B₁ B₂ →
+    Γ ∣ ⬝ ⊢ m ∶ Prod B₁ B₂ →
     ------------------------
     Γ ∣ Δ ⊢ fst m ∶ B₁
   | snd {Γ Δ m} {B₁ B₂ : ComType} :
-    Γ ∣ Δ ⊢ m ∶ Prod B₁ B₂ →
+    Γ ∣ ⬝ ⊢ m ∶ Prod B₁ B₂ →
     ------------------------
     Γ ∣ Δ ⊢ snd m ∶ B₂
   | join {Γ Δ j m n A B} :
     Γ ∷ A ∣ Δ ⊢ m ∶ B →
-    Γ ∣ Δ ∷ j ∶ ¬ A ⊢ n ∶ B →
-    -------------------------
+    Γ ∣ Δ ∷ j ∶ A ↗ B ⊢ n ∶ B →
+    ---------------------------
     Γ ∣ Δ ⊢ join j m n ∶ B
   | jump {Γ Δ j v A B} :
-    Δ ∋ j ∶ ¬ A →
+    Δ ∋ j ∶ A ↗ B →
     Γ ⊢ v ∶ A →
     --------------------
     Γ ∣ Δ ⊢ jump j v ∶ B
@@ -120,32 +120,32 @@ theorem wtWeakenCom₂ {Γ Δ A₁ A₂ B} {m : Com} :
   Rearrangement lemmas for commutations
 --------------------------------------*-/
 
-theorem wtLetApp {Γ Δ n m v A B} (hlet : Γ ∣ Δ ⊢ letin n m ∶ Arr A B) (hv : Γ ⊢ v ∶ A) :
+theorem wtLetApp {Γ Δ n m v A B} (hlet : Γ ∣ ⬝ ⊢ letin n m ∶ Arr A B) (hv : Γ ⊢ v ∶ A) :
   Γ ∣ Δ ⊢ letin n (app m (renameVal succ v)) ∶ B := by
   cases hlet with | letin hn hm =>
   exact .letin hn (.app hm (wtWeakenVal hv))
 
-theorem wtLetFst {Γ Δ n m B₁ B₂} (hlet : Γ ∣ Δ ⊢ letin n m ∶ Prod B₁ B₂) :
+theorem wtLetFst {Γ Δ n m B₁ B₂} (hlet : Γ ∣ ⬝ ⊢ letin n m ∶ Prod B₁ B₂) :
   Γ ∣ Δ ⊢ letin n (fst m) ∶ B₁ := by
   cases hlet with | letin hn hm =>
   exact .letin hn (.fst hm)
 
-theorem wtLetSnd {Γ Δ n m B₁ B₂} (hlet : Γ ∣ Δ ⊢ letin n m ∶ Prod B₁ B₂) :
+theorem wtLetSnd {Γ Δ n m B₁ B₂} (hlet : Γ ∣ ⬝ ⊢ letin n m ∶ Prod B₁ B₂) :
   Γ ∣ Δ ⊢ letin n (snd m) ∶ B₂ := by
   cases hlet with | letin hn hm =>
   exact .letin hn (.snd hm)
 
-theorem wtCaseApp {Γ Δ v m₁ m₂ w A B} (hcase : Γ ∣ Δ ⊢ case v m₁ m₂ ∶ Arr A B) (hw : Γ ⊢ w ∶ A) :
+theorem wtCaseApp {Γ Δ v m₁ m₂ w A B} (hcase : Γ ∣ ⬝ ⊢ case v m₁ m₂ ∶ Arr A B) (hw : Γ ⊢ w ∶ A) :
   Γ ∣ Δ ⊢ case v (app m₁ (renameVal succ w)) (app m₂ (renameVal succ w)) ∶ B := by
   cases hcase with | case hv hm₁ hm₂ =>
   exact .case hv (.app hm₁ (wtWeakenVal hw)) (.app hm₂ (wtWeakenVal hw))
 
-theorem wtCaseFst {Γ Δ v m₁ m₂ B₁ B₂} (hcase : Γ ∣ Δ ⊢ case v m₁ m₂ ∶ Prod B₁ B₂) :
+theorem wtCaseFst {Γ Δ v m₁ m₂ B₁ B₂} (hcase : Γ ∣ ⬝ ⊢ case v m₁ m₂ ∶ Prod B₁ B₂) :
   Γ ∣ Δ ⊢ case v (fst m₁) (fst m₂) ∶ B₁ := by
   cases hcase with | case hv hm₁ hm₂ =>
   exact .case hv (.fst hm₁) (.fst hm₂)
 
-theorem wtCaseSnd {Γ Δ v m₁ m₂ B₁ B₂} (hcase : Γ ∣ Δ ⊢ case v m₁ m₂ ∶ Prod B₁ B₂) :
+theorem wtCaseSnd {Γ Δ v m₁ m₂ B₁ B₂} (hcase : Γ ∣ ⬝ ⊢ case v m₁ m₂ ∶ Prod B₁ B₂) :
   Γ ∣ Δ ⊢ case v (snd m₁) (snd m₂) ∶ B₂ := by
   cases hcase with | case hv hm₁ hm₂ =>
   exact .case hv (.snd hm₁) (.snd hm₂)
