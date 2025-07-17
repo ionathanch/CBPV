@@ -356,7 +356,7 @@ theorem simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨⟦ t ⟧
       _ ⤳ _ := Step.π
       _ ⤳ _ := Step.β
       _ = _ := by
-        rw [← substUnion, substDropCom₂, ← transSubstCom, substComExt]
+        rw [← substUnion, substDrop₂, ← transSubstCom, substComExt]
         intro n; cases n <;> rfl
   case ιl =>
     calc
