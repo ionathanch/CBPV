@@ -19,12 +19,12 @@ inductive Eval : Com → Com → Prop where
   | ιr {v m n} : case (inr v) m n ⇒ n⦃v⦄
   | π1 {m n} : fst (prod m n) ⇒ m
   | π2 {m n} : snd (prod m n) ⇒ n
-  | γ {j m v} : join j m (jump j v) ⇒ m⦃v⦄
+  | γ {m v} : join m (jump 0 v) ⇒ m⦃v⦄
   -- drop joins
-  | ret {j m v} : join j m (ret v) ⇒ ret v
-  | lam {j m n} : join j m (lam n) ⇒ lam n
-  | prod {j m n₁ n₂} : join j m (prod n₁ n₂) ⇒ prod n₁ n₂
-  | join't {j j' m v} : j ≠ j' → join j m (jump j' v) ⇒ jump j' v
+  | ret {m v} : join m (ret v) ⇒ ret v
+  | lam {m n} : join m (lam n) ⇒ lam n
+  | prod {m n₁ n₂} : join m (prod n₁ n₂) ⇒ prod n₁ n₂
+  | join't {j m v} : join m (jump (j + 1) v) ⇒ jump j v
   -- congruence rules
   | app {m m' v} :
     m ⇒ m' →
@@ -42,10 +42,10 @@ inductive Eval : Com → Com → Prop where
     m ⇒ m' →
     ----------------
     snd m ⇒ snd m'
-  | join {j m n n'} :
+  | join {m n n'} :
     n ⇒ n' →
-    ------------------------
-    join j m n ⇒ join j m n'
+    --------------------
+    join m n ⇒ join m n'
 end
 infix:40 "⇒" => Eval
 
@@ -54,7 +54,6 @@ theorem evalDet {m n₁ n₂} (r₁ : m ⇒ n₁) (r₂ : m ⇒ n₂) : n₁ = n
   induction r₁ generalizing n₂
   all_goals cases r₂; try rfl
   case fst.fst ih _ r | snd.snd ih _ r => rw [ih r]
-  case γ.join't | join't.γ => contradiction
   all_goals try apply_rules [appCong, letinCong, prodCong, joinCong]
   all_goals rename _ ⇒ _ => r; cases r
 
@@ -85,7 +84,7 @@ theorem Evals.snd {m m'} (r : m ⇒⋆ m') : snd m ⇒⋆ snd m' := by
   case refl => exact .refl
   case trans r _ ih => exact .trans (.snd r) ih
 
-theorem Evals.join {j m n n'} (r : n ⇒⋆ n') : join j m n ⇒⋆ join j m n' := by
+theorem Evals.join {m n n'} (r : n ⇒⋆ n') : join m n ⇒⋆ join m n' := by
   induction r
   case refl => exact .refl
   case trans r _ ih => exact .trans (.join r) ih
@@ -148,8 +147,8 @@ theorem Norm.join {m n₁ n₂} : m ⇓ₙ n₁ → m ⇓ₙ n₂ → n₁ = n�
     let ⟨n', rn₁', rn₂'⟩ := confluence rn₁ rn₂
     by rw [nfn₁.steps rn₁', nfn₂.steps rn₂']
 
-theorem Norm.dropJoin {n n'} : n ⇓ₙ n' → ∀ j m, .join j m n ⇓ₙ n'
-  | ⟨rn, nfn⟩, j, m => by
+theorem Norm.dropJoin {n n'} : n ⇓ₙ n' → ∀ m, .join m n ⇓ₙ n'
+  | ⟨rn, nfn⟩, m => by
     cases n' <;> simp at nfn
     all_goals refine ⟨.trans' (Evals.join rn) (.once ?_), nfn⟩; constructor
 

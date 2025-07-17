@@ -69,11 +69,11 @@ inductive ComWt : Ctxt → Dtxt → Com → ComType → Prop where
     Γ ∣ ⬝ ⊢ m ∶ Prod B₁ B₂ →
     ------------------------
     Γ ∣ Δ ⊢ snd m ∶ B₂
-  | join {Γ Δ j m n A B} :
+  | join {Γ Δ m n A B} :
     Γ ∷ A ∣ Δ ⊢ m ∶ B →
-    Γ ∣ Δ ∷ j ∶ A ↗ B ⊢ n ∶ B →
-    ---------------------------
-    Γ ∣ Δ ⊢ join j m n ∶ B
+    Γ ∣ Δ ∷ A ↗ B ⊢ n ∶ B →
+    -----------------------
+    Γ ∣ Δ ⊢ join m n ∶ B
   | jump {Γ Δ j v A B} :
     Δ ∋ j ∶ A ↗ B →
     Γ ⊢ v ∶ A →

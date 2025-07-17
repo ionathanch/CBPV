@@ -8,11 +8,6 @@ def cons {A : Type} (x : A) (ξ : Nat → A) : Nat → A
   | n + 1 => ξ n
 infixr:50 "+:" => cons
 
-@[simp]
-def dons {A : Type} (j : String) (x : A) (ξ : String → A) : String → A :=
-  λ j' ↦ if j == j' then x else ξ j'
-notation:50 j:51 "≔" x:51 "+:" ξ => dons j x ξ
-
 /-*------
   Types
 ------*-/
@@ -52,8 +47,8 @@ inductive Com : Type where
   | prod : Com → Com → Com
   | fst : Com → Com
   | snd : Com → Com
-  | join : String → Com → Com → Com
-  | jump : String → Val → Com
+  | join : Com → Com → Com
+  | jump : Nat → Val → Com
 end
 open Val Com
 
@@ -66,7 +61,7 @@ theorem letinCong {m m' n n'} : m = m' → n = n' → letin m n = letin m' n'
 theorem prodCong {m m' n n'} : m = m' → n = n' → prod m n = prod m' n'
   | rfl, rfl => rfl
 
-theorem joinCong {j m m' n n'} : m = m' → n = n' → join j m n = join j m' n'
+theorem joinCong {m m' n n'} : m = m' → n = n' → join m n = join m' n'
   | rfl, rfl => rfl
 
 /-*------------------
@@ -122,7 +117,7 @@ def renameCom (ξ : Nat → Nat) : Com → Com
   | prod m n => prod (renameCom ξ m) (renameCom ξ n)
   | fst m => fst (renameCom ξ m)
   | snd m => snd (renameCom ξ m)
-  | join j m n => join j (renameCom (lift ξ) m) (renameCom ξ n)
+  | join m n => join (renameCom (lift ξ) m) (renameCom ξ n)
   | jump j v => jump j (renameVal ξ v)
 end
 
@@ -166,6 +161,26 @@ def renameValComp ξ ζ v : renameVal ξ (renameVal ζ v) = renameVal (ξ ∘ ζ
 
 def renameComComp ξ ζ m : renameCom ξ (renameCom ζ m) = renameCom (ξ ∘ ζ) m :=
   (renameComp ξ ζ (ξ ∘ ζ) (λ _ ↦ rfl)).right m
+
+/-* Applying renamings for join points *-/
+
+@[simp]
+def renameJoin (ξ : Nat → Nat) : Com → Com
+  | force v => force v
+  | lam m => lam m
+  | app m v => app m v
+  | ret v => ret v
+  | letin m n => letin m (renameJoin ξ n)
+  | case v m n => case v (renameJoin ξ m) (renameJoin ξ n)
+  | prod m n => prod m n
+  | fst m => fst m
+  | snd m => snd m
+  | join m n => join (renameJoin ξ m) (renameJoin (lift ξ) n)
+  | jump j v => jump (ξ j) v
+
+def renameJoinCom ξ ζ m : renameCom ξ (renameJoin ζ m) = renameJoin ζ (renameCom ξ m) := by
+  mutual_induction m generalizing ξ ζ
+  all_goals simp <;> (try constructor) <;> apply_assumption
 
 /-*----------------------
   Lifting substitutions
@@ -220,6 +235,22 @@ theorem upRename ξ σ τ (h : ∀ x, (renameVal ξ ∘ σ) x = τ x) : ∀ x, (
     _ = (renameVal succ (renameVal ξ (σ n))) := by rfl
     _ = renameVal succ (τ n)                 := by rw [← h]; rfl
 
+/-* Lifting substitutions for join points *-/
+
+def jup (σ : Nat → Com) : Nat → Com :=
+  jump 0 (var 0) +: (renameJoin succ ∘ σ)
+
+@[reducible] def jid : Nat → Com := λ n ↦ jump n (var 0)
+
+theorem jupId σ (h : ∀ j, σ j = jid j) : ∀ j, (jup σ) j = jid j := by
+  intro j; cases j <;> simp [h, jup]
+
+theorem jupExt σ τ (h : ∀ j, σ j = τ j) : ∀ j, (jup σ) j = (jup τ) j := by
+  intro j; cases j <;> simp [h, jup]
+
+theorem jupLift {ξ τ} : ∀ x, (renameCom (lift ξ) ∘ jup τ) x = (jup (renameCom (lift ξ) ∘ τ)) x := by
+  intro n; cases n; simp [lift, jup]; simp [jup, renameJoinCom]
+
 /-*-----------------------
   Applying substitutions
 -----------------------*-/
@@ -244,7 +275,7 @@ def substCom (σ : Nat → Val) : Com → Com
   | prod m n => prod (substCom σ m) (substCom σ n)
   | fst m => fst (substCom σ m)
   | snd m => snd (substCom σ m)
-  | join j m n => join j (substCom (⇑ σ) m) (substCom σ n)
+  | join m n => join (substCom (⇑ σ) m) (substCom σ n)
   | jump j v => jump j (substVal σ v)
 end
 notation:50 v "⦃" σ "⦄" => substVal σ v
@@ -335,6 +366,46 @@ theorem renameToSubst ξ :
 def renameToSubstVal ξ := (renameToSubst ξ).left
 def renameToSubstCom ξ := (renameToSubst ξ).right
 
+/-* Applying substitutions for join points *-/
+
+@[simp]
+def substJoin (σ : Nat → Com) : Com → Com
+  | force v => force v
+  | lam m => lam m
+  | app m v => app m v
+  | ret v => ret v
+  | letin m n => letin m (substJoin (renameCom (lift succ) ∘ σ) n)
+  | case v m n => case v (substJoin (renameCom (lift succ) ∘ σ) m) (substJoin (renameCom (lift succ) ∘ σ) n)
+  | prod m n => prod m n
+  | fst m => fst m
+  | snd m => snd m
+  | join m n => join (substJoin (renameCom (lift succ) ∘ σ) m) (substJoin (jup σ) n)
+  | jump j v => (σ j)⦃v⦄
+
+theorem renameSubstJoin {ξ} {σ τ : Nat → Com} (h : ∀ j, σ j = τ j) : ∀ j, (renameCom ξ ∘ σ) j = (renameCom ξ ∘ τ) j := by
+  intro j; simp [h j]
+
+theorem substJoinExt σ τ (h : ∀ j, σ j = τ j) : ∀ m, substJoin σ m = substJoin τ m := by
+  intro m;
+  mutual_induction m generalizing σ τ
+  all_goals simp; try repeat' constructor
+  all_goals apply_rules [renameSubstJoin, jupExt]
+
+theorem substJoinId {σ m} (h : ∀ j, σ j = jid j) : substJoin σ m = m := by
+  mutual_induction m generalizing σ
+  case jump j v => simp [h j]
+  all_goals simp
+  case letin ih =>
+    refine ih (λ j ↦ ?_); cases j <;> simp [h, lift]
+  case case ih₁ ih₂ =>
+    refine ⟨ih₁ (λ j ↦ ?_), ih₂ (λ j ↦ ?_)⟩
+    all_goals cases j <;> simp [h, lift]
+  case join ih₁ ih₂ =>
+    refine ⟨ih₁ (λ j ↦ ?_), ih₂ (λ j ↦ ?_)⟩
+    all_goals cases j <;> simp [h, lift, jup]
+
+theorem substJid {m} : substJoin jid m = m := substJoinId (λ _ ↦ rfl)
+
 /-*-------------------------------------------------
   Handy dandy derived renaming substitution lemmas
 -------------------------------------------------*-/
@@ -367,6 +438,12 @@ theorem substUnion σ a m : substCom (a +: σ) m = substCom (a +: var) (substCom
         by apply substComExt; intro n; cases n <;> simp; rw [← substDropVal]
     _ = substCom (a +: var) (substCom (⇑ σ) m) :=
         by rw [← substComComp]; rfl
+
+theorem substPush {σ : Nat → Val} {m : Com} {v : Val} : (m⦃v⦄⦃σ⦄) = substCom ((v⦃σ⦄) +: σ) m := by
+  calc (m⦃v⦄⦃σ⦄)
+    _ = (substCom σ ∘ substCom (v +: var)) m := rfl
+    _ = (m⦃substVal σ ∘ (v +: var)⦄) := by rw [substComComp σ (v +: var) m]
+    _ = substCom ((v⦃σ⦄) +: σ) m     := by rw [substComExt]; intro n; cases n <;> rfl
 
 theorem renameDist ξ a m : substCom (renameVal ξ a +: var) (renameCom (lift ξ) m) = renameCom ξ (substCom (a +: var) m) := by
   calc substCom (renameVal ξ a +: var) (renameCom (lift ξ) m)
@@ -453,15 +530,13 @@ notation:40 Γ:41 "∋" x:41 "∶" A:41 => In x A Γ
 
 inductive Dtxt : Type where
   | nil : Dtxt
-  | cons : Dtxt → String → ValType → ComType → Dtxt
+  | cons : Dtxt → ValType → ComType → Dtxt
 notation:50 "⬝" => Dtxt.nil
-notation:50 Δ:51 "∷" j:51 "∶" A:51 "↗" B:51 => Dtxt.cons Δ j A B
+notation:50 Δ:51 "∷" A:51 "↗" B:51 => Dtxt.cons Δ A B
 
-@[simp]
-def Jn (j : String) (A : ValType) (B : ComType) : Dtxt → Prop
-  | .nil => False
-  | .cons Δ j' A' B' =>
-    if j == j' then A = A' ∧ B = B' else Jn j A B Δ
+inductive Jn : Nat → ValType → ComType → Dtxt → Prop where
+  | here {Δ A B} : Jn 0 A B (Δ ∷ A ↗ B)
+  | there {Δ j A A' B B'} : Jn j A B Δ → Jn (succ j) A B (Δ ∷ A' ↗ B')
 notation:40 Δ:41 "∋" j:41 "∶" A:41 "↗" B:41 => Jn j A B Δ
 
 /-*----------------------

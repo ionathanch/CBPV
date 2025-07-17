@@ -11,7 +11,7 @@ inductive F : Type where
   | letin : Com → F
   | fst : F
   | snd : F
-  | join : String → Com → F
+  | join : Com → F
 open F
 
 def K := List F
@@ -24,7 +24,7 @@ def renameK (ξ : Nat → Nat) : K → K
   | .letin m :: k => letin (renameCom (lift ξ) m) :: renameK ξ k
   | .fst :: k => fst :: renameK ξ k
   | .snd :: k => snd :: renameK ξ k
-  | .join j m :: k => join j (renameCom ξ m) :: renameK ξ k
+  | .join m :: k => join (renameCom ξ m) :: renameK ξ k
 
 @[simp]
 def dismantle (n : Com) : K → Com
@@ -33,33 +33,32 @@ def dismantle (n : Com) : K → Com
   | .letin m :: k => dismantle (letin n m) k
   | .fst :: k => dismantle (fst n) k
   | .snd :: k => dismantle (snd n) k
-  | .join j m :: k => dismantle (join j m n) k
+  | .join m :: k => dismantle (join m n) k
 
 section
 set_option hygiene false
 local infix:40 "⤳" => Step
 inductive Step : CK → CK → Prop where
   -- reduction steps
-  | β {m v k} :          ⟨lam m, app v :: k⟩         ⤳ ⟨m⦃v⦄, k⟩
-  | ζ {v m k} :          ⟨ret v, letin m :: k⟩       ⤳ ⟨m⦃v⦄, k⟩
-  | ιl {v m n k} :       ⟨case (inl v) m n, k⟩       ⤳ ⟨m⦃v⦄, k⟩
-  | ιr {v m n k} :       ⟨case (inr v) m n, k⟩       ⤳ ⟨n⦃v⦄, k⟩
-  | π {m k} :            ⟨force (thunk m), k⟩        ⤳ ⟨m, k⟩
-  | π1 {m n k} :         ⟨prod m n, fst :: k⟩        ⤳ ⟨m, k⟩
-  | π2 {m n k} :         ⟨prod m n, snd :: k⟩        ⤳ ⟨n, k⟩
-  | γ {j m v k} :        ⟨jump j v, join j m :: k⟩   ⤳ ⟨m⦃v⦄, k⟩
+  | β {m v k} :        ⟨lam m, app v :: k⟩           ⤳ ⟨m⦃v⦄, k⟩
+  | ζ {v m k} :        ⟨ret v, letin m :: k⟩         ⤳ ⟨m⦃v⦄, k⟩
+  | ιl {v m n k} :     ⟨case (inl v) m n, k⟩         ⤳ ⟨m⦃v⦄, k⟩
+  | ιr {v m n k} :     ⟨case (inr v) m n, k⟩         ⤳ ⟨n⦃v⦄, k⟩
+  | π {m k} :          ⟨force (thunk m), k⟩          ⤳ ⟨m, k⟩
+  | π1 {m n k} :       ⟨prod m n, fst :: k⟩          ⤳ ⟨m, k⟩
+  | π2 {m n k} :       ⟨prod m n, snd :: k⟩          ⤳ ⟨n, k⟩
+  | γ {m v k} :        ⟨jump 0 v, join m :: k⟩       ⤳ ⟨m⦃v⦄, k⟩
   -- congruence rules
-  | app {m v k} :        ⟨app m v, k⟩                ⤳ ⟨m, app v :: k⟩
-  | letin {m n k} :      ⟨letin m n, k⟩              ⤳ ⟨m, letin n :: k⟩
-  | fst {m k} :          ⟨fst m, k⟩                  ⤳ ⟨m, fst :: k⟩
-  | snd {m k} :          ⟨snd m, k⟩                  ⤳ ⟨m, snd :: k⟩
-  | join {j m n k} :     ⟨join j m n, k⟩             ⤳ ⟨n, join j m :: k⟩
+  | app {m v k} :      ⟨app m v, k⟩                  ⤳ ⟨m, app v :: k⟩
+  | letin {m n k} :    ⟨letin m n, k⟩                ⤳ ⟨m, letin n :: k⟩
+  | fst {m k} :        ⟨fst m, k⟩                    ⤳ ⟨m, fst :: k⟩
+  | snd {m k} :        ⟨snd m, k⟩                    ⤳ ⟨m, snd :: k⟩
+  | join {m n k} :     ⟨join m n, k⟩                 ⤳ ⟨n, join m :: k⟩
   -- drop joins
-  | ret {j m v k} :      ⟨ret v, join j m :: k⟩      ⤳ ⟨ret v, k⟩
-  | lam {j m n k} :      ⟨lam n, join j m :: k⟩      ⤳ ⟨lam n, k⟩
-  | prod {j m n₁ n₂ k} : ⟨prod n₁ n₂, join j m :: k⟩ ⤳ ⟨prod n₁ n₂, k⟩
-  | join't {j j' m v k} : j ≠ j' →
-                         ⟨jump j' v, join j m :: k⟩  ⤳ ⟨jump j' v, k⟩
+  | ret {m v k} :      ⟨ret v, join m :: k⟩          ⤳ ⟨ret v, k⟩
+  | lam {m n k} :      ⟨lam n, join m :: k⟩          ⤳ ⟨lam n, k⟩
+  | prod {m n₁ n₂ k} : ⟨prod n₁ n₂, join m :: k⟩     ⤳ ⟨prod n₁ n₂, k⟩
+  | join't {j m v k} : ⟨jump (j + 1) v, join m :: k⟩ ⤳ ⟨jump j v, k⟩
 end
 infix:40 "⤳" => Step
 
@@ -112,28 +111,28 @@ inductive BStep : Com → Com → Prop where
     m₂ ⇓ t →
     ---------
     snd n ⇓ t
-  | γ {j m n v t} :
-    n ⇓ jump j v →
+  | γ {m n v t} :
+    n ⇓ jump 0 v →
     m⦃v⦄ ⇓ t →
-    --------------
-    join j m n ⇓ t
+    ------------
+    join m n ⇓ t
   -- drop joins
-  | joinret {j m n v} :
+  | joinret {m n v} :
     n ⇓ ret v →
-    ------------------
-    join j m n ⇓ ret v
-  | joinlam {j m n n'} :
+    ----------------
+    join m n ⇓ ret v
+  | joinlam {m n n'} :
     n ⇓ lam n' →
-    -------------------
-    join j m n ⇓ lam n'
-  | joinprod {j m n n₁ n₂} :
+    -----------------
+    join m n ⇓ lam n'
+  | joinprod {m n n₁ n₂} :
     n ⇓ prod n₁ n₂ →
-    -----------------------
-    join j m n ⇓ prod n₁ n₂
-  | join't {j j' m n v} : j ≠ j' →
-    n ⇓ jump j' v →
-    ----------------------
-    join j m n ⇓ jump j' v
+    ---------------------
+    join m n ⇓ prod n₁ n₂
+  | join't {j m n v} :
+    n ⇓ jump (j + 1) v →
+    -------------------
+    join m n ⇓ jump j v
 end
 infix:40 "⇓" => BStep
 
@@ -152,8 +151,13 @@ theorem BStep.determinism {m t₁ t₂} (r₁ : m ⇓ t₁) (r₂ : m ⇓ t₂) 
   case γ.γ ih₁ ih₂ _ h₁ h₂ =>
     injection ih₁ h₁ with _ e; subst e; exact ih₂ h₂
   case γ.joinlam ih _ _ h | γ.joinret ih _ _ h | γ.joinprod ih _ _ _ h
-    | joinlam.γ ih _ h _ | joinret.γ ih _ h _ | joinprod.γ ih _ h _ => cases ih h
-  case γ.join't ih _ _ _ e h | join't.γ e _ ih _ h _ => cases ih h; contradiction
+    | joinlam.γ ih _ h _ | joinret.γ ih _ h _ | joinprod.γ ih _ h _
+    | γ.join't ih _ _ e h | join't.γ e _ ih _ h _
+    | joinret.join't ih _ _ h | join't.joinret ih _ h
+    | joinprod.join't ih _ _ h | join't.joinprod ih _ _ h
+    | joinlam.join't ih _ _ h | join't.joinlam ih _ h => cases ih h
+  case join't.join't ih _ _ h =>
+    injection ih h with ej ev; injection ej with ej; subst ej ev; rfl
   all_goals apply_rules
 
 theorem BStep.app {m n v t} (h : ∀ t, m ⇓ t → n ⇓ t) : app m v ⇓ t → app n v ⇓ t := by
@@ -176,14 +180,14 @@ theorem BStep.snd {m n t} (h : ∀ t, m ⇓ t → n ⇓ t) : snd m ⇓ t → snd
   induction r generalizing m <;> injection e
   case π2 h₁ h₂ _ _ e => subst e; exact π2 (h _ h₁) h₂
 
-theorem BStep.join {j m n₁ n₂ t} (h : ∀ t, n₁ ⇓ t → n₂ ⇓ t) : join j m n₁ ⇓ t → join j m n₂ ⇓ t := by
-  intro r; generalize e : Com.join j m n₁ = m' at r
+theorem BStep.join {m n₁ n₂ t} (h : ∀ t, n₁ ⇓ t → n₂ ⇓ t) : join m n₁ ⇓ t → join m n₂ ⇓ t := by
+  intro r; generalize e : Com.join m n₁ = m' at r
   induction r generalizing m <;> injection e
-  case γ h₁ h₂ _ _ ej em en => subst ej em en; exact γ (h _ h₁) h₂
-  case join't e h₁ _ ej em en => subst ej em en; exact join't e (h _ h₁)
-  case joinret h₁ _ ej em en => subst ej em en; exact joinret (h _ h₁)
-  case joinlam h₁ _ ej em en => subst ej em en; exact joinlam (h _ h₁)
-  case joinprod h₁ _ ej em en => subst ej em en; exact joinprod (h _ h₁)
+  case γ h₁ h₂ _ _ em en => subst em en; exact γ (h _ h₁) h₂
+  case join't h₁ _ em en => subst em en; exact join't (h _ h₁)
+  case joinret h₁ _ em en => subst em en; exact joinret (h _ h₁)
+  case joinlam h₁ _ em en => subst em en; exact joinlam (h _ h₁)
+  case joinprod h₁ _ em en => subst em en; exact joinprod (h _ h₁)
 
 end Big
 
@@ -214,7 +218,7 @@ inductive EqCom : Com → Com → Prop
   | prod {m₁ m₂ n₁ n₂ : Com} : m₁ ≡ n₁ → m₂ ≡ n₂ → prod m₁ m₂ ≡ prod n₁ n₂
   | fst {m n : Com} : m ≡ n → fst m ≡ fst n
   | snd {m n : Com} : m ≡ n → snd m ≡ snd n
-  | join {j} {m₁ m₂ n₁ n₂ : Com} : m₁ ≡ n₁ → m₂ ≡ n₂ → join j m₁ m₂ ≡ join j n₁ n₂
+  | join {m₁ m₂ n₁ n₂ : Com} : m₁ ≡ n₁ → m₂ ≡ n₂ → join m₁ m₂ ≡ join n₁ n₂
   | jump {j} {v w : Val} : v ≡ w → jump j v ≡ jump j w
   -- reduction rules
   | β {m v} : app (lam m) v ≡ m⦃v⦄
@@ -224,12 +228,12 @@ inductive EqCom : Com → Com → Prop
   | π {m} : force (thunk m) ≡ m
   | π1 {m₁ m₂} : fst (prod m₁ m₂) ≡ m₁
   | π2 {m₁ m₂} : snd (prod m₁ m₂) ≡ m₂
-  | γ {j m v} : join j m (jump j v) ≡ m⦃v⦄
+  | γ {m v} : join m (jump 0 v) ≡ m⦃v⦄
   -- drop joins
-  | joinret {j m v} : join j m (ret v) ≡ ret v
-  | joinlam {j m n} : join j m (lam n) ≡ lam n
-  | joinprod {j m n₁ n₂} : join j m (prod n₁ n₂) ≡ prod n₁ n₂
-  | join't {j j' m v} : j ≠ j' → join j m (jump j' v) ≡ jump j' v
+  | joinret {m v} : join m (ret v) ≡ ret v
+  | joinlam {m n} : join m (lam n) ≡ lam n
+  | joinprod {m n₁ n₂} : join m (prod n₁ n₂) ≡ prod n₁ n₂
+  | join't {j m v} : join m (jump (j + 1) v) ≡ jump j v
   -- partial equivalence
   | sym {m n : Com} : n ≡ m → m ≡ n
   | trans {m n p : Com} : m ≡ n → n ≡ p → m ≡ p
@@ -273,7 +277,6 @@ theorem stepEval {m n k₁ k₂} (r : ⟨m, k₁⟩ ⤳ ⟨n, k₂⟩) :
   all_goals injection e₂ with en ek₂; subst en ek₂
   case app | letin | fst | snd | join => right; rfl
   all_goals (try simp); left; apply evalCongK; constructor
-  case join't => assumption
 
 theorem stepEvals {m n k₁ k₂} (r : ⟨m, k₁⟩ ⤳⋆ ⟨n, k₂⟩) : dismantle m k₁ ⇒⋆ dismantle n k₂ := by
   generalize e₁ : (m, k₁) = ck₁ at r
@@ -310,7 +313,7 @@ theorem bigStep {m n t k₁ k₂} (r : ⟨m, k₁⟩ ⤳ ⟨n, k₂⟩) : disman
   case ret => exact .joinret .ret
   case lam => exact .joinlam .lam
   case prod => exact .joinprod .prod
-  case join't e => exact .join't e .jump
+  case join't => exact .join't .jump
 
 theorem bigSteps {m n t k₁ k₂} (r : ⟨m, k₁⟩ ⤳⋆ ⟨n, k₂⟩) : dismantle n k₂ ⇓ t → dismantle m k₁ ⇓ t := by
   generalize em : (m, k₁) = mk at r
@@ -354,16 +357,16 @@ theorem stepBig {m n k} (r : m ⇓ n) : ⟨m, k⟩ ⤳⋆ ⟨n, k⟩ := by
       _ ⤳⋆ ⟨prod m₁ m₂, .snd :: k⟩ := ih₁
       _ ⤳  ⟨m₂, k⟩                 := .π2
       _ ⤳⋆ ⟨t, k⟩                  := ih₂
-  case γ j m n v t _ _ ih₁ ih₂ =>
-    calc ⟨join j m n, k⟩
-      _ ⤳  ⟨n, .join j m :: k⟩        := .join
-      _ ⤳⋆ ⟨jump j v, .join j m :: k⟩ := ih₁
-      _ ⤳  ⟨m⦃v⦄, k⟩                  := .γ
-      _ ⤳⋆ ⟨t, k⟩                     := ih₂
+  case γ m n v t _ _ ih₁ ih₂ =>
+    calc ⟨join m n, k⟩
+      _ ⤳  ⟨n, .join m :: k⟩        := .join
+      _ ⤳⋆ ⟨jump 0 v, .join m :: k⟩ := ih₁
+      _ ⤳  ⟨m⦃v⦄, k⟩                := .γ
+      _ ⤳⋆ ⟨t, k⟩                   := ih₂
   case joinret ih => exact .trans' (.trans .join ih) (.once .ret)
   case joinlam ih => exact .trans' (.trans .join ih) (.once .lam)
   case joinprod ih => exact .trans' (.trans .join ih) (.once .prod)
-  case join't e _ ih =>  exact .trans' (.trans .join ih) (.once (.join't e))
+  case join't ih =>  exact .trans' (.trans .join ih) (.once .join't)
 
 /-* CK machine is complete wrt small-step evaluation via big-step *-/
 
@@ -387,11 +390,11 @@ theorem evalBig {m n t} (r : m ⇒ n) : n ⇓ t → m ⇓ t := by
     case joinret r => exact .joinret (ih r)
     case joinlam r => exact .joinlam (ih r)
     case joinprod r => exact .joinprod (ih r)
-    case join't e r => exact .join't e (ih r)
+    case join't r => exact .join't (ih r)
   case ret => cases r; exact .joinret .ret
   case lam => cases r; exact .joinlam .lam
   case prod => cases r; exact .joinprod .prod
-  case join't e => cases r; exact .join't e .jump
+  case join't => cases r; exact .join't .jump
 
 theorem evalBigs {m n t} (r : m ⇒⋆ n) : n ⇓ t → m ⇓ t := by
   induction r generalizing t <;> intro r
@@ -419,7 +422,6 @@ theorem stepEq {m n k₁ k₂} (r : ⟨m, k₁⟩ ⤳ ⟨n, k₂⟩) : dismantle
   cases r
   case app | letin | fst | snd | join => rfl
   all_goals (try simp); apply eqCongK; constructor
-  case join't => assumption
 
 theorem stepsEq {m n k₁ k₂} (r : ⟨m, k₁⟩ ⤳⋆ ⟨n, k₂⟩) : dismantle m k₁ ≡ dismantle n k₂ := by
   generalize e₁ : (m, k₁) = ck₁ at r
