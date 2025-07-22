@@ -162,34 +162,6 @@ def renameValComp ξ ζ v : renameVal ξ (renameVal ζ v) = renameVal (ξ ∘ ζ
 def renameComComp ξ ζ m : renameCom ξ (renameCom ζ m) = renameCom (ξ ∘ ζ) m :=
   (renameComp ξ ζ (ξ ∘ ζ) (λ _ ↦ rfl)).right m
 
-/-* Applying renamings for join points *-/
-
-@[simp]
-def renameJoin (ξ : Nat → Nat) : Com → Com
-  | force v => force v
-  | lam m => lam m
-  | app m v => app m v
-  | ret v => ret v
-  | letin m n => letin m (renameJoin ξ n)
-  | case v m n => case v (renameJoin ξ m) (renameJoin ξ n)
-  | prod m n => prod m n
-  | fst m => fst m
-  | snd m => snd m
-  | join m n => join (renameJoin ξ m) (renameJoin (lift ξ) n)
-  | jump j v => jump (ξ j) v
-
-def renameComJoin ξ ζ m : renameCom ξ (renameJoin ζ m) = renameJoin ζ (renameCom ξ m) := by
-  mutual_induction m generalizing ξ ζ
-  all_goals simp <;> (try constructor) <;> apply_assumption
-
-theorem renameJoinComp' ξ ζ ς (h : ∀ x, (ξ ∘ ζ) x = ς x) m : (renameJoin ξ ∘ renameJoin ζ) m = renameJoin ς m := by
-  mutual_induction m generalizing ξ ζ ς
-  all_goals simp; try repeat' constructor
-  all_goals try apply_rules [liftComp]
-
-theorem renameJoinComp ξ ζ m : (renameJoin ξ ∘ renameJoin ζ) m = renameJoin (ξ ∘ ζ) m :=
-  renameJoinComp' ξ ζ (ξ ∘ ζ) (λ _ ↦ rfl) m
-
 /-*----------------------
   Lifting substitutions
 ----------------------*-/
@@ -242,36 +214,6 @@ theorem upRename ξ σ τ (h : ∀ x, (renameVal ξ ∘ σ) x = τ x) : ∀ x, (
     _ = (renameVal succ ∘ renameVal ξ) (σ n) := by simp [renameValComp]
     _ = (renameVal succ (renameVal ξ (σ n))) := by rfl
     _ = renameVal succ (τ n)                 := by rw [← h]; rfl
-
-/-* Lifting substitutions for join points *-/
-
-def jup (σ : Nat → Com) : Nat → Com :=
-  jump 0 (var 0) +: (renameJoin succ ∘ σ)
-
-@[reducible] def jid : Nat → Com := λ n ↦ jump n (var 0)
-
-theorem jupId σ (h : ∀ j, σ j = jid j) : ∀ j, (jup σ) j = jid j := by
-  intro j; cases j <;> simp [h, jup]
-
-theorem jupExt σ τ (h : ∀ j, σ j = τ j) : ∀ j, (jup σ) j = (jup τ) j := by
-  intro j; cases j <;> simp [h, jup]
-
-theorem jupLift ξ σ τ (h : ∀ j, (σ ∘ ξ) j = τ j) : ∀ j, (jup σ ∘ lift ξ) j = (jup τ) j := by
-  intro j; cases j <;> simp [lift, jup, ← h]
-
-theorem jupRename ξ σ τ (h : ∀ x, (renameJoin ξ ∘ σ) x = τ x) : ∀ j, (renameJoin (lift ξ) ∘ jup σ) j = (jup τ) j := by
-  intro j; cases j; simp [lift, jup]
-  case succ j => calc
-    (renameJoin (lift ξ) ∘ renameJoin succ) (σ j)
-      = renameJoin (lift ξ ∘ succ) (σ j)       := by rw [renameJoinComp]
-    _ = (renameJoin (succ ∘ ξ)) (σ j)          := by rfl
-    _ = (renameJoin succ ∘ renameJoin ξ) (σ j) := by rw [renameJoinComp]
-    _ = (renameJoin succ (renameJoin ξ (σ j))) := by rfl
-    _ = renameJoin succ (τ j)                  := by rw [← h]; rfl
-
-theorem jupRenameCom ξ σ : ∀ j, (renameCom (lift ξ) ∘ jup σ) j = (jup (renameCom (lift ξ) ∘ σ)) j := by
-  intro j; cases j; simp [lift, jup]; simp [jup]
-  case succ j => apply renameComJoin
 
 /-*-----------------------
   Applying substitutions
@@ -388,82 +330,6 @@ theorem renameToSubst ξ :
 def renameToSubstVal ξ := (renameToSubst ξ).left
 def renameToSubstCom ξ := (renameToSubst ξ).right
 
-/-* Applying substitutions for join points *-/
-
-@[simp]
-def substJoin (σ : Nat → Com) : Com → Com
-  | force v => force v
-  | lam m => lam m
-  | app m v => app m v
-  | ret v => ret v
-  | letin m n => letin m (substJoin (renameCom (lift succ) ∘ σ) n)
-  | case v m n => case v (substJoin (renameCom (lift succ) ∘ σ) m) (substJoin (renameCom (lift succ) ∘ σ) n)
-  | prod m n => prod m n
-  | fst m => fst m
-  | snd m => snd m
-  | join m n => join (substJoin (renameCom (lift succ) ∘ σ) m) (substJoin (jup σ) n)
-  | jump j v => (σ j)⦃v⦄
-
-theorem substComJoin σ τ m : substCom σ (renameJoin τ m) = renameJoin τ (substCom σ m) := by
-  mutual_induction m generalizing σ τ
-  all_goals simp <;> (try constructor) <;> apply_assumption
-
-theorem renameJoinCong {ρ : Com → Com} {σ τ : Nat → Com} (h : ∀ j, σ j = τ j) : ∀ j, (ρ ∘ σ) j = (ρ ∘ τ) j := by
-  intro j; simp [h j]
-
-theorem substJoinExt σ τ (h : ∀ j, σ j = τ j) : ∀ m, substJoin σ m = substJoin τ m := by
-  intro m;
-  mutual_induction m generalizing σ τ
-  all_goals simp; try repeat' constructor
-  all_goals apply_rules [renameJoinCong, jupExt]
-
-theorem substJoinId {σ m} (h : ∀ j, σ j = jid j) : substJoin σ m = m := by
-  mutual_induction m generalizing σ
-  case jump j v => simp [h j]
-  all_goals simp
-  case letin ih =>
-    refine ih (λ j ↦ ?_); cases j <;> simp [h, lift]
-  case case ih₁ ih₂ =>
-    refine ⟨ih₁ (λ j ↦ ?_), ih₂ (λ j ↦ ?_)⟩
-    all_goals cases j <;> simp [h, lift]
-  case join ih₁ ih₂ =>
-    refine ⟨ih₁ (λ j ↦ ?_), ih₂ (λ j ↦ ?_)⟩
-    all_goals cases j <;> simp [h, lift, jup]
-
-theorem substJid {m} : substJoin jid m = m := substJoinId (λ _ ↦ rfl)
-
-theorem substRenameJoin' ξ σ τ (h : ∀ x, (σ ∘ ξ) x = τ x) m : substJoin σ (renameJoin ξ m) = substJoin τ m := by
-  mutual_induction m generalizing ξ σ τ
-  all_goals simp; try repeat' constructor
-  case letin ih | case.left ih _ | case.right ih | join.left ih _ =>
-    refine ih _ _ _ (λ n ↦ ?_); have e := h n; simp at *; rw [e]
-  all_goals apply_rules [h, jupLift]
-
-theorem substRenameJoin ξ σ m : substJoin σ (renameJoin ξ m) = substJoin (σ ∘ ξ) m :=
-  substRenameJoin' ξ σ (σ ∘ ξ) (λ _ ↦ rfl) m
-
-theorem renameSubstJoin' ξ σ τ (h : ∀ x, (renameJoin ξ ∘ σ) x = τ x) m : renameJoin ξ (substJoin σ m) = substJoin τ m := by
-  mutual_induction m generalizing ξ σ τ
-  all_goals simp; try repeat' constructor
-  case letin ih | case.left ih _ | case.right ih | join.left ih _ =>
-    refine ih _ _ _ (λ n ↦ ?_); have e := h n; simp at *; rw [← e, renameComJoin]
-  case join.right ih => apply_rules [jupRename]
-  case jump j v => rw [← h j, ← substComJoin]; rfl
-
-theorem renameSubstJoin ξ σ m : renameJoin ξ (substJoin σ m) = substJoin (renameJoin ξ ∘ σ) m :=
-  renameSubstJoin' ξ σ (renameJoin ξ ∘ σ) (λ _ ↦ rfl) m
-
-theorem jupSubst ρ σ τ (h : ∀ x, (substJoin ρ ∘ σ) x = τ x) :
-  ∀ j, (substJoin (jup ρ) ∘ (jup σ)) j = (jup τ) j := by
-  intro n; cases n; rfl
-  case succ n => calc
-    (substJoin (jup ρ) ∘ renameJoin succ) (σ n)
-    _ = substJoin (jup ρ ∘ succ) (σ n)        := by rw [← substRenameJoin]; rfl
-    _ = substJoin (renameJoin succ ∘ ρ) (σ n) := by rfl
-    _ = (renameJoin succ ∘ substJoin ρ) (σ n) := by rw [← renameSubstJoin]; rfl
-    _ = renameJoin succ (substJoin ρ (σ n))   := by rfl
-    _ = renameJoin succ (τ n)                 := by rw [← h]; rfl
-
 /-*-------------------------------------------------
   Handy dandy derived renaming substitution lemmas
 -------------------------------------------------*-/
@@ -565,62 +431,6 @@ theorem renameDropSubst σ m v : ((renameCom (lift succ) m)⦃⇑⇑ σ⦄⦃⇑
     _ = (m⦃⇑ σ⦄⦃var 0 +: var ∘ succ⦄)                   := by rw [substDrop₂]
     _ = (m⦃⇑ σ⦄⦃var⦄)                                   := by rw [substComExt]; intro n; cases n <;> rfl
     _ = (m⦃⇑ σ⦄)                                        := by rw [substComId]
-
-theorem renameComSubstJoin ξ σ m : renameCom ξ (substJoin σ m) = substJoin (renameCom (lift ξ) ∘ σ) (renameCom ξ m) := by
-  mutual_induction m generalizing ξ σ
-  all_goals simp <;> (try constructor) <;> try apply_assumption
-  case letin ih | case.left ih _ | case.right ih | join.left ih _ =>
-    rw [ih (lift ξ), substJoinExt _ _ (λ j ↦ ?_)]; simp
-    exact renameLiftLiftRename ξ (σ j)
-  case join.right ih =>
-    rw [ih ξ (jup σ), substJoinExt _ _ (λ j ↦ ?_)]; cases j
-    case zero => simp [lift, jup]
-    case succ j => exact renameComJoin (lift ξ) succ (σ j)
-  case jump j v =>
-    rw [substRenameCom, renameSubstCom]
-    apply substComExt; intro j; cases j; simp [lift]; simp [lift]
-
-theorem substJoinRenameCom σ m :
-  renameCom (lift succ) (substJoin (renameCom succ ∘ σ) m) =
-  substJoin (renameCom succ ∘ renameCom (lift succ) ∘ σ) (renameCom (lift succ) m) := by
-  calc renameCom (lift succ) (substJoin (renameCom succ ∘ σ) m)
-    _ = substJoin (renameCom (lift (lift succ)) ∘ (renameCom succ ∘ σ)) (renameCom (lift succ) m)
-      := by rw [renameComSubstJoin]
-    _ = substJoin (renameCom succ ∘ renameCom (lift succ) ∘ σ) (renameCom (lift succ) m)
-      := by rw [substJoinExt _ _ (λ j ↦ ?_)]; simp; rw [renameComComp, renameComComp]; rfl
-
-theorem substCompJoin' ρ σ τ (h : ∀ x, (substJoin (renameCom succ ∘ ρ) ∘ σ) x = τ x) m : (substJoin ρ ∘ substJoin σ) m = substJoin τ m := by
-  mutual_induction m generalizing ρ σ τ
-  all_goals simp; try repeat' constructor
-  case letin ih | case.left ih _ | case.right ih | join.left ih _ =>
-    apply ih; intro j; simp [← h j]; rw [← substJoinRenameCom ρ (σ j)]
-  case join.right ih =>
-    apply ih (jup ρ) (jup σ) (jup τ)
-    intro j; rw [← jupSubst (renameCom succ ∘ ρ) σ τ h]; simp
-    rw [substJoinExt _ _ (λ n ↦ ?_)]; sorry
-  case jump j v => rw [← h j]; simp; sorry
-
-/-
-(substJoin (m +: jid) ∘ substJoin (jup σ)) (jump 0 v)
-= substJoin (m +: jid) ((jump 0 (var 0))⦃v⦄)
-= substJoin (m +: jid) (jump 0 v)
-= m⦃v⦄
-
-substJoin (substJoin (m +: jid) ∘ jup σ) (jump 0 v)
-= ((substJoin (m +: jid) ∘ jup σ) 0)⦃v⦄
-= (substJoin (m +: jid) (jump 0 (var 0)))⦃v⦄
-= (m⦃var 0⦄)⦃v⦄
--/
-
-theorem substCompJoin σ τ m : (substJoin σ ∘ substJoin τ) m = substJoin (substJoin (renameCom succ ∘ σ) ∘ τ) m :=
-  substCompJoin' σ τ (substJoin (renameCom succ ∘ σ) ∘ τ) (λ _ ↦ rfl) m
-
--- substJoin (m +: jid) (substJoin (jup τ) n) = substJoin (m +: τ) n
-theorem substUnionJoin σ m n : substJoin (n +: jid) (substJoin (jup σ) m) = substJoin (n +: σ) m := by
-  calc substJoin (n +: jid) (substJoin (jup σ) m)
-    _ = (substJoin (n +: jid) ∘ substJoin (jup σ)) m := rfl
-    _ = substJoin (substJoin (renameCom succ ∘ (n +: jid)) ∘ (jup σ)) m := substCompJoin _ _ m
-    _ = substJoin (n +: σ) m := by sorry
 
 /-*------------------------
   Contexts and membership
