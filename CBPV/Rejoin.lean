@@ -62,15 +62,15 @@ theorem substJExt σ τ (h : ∀ x, σ x = τ x) js : substJ σ js = substJ τ j
 theorem substJDrop σ v js : substJ (v +: σ) (renameJ succ js) = substJ σ js := by
   rw [substRenameJ]; exact substJExt _ _ (λ _ ↦ rfl) js
 
-theorem Eval.rejoinCong {m n js} (r : m ⇒ n) : rejoin m js ⇒ rejoin n js := by
+theorem Eval.rejoin {m n js} (r : m ⇒ n) : rejoin m js ⇒ rejoin n js := by
   induction js generalizing m n
   case nil => exact r
   case cons ih => simp; exact ih (.join r)
 
-theorem Evals.rejoinCong {m n js} (r : m ⇒⋆ n) : rejoin m js ⇒⋆ rejoin n js := by
+theorem Evals.rejoin {m n js} (r : m ⇒⋆ n) : rejoin m js ⇒⋆ rejoin n js := by
   induction r
   case refl => rfl
-  case trans r _ rs => exact .trans (r.rejoinCong) rs
+  case trans r _ rs => exact .trans (r.rejoin) rs
 
 theorem nf.rejoinDrop {m js} : nf m → rejoin m js ⇒⋆ m := by
   intro nfm; mutual_induction m generalizing nfm js
@@ -78,4 +78,7 @@ theorem nf.rejoinDrop {m js} : nf m → rejoin m js ⇒⋆ m := by
   case lam | ret | prod =>
     induction js <;> simp [RTC.refl]
     case cons ih =>
-      refine .trans' (Evals.rejoinCong (.once ?_)) ih; constructor
+      refine .trans' (Evals.rejoin (.once ?_)) ih; constructor
+
+theorem Norm.rejoinDrop {m n js} : m ⇓ₙ n → rejoin m js ⇒⋆ n
+  | ⟨r, nfn⟩ => .trans' r.rejoin nfn.rejoinDrop

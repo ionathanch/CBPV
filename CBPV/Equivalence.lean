@@ -134,7 +134,7 @@ theorem trans𝒞ℰ {B} (𝒞trans : ∀ {m₁ m₂ m₃}, (m₁, m₂) ∈ ⟦
   let ⟨m, m', nm, nm', hB₁₂⟩ := h₁₂
   let ⟨n', n, nn', nn, hB₂₃⟩ := h₂₃
   rw [Norm.join nm' nn'] at hB₁₂
-  refine ⟨m, n, nm, nn, 𝒞trans hB₁₂ hB₂₃⟩
+  exact ⟨m, n, nm, nn, 𝒞trans hB₁₂ hB₂₃⟩
 
 theorem trans𝒱𝒞 :
   (∀ {v₁ v₂ v₃ A}, (v₁, v₂) ∈ ⟦A⟧ᵛ → (v₂, v₃) ∈ ⟦A⟧ᵛ → (v₁, v₃) ∈ ⟦A⟧ᵛ) ∧
