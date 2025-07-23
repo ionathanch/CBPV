@@ -58,6 +58,8 @@ theorem 𝒞.bwd {B m n} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᶜ) : m ∈ ⟦ B
   Semantic typing
 ----------------*-/
 
+/-* Semantic well-formedness of contexts *-/
+
 def semCtxt Γ (σ : Nat → Val) := ∀ {x A}, Γ ∋ x ∶ A → σ x ∈ ⟦ A ⟧ᵛ
 notation:40 Γ:41 "⊨" σ:41 => semCtxt Γ σ
 
@@ -65,6 +67,8 @@ theorem semCtxt.nil : ⬝ ⊨ var := by intro _ _ mem; cases mem
 theorem semCtxt.cons {Γ σ v A} (h : v ∈ ⟦ A ⟧ᵛ) (hσ : Γ ⊨ σ) : Γ ∷ A ⊨ v +: σ
   | _, _, .here => h
   | _, _, .there mem => hσ mem
+
+/-* Semantic well-formedness of join point contexts *-/
 
 section
 set_option hygiene false
@@ -86,7 +90,8 @@ theorem semDtxt.weaken {Γ Δ js A} (h : Γ ∣ Δ ⊨ js) : Γ ∷ A ∣ Δ ⊨
     rw [substRenameCom, substRenameJ, e]
     exact ih (λ mem ↦ hσ (.there mem)) hv
 
--- Semantic typing of values and computations
+/-* Semantic typing of values and computations *-/
+
 @[simp] def semVal (Γ : Ctxt) v A := ∀ σ, Γ ⊨ σ → v⦃σ⦄ ∈ ⟦ A ⟧ᵛ
 @[simp] def semCom (Γ : Ctxt) (Δ : Dtxt) m B := ∀ σ, Γ ⊨ σ → ∀ js, Γ ∣ Δ ⊨ js → rejoin (m⦃σ⦄) (substJ σ js) ∈ ⟦ B ⟧ᵉ
 notation:40 Γ:41 "⊨" v:41 "∶" A:41 => semVal Γ v A
