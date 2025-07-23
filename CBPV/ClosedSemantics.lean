@@ -61,8 +61,8 @@ theorem 𝒞bwd {B m n} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᶜ) : m ∈ ⟦ B 
 def semCtxt Γ (σ : Nat → Val) := ∀ {x A}, Γ ∋ x ∶ A → σ x ∈ ⟦ A ⟧ᵛ
 notation:40 Γ:41 "⊨" σ:41 => semCtxt Γ σ
 
-theorem semCtxtNil : ⬝ ⊨ var := by intro _ _ mem; cases mem
-theorem semCtxtCons {Γ σ v A} (h : v ∈ ⟦ A ⟧ᵛ) (hσ : Γ ⊨ σ) : Γ ∷ A ⊨ v +: σ
+theorem semCtxt.nil : ⬝ ⊨ var := by intro _ _ mem; cases mem
+theorem semCtxt.cons {Γ σ v A} (h : v ∈ ⟦ A ⟧ᵛ) (hσ : Γ ⊨ σ) : Γ ∷ A ⊨ v +: σ
   | _, _, .here => h
   | _, _, .there mem => hσ mem
 
@@ -73,11 +73,11 @@ inductive semDtxt (Γ : Ctxt) : Dtxt → J → Prop where
   | nil : Γ ∣ ⬝ ⊨ .nil
   | cons {Δ js m A B} : Γ ∣ Δ ⊨ js →
     (∀ {σ v}, Γ ⊨ σ → v ∈ ⟦ A ⟧ᵛ → (rejoin (m⦃v +: σ⦄) (substJ σ js)) ∈ ⟦ B ⟧ᵉ) →
-    Γ ∣ Δ ∷ A ↗ B ⊨ .cons js m
+    Γ ∣ Δ ∷ A ↗ B ⊨ .cons m js
 end
 notation:40 Γ:41 "∣" Δ:41 "⊨" js:41 => semDtxt Γ Δ js
 
-theorem semDtxtWeaken {Γ Δ js A} (h : Γ ∣ Δ ⊨ js) : Γ ∷ A ∣ Δ ⊨ renameJ succ js := by
+theorem semDtxt.weaken {Γ Δ js A} (h : Γ ∣ Δ ⊨ js) : Γ ∷ A ∣ Δ ⊨ renameJ succ js := by
   induction h <;> constructor; assumption
   case cons m _ _ _ ih _ =>
     intro σ v hσ hv
@@ -137,7 +137,7 @@ theorem soundness {Γ} :
   case lam ih =>
     refine 𝒞bwd (nf.rejoinDrop ⟨⟩) (𝒞.lam (λ v hv ↦ ?_))
     rw [← substUnion]
-    exact ih (v +: σ) (semCtxtCons hv hσ) .nil .nil
+    exact ih (v +: σ) (semCtxt.cons hv hσ) .nil .nil
   case app m v _ _ _ _ ihm ihv =>
     simp [ℰ, 𝒞] at ihm
     let ⟨_, ⟨rlam, _⟩, n, h, e⟩ := ihm σ hσ .nil .nil; subst e
@@ -152,22 +152,22 @@ theorem soundness {Γ} :
   case letin m n _ _ _ _ ihret ih =>
     simp [ℰ, 𝒞] at ihret ih
     let ⟨_, ⟨rret, _⟩, v, hv, e⟩ := ihret σ hσ .nil .nil; subst e
-    let ⟨nv, ⟨rlet, nflet⟩, h⟩ := ih (v +: σ) (semCtxtCons hv hσ) _ (semDtxtWeaken hjs)
+    let ⟨nv, ⟨rlet, nflet⟩, h⟩ := ih (v +: σ) (semCtxt.cons hv hσ) _ (.weaken hjs)
     rw [substUnion, substJDrop] at rlet
     refine 𝒞bwd ?_ h
     calc rejoin (letin (m⦃σ⦄) (n⦃⇑ σ⦄)) (substJ σ js)
-      _ ⇒⋆ rejoin (letin (ret v) (n⦃⇑ σ⦄)) (substJ σ js) := .rejoinCong (.let rret)
+      _ ⇒⋆ rejoin (letin (ret v) (n⦃⇑ σ⦄)) (substJ σ js) := .rejoinCong (.letin rret)
       _ ⇒  rejoin (n⦃⇑ σ⦄⦃v⦄) (substJ σ js)              := .rejoinCong .ζ
       _ ⇒⋆ nv                                            := rlet
   case case m n _ _ _ _ _ _ ihv ihm ihn =>
     simp [𝒱] at ihv
     match ihv σ hσ with
     | .inl ⟨v, hv, e⟩ =>
-      let hm := ihm (v +: σ) (semCtxtCons hv hσ) _ (semDtxtWeaken hjs)
+      let hm := ihm (v +: σ) (semCtxt.cons hv hσ) _ (.weaken hjs)
       simp [e]; rw [substUnion, substJDrop] at hm
       exact ℰbwd (.rejoinCong (.once .ιl)) hm
     | .inr ⟨v, hv, e⟩ =>
-      let hn := ihn (v +: σ) (semCtxtCons hv hσ) _ (semDtxtWeaken hjs)
+      let hn := ihn (v +: σ) (semCtxt.cons hv hσ) _ (.weaken hjs)
       simp [e]; rw [substUnion, substJDrop] at hn
       exact ℰbwd (.rejoinCong (.once .ιr)) hn
   case prod m n _ _ _ _ ihm ihn =>
@@ -200,9 +200,9 @@ theorem soundness {Γ} :
       _ ⇒⋆ n₂'                                     := nfn.rejoinDrop
   case join Γ Δ m n A B _ _ ihm ihn =>
     simp [ℰ] at ihn
-    let ⟨n', ⟨r, _⟩, hn⟩ := ihn σ hσ (.cons js m) (.cons hjs (λ {σ v} hσ hv ↦ ?hm))
+    let ⟨n', ⟨r, _⟩, hn⟩ := ihn σ hσ (.cons m js) (.cons hjs (λ {σ v} hσ hv ↦ ?hm))
     case hm =>
-      let hm := ihm (v +: σ) (semCtxtCons hv hσ) _ (semDtxtWeaken hjs)
+      let hm := ihm (v +: σ) (semCtxt.cons hv hσ) _ (.weaken hjs)
       rw [substRenameJ, substJExt ((v +: σ) ∘ succ) σ (λ _ ↦ rfl)] at hm; exact hm
     exact 𝒞bwd r hn
   case jump j v _ _ mem _ ihv => exact rejoinJump mem hjs hσ (ihv σ hσ)
@@ -212,7 +212,7 @@ theorem normal {m B} (nr : ∀ {n}, ¬ m ⇒ n) (h : ⬝ ∣ ⬝ ⊢ m ∶ B) : 
   let ⟨_, soundCom⟩ := soundness (Γ := ⬝)
   let mB := soundCom m B h
   simp [ℰ] at mB
-  let ⟨_, ⟨r, nfm⟩, _⟩ := mB var semCtxtNil .nil .nil
+  let ⟨_, ⟨r, nfm⟩, _⟩ := mB var semCtxt.nil .nil .nil
   rw [substComId] at r
   cases r with | refl => exact nfm | trans r _ => cases nr r
 
@@ -221,6 +221,6 @@ theorem normalization {m : Com} {B : ComType} (h : ⬝ ∣ ⬝ ⊢ m ∶ B) : SN
   let ⟨_, soundCom⟩ := soundness (Γ := ⬝)
   let mB := soundCom m B h
   simp [ℰ] at mB
-  let ⟨_, ⟨r, nfm⟩, _⟩ := mB var semCtxtNil .nil .nil
+  let ⟨_, ⟨r, nfm⟩, _⟩ := mB var semCtxt.nil .nil .nil
   rw [substComId] at r
   exact r.sn nfm

@@ -67,12 +67,12 @@ infix:40 "⤳⋆"  => Steps
 
 end CK
 
-namespace Big
+open CK
 
 section
 set_option hygiene false
-local infix:40 "⇓" => BStep
-inductive BStep : Com → Com → Prop where
+local infix:40 "⇓" => Big
+inductive Big : Com → Com → Prop where
   -- terminals
   | ret {v} : ret v ⇓ ret v
   | lam {m} : lam m ⇓ lam m
@@ -134,13 +134,15 @@ inductive BStep : Com → Com → Prop where
     -------------------
     join m n ⇓ jump j v
 end
-infix:40 "⇓" => BStep
+infix:40 "⇓" => Big
 
-theorem BStep.terminal {n} (nfn : nf n) : n ⇓ n := by
+namespace Big
+
+theorem terminal {n} (nfn : nf n) : n ⇓ n := by
   mutual_induction n generalizing nfn
   all_goals simp at nfn <;> constructor
 
-theorem BStep.determinism {m t₁ t₂} (r₁ : m ⇓ t₁) (r₂ : m ⇓ t₂) : t₁ = t₂ := by
+theorem determinism {m t₁ t₂} (r₁ : m ⇓ t₁) (r₂ : m ⇓ t₂) : t₁ = t₂ := by
   induction r₁ generalizing t₂ <;> cases r₂
   case β.β ih₁ ih₂ _ h₁ h₂
     | ζ.ζ ih₁ ih₂ _ h₁ h₂ =>
@@ -160,27 +162,27 @@ theorem BStep.determinism {m t₁ t₂} (r₁ : m ⇓ t₁) (r₂ : m ⇓ t₂) 
     injection ih h with ej ev; injection ej with ej; subst ej ev; rfl
   all_goals apply_rules
 
-theorem BStep.app {m n v t} (h : ∀ t, m ⇓ t → n ⇓ t) : app m v ⇓ t → app n v ⇓ t := by
+theorem app {m n v t} (h : ∀ t, m ⇓ t → n ⇓ t) : app m v ⇓ t → app n v ⇓ t := by
   intro r; generalize e : Com.app m v = mv at r
   induction r generalizing m n <;> injection e
   case β h₁ h₂ _ _ em ev => subst em ev; exact β (h _ h₁) h₂
 
-theorem BStep.letin {n₁ n₂ m t} (h : ∀ t, n₁ ⇓ t → n₂ ⇓ t) : letin n₁ m ⇓ t → letin n₂ m ⇓ t := by
+theorem letin {n₁ n₂ m t} (h : ∀ t, n₁ ⇓ t → n₂ ⇓ t) : letin n₁ m ⇓ t → letin n₂ m ⇓ t := by
   intro r; generalize e : Com.letin n₁ m = m' at r
   induction r generalizing m <;> injection e
   case ζ h₁ h₂ _ _ en em => subst en em; exact ζ (h _ h₁) h₂
 
-theorem BStep.fst {m n t} (h : ∀ t, m ⇓ t → n ⇓ t) : fst m ⇓ t → fst n ⇓ t := by
+theorem fst {m n t} (h : ∀ t, m ⇓ t → n ⇓ t) : fst m ⇓ t → fst n ⇓ t := by
   intro r; generalize e : Com.fst m = m' at r
   induction r generalizing m <;> injection e
   case π1 h₁ h₂ _ _ e => subst e; exact π1 (h _ h₁) h₂
 
-theorem BStep.snd {m n t} (h : ∀ t, m ⇓ t → n ⇓ t) : snd m ⇓ t → snd n ⇓ t := by
+theorem snd {m n t} (h : ∀ t, m ⇓ t → n ⇓ t) : snd m ⇓ t → snd n ⇓ t := by
   intro r; generalize e : Com.snd m = m' at r
   induction r generalizing m <;> injection e
   case π2 h₁ h₂ _ _ e => subst e; exact π2 (h _ h₁) h₂
 
-theorem BStep.join {m n₁ n₂ t} (h : ∀ t, n₁ ⇓ t → n₂ ⇓ t) : join m n₁ ⇓ t → join m n₂ ⇓ t := by
+theorem join {m n₁ n₂ t} (h : ∀ t, n₁ ⇓ t → n₂ ⇓ t) : join m n₁ ⇓ t → join m n₂ ⇓ t := by
   intro r; generalize e : Com.join m n₁ = m' at r
   induction r generalizing m <;> injection e
   case γ h₁ h₂ _ _ em en => subst em en; exact γ (h _ h₁) h₂
@@ -190,8 +192,6 @@ theorem BStep.join {m n₁ n₂ t} (h : ∀ t, n₁ ⇓ t → n₂ ⇓ t) : join
   case joinprod h₁ _ em en => subst em en; exact joinprod (h _ h₁)
 
 end Big
-
-namespace Eq
 
 section
 set_option hygiene false
@@ -255,10 +255,6 @@ theorem reflValCom :
 instance : Trans EqCom EqCom EqCom where
   trans := .trans
 
-end Eq
-
-open CK Big
-
 /-* CK machine semantics is sound wrt small-step evaluation semantics *-/
 
 theorem evalCongK {m n k} (r : m ⇒ n) : dismantle m k ⇒ dismantle n k := by
@@ -298,7 +294,7 @@ theorem bigCongK {m n t k} (h : ∀ t, n ⇓ t → m ⇓ t) : dismantle n k ⇓ 
   case nil => exact h _
   case cons f _ ih =>
     cases f <;> refine ih (λ t ↦ ?_)
-    all_goals apply_assumption [BStep.app h, BStep.letin h, BStep.fst h, BStep.snd h, BStep.join h]
+    all_goals apply_assumption [Big.app h, Big.letin h, Big.fst h, Big.snd h, Big.join h]
 
 theorem bigStep {m n t k₁ k₂} (r : ⟨m, k₁⟩ ⤳ ⟨n, k₂⟩) : dismantle n k₂ ⇓ t → dismantle m k₁ ⇓ t := by
   generalize em : (m, k₁) = mk at r

@@ -64,48 +64,52 @@ theorem evalDet {m n₁ n₂} (r₁ : m ⇒ n₁) (r₂ : m ⇒ n₂) : n₁ = n
 @[reducible] def Evals := RTC Eval
 infix:40 "⇒⋆" => Evals
 
-theorem Evals.app {m n v} (r : m ⇒⋆ n) : app m v ⇒⋆ app n v := by
+namespace Evals
+
+theorem app {m n v} (r : m ⇒⋆ n) : app m v ⇒⋆ app n v := by
   induction r
   case refl => exact .refl
   case trans r _ ih => exact .trans (.app r) ih
 
-theorem Evals.let {m m' n} (r : m ⇒⋆ m') : letin m n ⇒⋆ letin m' n := by
+theorem letin {m m' n} (r : m ⇒⋆ m') : letin m n ⇒⋆ letin m' n := by
   induction r
   case refl => exact .refl
   case trans r _ ih => exact .trans (.letin r) ih
 
-theorem Evals.fst {m m'} (r : m ⇒⋆ m') : fst m ⇒⋆ fst m' := by
+theorem fst {m m'} (r : m ⇒⋆ m') : fst m ⇒⋆ fst m' := by
   induction r
   case refl => exact .refl
   case trans r _ ih => exact .trans (.fst r) ih
 
-theorem Evals.snd {m m'} (r : m ⇒⋆ m') : snd m ⇒⋆ snd m' := by
+theorem snd {m m'} (r : m ⇒⋆ m') : snd m ⇒⋆ snd m' := by
   induction r
   case refl => exact .refl
   case trans r _ ih => exact .trans (.snd r) ih
 
-theorem Evals.join {m n n'} (r : n ⇒⋆ n') : join m n ⇒⋆ join m n' := by
+theorem join {m n n'} (r : n ⇒⋆ n') : join m n ⇒⋆ join m n' := by
   induction r
   case refl => exact .refl
   case trans r _ ih => exact .trans (.join r) ih
 
-theorem Evals.ret_inv {v m} (r : ret v ⇒⋆ m) : ret v = m := by
+theorem ret_inv {v m} (r : ret v ⇒⋆ m) : ret v = m := by
   generalize e : ret v = n at r
   induction r generalizing v <;> subst e
   case refl => rfl
   case trans r => cases r
 
-theorem Evals.lam_inv {m n} (r : lam m ⇒⋆ n) : lam m = n := by
+theorem lam_inv {m n} (r : lam m ⇒⋆ n) : lam m = n := by
   generalize e : lam m = m' at r
   induction r generalizing m <;> subst e
   case refl => rfl
   case trans r => cases r
 
-theorem Evals.prod_inv {m₁ m₂ n} (r : prod m₁ m₂ ⇒⋆ n) : prod m₁ m₂ = n := by
+theorem prod_inv {m₁ m₂ n} (r : prod m₁ m₂ ⇒⋆ n) : prod m₁ m₂ = n := by
   generalize e : prod m₁ m₂ = m at r
   induction r generalizing m₁ m₂ <;> subst e
   case refl => rfl
   case trans r => cases r
+
+end Evals
 
 -- Multi-step reduction is confluent trivially by determinism
 theorem confluence {m n₁ n₂} (r₁ : m ⇒⋆ n₁) (r₂ : m ⇒⋆ n₂) : ∃ m', n₁ ⇒⋆ m' ∧ n₂ ⇒⋆ m' := by
@@ -137,20 +141,24 @@ theorem nf.steps {m n} (nfm : nf m) (r : m ⇒⋆ n) : m = n := by
 def Norm (m n : Com) := m ⇒⋆ n ∧ nf n
 infix:40 "⇓ₙ" => Norm
 
-@[refl] theorem Norm.refl {m} (nfm : nf m) : m ⇓ₙ m := by exists .refl
+namespace Norm
 
-theorem Norm.bwd {m m' n} (r : m ⇒⋆ m') : m' ⇓ₙ n → m ⇓ₙ n
+@[refl] theorem refl {m} (nfm : nf m) : m ⇓ₙ m := by exists .refl
+
+theorem bwd {m m' n} (r : m ⇒⋆ m') : m' ⇓ₙ n → m ⇓ₙ n
   | ⟨rn, nfn⟩ => ⟨.trans' r rn, nfn⟩
 
-theorem Norm.join {m n₁ n₂} : m ⇓ₙ n₁ → m ⇓ₙ n₂ → n₁ = n₂
+theorem join {m n₁ n₂} : m ⇓ₙ n₁ → m ⇓ₙ n₂ → n₁ = n₂
   | ⟨rn₁, nfn₁⟩, ⟨rn₂, nfn₂⟩ =>
     let ⟨n', rn₁', rn₂'⟩ := confluence rn₁ rn₂
     by rw [nfn₁.steps rn₁', nfn₂.steps rn₂']
 
-theorem Norm.dropJoin {n n'} : n ⇓ₙ n' → ∀ m, .join m n ⇓ₙ n'
+theorem dropJoin {n n'} : n ⇓ₙ n' → ∀ m, .join m n ⇓ₙ n'
   | ⟨rn, nfn⟩, m => by
     cases n' <;> simp at nfn
     all_goals refine ⟨.trans' (Evals.join rn) (.once ?_), nfn⟩; constructor
+
+end Norm
 
 /-*---------------------
   Strong normalization
