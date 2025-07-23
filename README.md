@@ -77,7 +77,8 @@ Evaluation    Typing    NormalInd    Reduction
   │   ╽       ╽ │  │        ╽  ╰─────────│────╼ LeftmostOutermost
   │   CK ─╼ CBV │  │  OpenSemantics      │      Antisubstitution
   │         CBN │  │    │                │
-  ╽             ╽  ╽    ╽                ╽
+  ├─╼ Rejoin    │  │    │                │
+  ╽        ╽    ╽  ╽    ╽                ╽
   ClosedSemantics  Soundness         NormalAcc
   Equivalence ─╮          │           │
   Commutation ─┴─╼ ANF    ╽           ╽
