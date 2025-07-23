@@ -1,5 +1,5 @@
-import CBPV.Evaluation
 import CBPV.Typing
+import CBPV.Rejoin
 
 open Nat ValType ComType Val Com
 
@@ -202,11 +202,16 @@ def ℰ.trans {B} := @trans𝒞ℰ B 𝒞.trans
 
 theorem ℰ.bwds {m m' n n' B} (rm : m ⇒⋆ m') (rn : n ⇒⋆ n') (h : (m', n') ∈ ⟦B⟧ᵉ) : (m, n) ∈ ⟦B⟧ᵉ := by
   unfold ℰ at *
-  match h with
-  | ⟨m'', n'', nm', nn', h⟩ =>
-  exact ⟨m'', n'', nm'.bwd rm, nn'.bwd rn, h⟩
+  let ⟨m'', n'', nm', nn', h⟩ := h
+  exact ⟨m'', n'', nm'.bwds rm, nn'.bwds rn, h⟩
+
+theorem ℰ.bwdsRejoin {m m' n n' js B} (rm : m ⇒⋆ m') (rn : n ⇒⋆ n') (h : (m', n') ∈ ⟦B⟧ᵉ) : (rejoin m js, rejoin n js) ∈ ⟦B⟧ᵉ := by
+  unfold ℰ at *
+  let ⟨m'', n'', nm', nn', h⟩ := h
+  refine ⟨m'', n'', nm'.bwdsRejoin rm, nn'.bwdsRejoin rn, h⟩
 
 theorem ℰ.bwd {m m' n n' B} (rm : m ⇒ m') (rn : n ⇒ n') : (m', n') ∈ ⟦B⟧ᵉ → (m, n) ∈ ⟦B⟧ᵉ := ℰ.bwds (.once rm) (.once rn)
+theorem ℰ.bwdRejoin {m m' n n' js B} (rm : m ⇒ m') (rn : n ⇒ n') : (m', n') ∈ ⟦B⟧ᵉ → (rejoin m js, rejoin n js) ∈ ⟦B⟧ᵉ := ℰ.bwdsRejoin (.once rm) (.once rn)
 
 /-*---------------------
   Semantic equivalence

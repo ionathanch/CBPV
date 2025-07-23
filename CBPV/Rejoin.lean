@@ -80,5 +80,5 @@ theorem nf.rejoinDrop {m js} : nf m → rejoin m js ⇒⋆ m := by
     case cons ih =>
       refine .trans' (Evals.rejoin (.once ?_)) ih; constructor
 
-theorem Norm.rejoinDrop {m n js} : m ⇓ₙ n → rejoin m js ⇒⋆ n
-  | ⟨r, nfn⟩ => .trans' r.rejoin nfn.rejoinDrop
+theorem Norm.bwdsRejoin {m n n' js} (r : m ⇒⋆ n) : n ⇓ₙ n' → rejoin m js ⇓ₙ n'
+  | ⟨r', nfn⟩ => ⟨.trans' (Evals.rejoin (.trans' r r')) nfn.rejoinDrop, nfn⟩

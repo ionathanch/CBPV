@@ -145,7 +145,7 @@ namespace Norm
 
 @[refl] theorem refl {m} (nfm : nf m) : m ⇓ₙ m := by exists .refl
 
-theorem bwd {m m' n} (r : m ⇒⋆ m') : m' ⇓ₙ n → m ⇓ₙ n
+theorem bwds {m m' n} (r : m ⇒⋆ m') : m' ⇓ₙ n → m ⇓ₙ n
   | ⟨rn, nfn⟩ => ⟨.trans' r rn, nfn⟩
 
 theorem join {m n₁ n₂} : m ⇓ₙ n₁ → m ⇓ₙ n₂ → n₁ = n₂

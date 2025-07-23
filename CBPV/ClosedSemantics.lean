@@ -52,16 +52,16 @@ theorem ℰ.prod {m n B₁ B₂} (hm : m ∈ ⟦B₁⟧ᵉ) (hn : n ∈ ⟦B₂�
 
 theorem ℰ.bwds {B m n} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᵉ) : m ∈ ⟦ B ⟧ᵉ := by
   unfold ℰ at *
-  let ⟨n', ⟨r', nfn⟩, h⟩ := h
-  exact ⟨n', ⟨.trans' r r', nfn⟩, h⟩
+  let ⟨n', nn', h⟩ := h
+  exact ⟨n', nn'.bwds r, h⟩
 
 theorem ℰ.bwdsRejoin {B m n js} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᵉ) : rejoin m js ∈ ⟦ B ⟧ᵉ := by
   unfold ℰ at *
-  let ⟨n', nfn, h⟩ := h
-  exact ⟨n', ⟨.trans' r.rejoin nfn.rejoinDrop, nfn.2⟩, h⟩
+  let ⟨n', nn', h⟩ := h
+  exact ⟨n', nn'.bwdsRejoin r, h⟩
 
-theorem ℰ.bwd {B m n} (r : m ⇒ n) (h : n ∈ ⟦ B ⟧ᵉ) : m ∈ ⟦ B ⟧ᵉ := ℰ.bwds (.once r) h
-theorem ℰ.bwdRejoin {B m n js} (r : m ⇒ n) (h : n ∈ ⟦ B ⟧ᵉ) : rejoin m js ∈ ⟦ B ⟧ᵉ := ℰ.bwdsRejoin (.once r) h
+theorem ℰ.bwd {B m n} (r : m ⇒ n) : n ∈ ⟦ B ⟧ᵉ → m ∈ ⟦ B ⟧ᵉ := ℰ.bwds (.once r)
+theorem ℰ.bwdRejoin {B m n js} (r : m ⇒ n) : n ∈ ⟦ B ⟧ᵉ → rejoin m js ∈ ⟦ B ⟧ᵉ := ℰ.bwdsRejoin (.once r)
 
 /-*----------------
   Semantic typing
