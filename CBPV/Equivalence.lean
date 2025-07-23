@@ -32,6 +32,16 @@ notation:40 "(" v:41 "," w:41 ")" "∈" "⟦" A:41 "⟧ᵛ" => 𝒱 A v w
 notation:40 "(" m:41 "," n:41 ")" "∈" "⟦" B:41 "⟧ᶜ" => 𝒞 B m n
 notation:40 "(" m:41 "," n:41 ")" "∈" "⟦" B:41 "⟧ᵉ" => ℰ B m n
 
+/-* LE computations are normal and embed into LE evaluations *-/
+
+theorem 𝒞.nf {m n B} (h : (m, n) ∈ ⟦B⟧ᶜ) : nf m ∧ nf n := by
+  match (generalizing := true) B with
+  | F _ | Arr _ _ => unfold 𝒞 at h; let ⟨_, _, _, e₁, e₂⟩ := h; simp [e₁, e₂]
+  | .Prod _ _ => unfold 𝒞 at h; let ⟨_, _, _, _, _, _, e₁, e₂⟩ := h; simp [e₁, e₂]
+
+theorem 𝒞ℰ {m n A} (h : 𝒞 A m n) : ℰ A m n := by
+  unfold ℰ; let ⟨nfm, nfn⟩ := h.nf; exact ⟨m, n, .refl nfm, .refl nfn, h⟩
+
 /-*-------------------------------
   Convenient constructors for LE
 -------------------------------*-/
@@ -39,19 +49,18 @@ notation:40 "(" m:41 "," n:41 ")" "∈" "⟦" B:41 "⟧ᵉ" => ℰ B m n
 theorem 𝒱.unit : 𝒱 Unit unit unit := by simp [𝒱]
 theorem 𝒱.inl {v w A₁ A₂} (h : (v, w) ∈ ⟦A₁⟧ᵛ) : (inl v, inl w) ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [𝒱, h]
 theorem 𝒱.inr {v w A₁ A₂} (h : (v, w) ∈ ⟦A₂⟧ᵛ) : (inr v, inr w) ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [𝒱, h]
-theorem 𝒱.thunk {m n B} (h : (m, n) ∈ ⟦B⟧ᵉ) : (thunk m, thunk n) ∈ ⟦U B⟧ᵛ := by
-  unfold 𝒱; exact ⟨_, _, h, rfl, rfl⟩
+theorem 𝒱.thunk {m n B} (h : (m, n) ∈ ⟦B⟧ᵉ) : (thunk m, thunk n) ∈ ⟦U B⟧ᵛ := by simp [𝒱, h]
 
 namespace ℰ
 
 theorem ret {v w A} (h : (v, w) ∈ ⟦A⟧ᵛ) : (ret v, ret w) ∈ ⟦F A⟧ᵉ := by
-  unfold ℰ 𝒞; exact ⟨_, _, .refl ⟨⟩, .refl ⟨⟩, _, _, h, rfl, rfl⟩
+  apply 𝒞ℰ; simp [ℰ, 𝒞, h]
 
-theorem lam {m n A B} (hB : ∀ v w, (v, w) ∈ ⟦A⟧ᵛ → (m⦃v⦄, n⦃w⦄) ∈ ⟦B⟧ᵉ) : (lam m, lam n) ∈ ⟦Arr A B⟧ᵉ := by
-  unfold ℰ 𝒞; exact ⟨_, _, .refl ⟨⟩, .refl ⟨⟩, _, _, λ _ _ hA ↦ hB _ _ hA, rfl, rfl⟩
+theorem lam {m n A B} (h : ∀ v w, (v, w) ∈ ⟦A⟧ᵛ → (m⦃v⦄, n⦃w⦄) ∈ ⟦B⟧ᵉ) : (lam m, lam n) ∈ ⟦Arr A B⟧ᵉ := by
+  apply 𝒞ℰ; simp [ℰ, 𝒞] at *; exact h
 
 theorem prod {m₁ m₂ n₁ n₂ B₁ B₂} (hB₁ : (m₁, n₁) ∈ ⟦B₁⟧ᵉ) (hB₂ : (m₂, n₂) ∈ ⟦B₂⟧ᵉ) : (prod m₁ m₂, prod n₁ n₂) ∈ ⟦Prod B₁ B₂⟧ᵉ:= by
-  unfold ℰ 𝒞; exact ⟨_, _, .refl ⟨⟩, .refl ⟨⟩, _, _, _, _, hB₁, hB₂, rfl, rfl⟩
+  apply 𝒞ℰ; unfold 𝒞; exact ⟨_, _, _, _, hB₁, hB₂, rfl, rfl⟩
 
 /-*-----------------------
   Inversion lemmas on LE
@@ -62,7 +71,7 @@ theorem ret_inv {m n A} (h : (m, n) ∈ ⟦F A⟧ᵉ) : ∃ v w, m ⇒⋆ .ret v
   let ⟨_, _, ⟨r₁, _⟩, ⟨r₂, _⟩, _, _, h, e₁, e₂⟩ := h
   subst e₁ e₂; exact ⟨_, _, r₁, r₂, h⟩
 
-theorem lam_inv {m₁ m₂ A B} (h : (m₁, m₂) ∈ ⟦Arr A B⟧ᵉ) : ∃ n₁ n₂, m₁ ⇒⋆ .lam n₁ ∧ m₂ ⇒⋆ .lam n₂ ∧ (∀ v w, 𝒱 A v w → ℰ B (n₁⦃v⦄) (n₂⦃w⦄)) := by
+theorem lam_inv {m₁ m₂ A B} (h : (m₁, m₂) ∈ ⟦Arr A B⟧ᵉ) : ∃ n₁ n₂, m₁ ⇒⋆ .lam n₁ ∧ m₂ ⇒⋆ .lam n₂ ∧ (∀ v w, (v, w) ∈ ⟦A⟧ᵛ → (n₁⦃v⦄, n₂⦃w⦄) ∈ ⟦B⟧ᵉ) := by
   unfold ℰ 𝒞 at h
   let ⟨_, _, ⟨r₁, _⟩, ⟨r₂, _⟩, _, _, h, e₁, e₂⟩ := h
   subst e₁ e₂; exact ⟨_, _, r₁, r₂, h⟩
@@ -187,13 +196,9 @@ def 𝒱.trans := @trans𝒱𝒞.left
 def 𝒞.trans := @trans𝒱𝒞.right
 def ℰ.trans {B} := @trans𝒞ℰ B 𝒞.trans
 
-/-*-------------------------------
-  Other properties of LE:
-  * LE evals are backward closed
-  * Reductions are LE evals
-  * LE comps are normal
-  * LE comps embed into evals
--------------------------------*-/
+/-*-----------------------------
+  LE evals are backward closed
+-----------------------------*-/
 
 theorem ℰ.bwds {m m' n n' B} (rm : m ⇒⋆ m') (rn : n ⇒⋆ n') (h : (m', n') ∈ ⟦B⟧ᵉ) : (m, n) ∈ ⟦B⟧ᵉ := by
   unfold ℰ at *
@@ -202,16 +207,6 @@ theorem ℰ.bwds {m m' n n' B} (rm : m ⇒⋆ m') (rn : n ⇒⋆ n') (h : (m', n
   exact ⟨m'', n'', nm'.bwd rm, nn'.bwd rn, h⟩
 
 theorem ℰ.bwd {m m' n n' B} (rm : m ⇒ m') (rn : n ⇒ n') : (m', n') ∈ ⟦B⟧ᵉ → (m, n) ∈ ⟦B⟧ᵉ := ℰ.bwds (.once rm) (.once rn)
-
-theorem ℰ.red {m n B} (r : m ⇒⋆ n) (h : (n, n) ∈ ⟦B⟧ᵉ) : (m, n) ∈ ⟦B⟧ᵉ := ℰ.bwds r .refl h
-
-theorem 𝒞.nf {m n B} (h : (m, n) ∈ ⟦B⟧ᶜ) : nf m ∧ nf n := by
-  match (generalizing := true) B with
-  | F _ | Arr _ _ => unfold 𝒞 at h; let ⟨_, _, _, e₁, e₂⟩ := h; simp [e₁, e₂]
-  | .Prod _ _ => unfold 𝒞 at h; let ⟨_, _, _, _, _, _, e₁, e₂⟩ := h; simp [e₁, e₂]
-
-theorem 𝒞ℰ {m n A} (h : 𝒞 A m n) : ℰ A m n := by
-  unfold ℰ; let ⟨nfm, nfn⟩ := h.nf; exact ⟨m, n, .refl nfm, .refl nfn, h⟩
 
 /-*---------------------
   Semantic equivalence

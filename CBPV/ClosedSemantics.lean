@@ -41,24 +41,27 @@ theorem 𝒞ℰ {B m} (h : m ∈ ⟦ B ⟧ᶜ) : m ∈ ⟦ B ⟧ᵉ :=
 /-* Convenient constructors for the logical relation *-/
 
 theorem 𝒱.unit : 𝒱 Unit unit := by simp [𝒱]
-theorem 𝒱.inl {v A₁ A₂} (h : v ∈ ⟦A₁⟧ᵛ) : inl v ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [𝒱]; assumption
-theorem 𝒱.inr {v A₁ A₂} (h : v ∈ ⟦A₂⟧ᵛ) : inr v ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [𝒱]; assumption
-theorem 𝒱.thunk {m B} (h : m ∈ ⟦B⟧ᵉ) : thunk m ∈ ⟦U B⟧ᵛ := by simp [𝒱]; assumption
-theorem ℰ.ret {v A} (h : v ∈ ⟦A⟧ᵛ) : ret v ∈ ⟦F A⟧ᵉ := by apply 𝒞ℰ; simp [𝒞]; assumption
-theorem ℰ.lam {n A B} (h : ∀ v, v ∈ ⟦A⟧ᵛ → n⦃v⦄ ∈ ⟦B⟧ᵉ) : lam n ∈ ⟦Arr A B⟧ᵉ := by apply 𝒞ℰ; simp [𝒞]; assumption
-theorem ℰ.prod {m n B₁ B₂} (hm : m ∈ ⟦B₁⟧ᵉ) (hn : n ∈ ⟦B₂⟧ᵉ) : prod m n ∈ ⟦Prod B₁ B₂⟧ᵉ := by apply 𝒞ℰ; simp [𝒞]; constructor <;> assumption
+theorem 𝒱.inl {v A₁ A₂} (h : v ∈ ⟦A₁⟧ᵛ) : inl v ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [𝒱, h]
+theorem 𝒱.inr {v A₁ A₂} (h : v ∈ ⟦A₂⟧ᵛ) : inr v ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [𝒱, h]
+theorem 𝒱.thunk {m B} (h : m ∈ ⟦B⟧ᵉ) : thunk m ∈ ⟦U B⟧ᵛ := by simp [𝒱, h]
+theorem ℰ.ret {v A} (h : v ∈ ⟦A⟧ᵛ) : ret v ∈ ⟦F A⟧ᵉ := by apply 𝒞ℰ; simp [𝒞, h]
+theorem ℰ.lam {n A B} (h : ∀ v, v ∈ ⟦A⟧ᵛ → n⦃v⦄ ∈ ⟦B⟧ᵉ) : lam n ∈ ⟦Arr A B⟧ᵉ := by apply 𝒞ℰ; simp [𝒞]; exact h
+theorem ℰ.prod {m n B₁ B₂} (hm : m ∈ ⟦B₁⟧ᵉ) (hn : n ∈ ⟦B₂⟧ᵉ) : prod m n ∈ ⟦Prod B₁ B₂⟧ᵉ := by apply 𝒞ℰ; simp [𝒞]; exact ⟨hm, hn⟩
 
 /-* Semantic evaluations are backward closed under reduction *-/
 
-theorem ℰ.bwd {B m n} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᵉ) : m ∈ ⟦ B ⟧ᵉ := by
+theorem ℰ.bwds {B m n} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᵉ) : m ∈ ⟦ B ⟧ᵉ := by
   unfold ℰ at *
   let ⟨n', ⟨r', nfn⟩, h⟩ := h
-  refine ⟨n', ⟨.trans' r r', nfn⟩, h⟩
+  exact ⟨n', ⟨.trans' r r', nfn⟩, h⟩
 
-theorem ℰ.bwdRejoin {B m n js} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᵉ) : rejoin m js ∈ ⟦ B ⟧ᵉ := by
+theorem ℰ.bwdsRejoin {B m n js} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᵉ) : rejoin m js ∈ ⟦ B ⟧ᵉ := by
   unfold ℰ at *
   let ⟨n', nfn, h⟩ := h
-  refine ⟨n', ⟨.trans' r.rejoin nfn.rejoinDrop, nfn.2⟩, h⟩
+  exact ⟨n', ⟨.trans' r.rejoin nfn.rejoinDrop, nfn.2⟩, h⟩
+
+theorem ℰ.bwd {B m n} (r : m ⇒ n) (h : n ∈ ⟦ B ⟧ᵉ) : m ∈ ⟦ B ⟧ᵉ := ℰ.bwds (.once r) h
+theorem ℰ.bwdRejoin {B m n js} (r : m ⇒ n) (h : n ∈ ⟦ B ⟧ᵉ) : rejoin m js ∈ ⟦ B ⟧ᵉ := ℰ.bwdsRejoin (.once r) h
 
 /-*----------------
   Semantic typing
@@ -116,11 +119,11 @@ theorem rejoinJump {Γ Δ js j A B} (mem : Δ ∋ j ∶ A ↗ B) (h : Γ ∣ Δ 
     cases mem
     case here =>
       intro σ v hσ hv; simp
-      refine .bwd (.rejoin (.once ?_)) (h hσ hv)
+      refine .bwd (.rejoin ?_) (h hσ hv)
       rw [substUnion]; exact .γ
     case there ih _ mem =>
       intro σ v hσ hv; simp
-      refine .bwd (.rejoin (.once .join't)) (ih mem hσ hv)
+      refine .bwd (.rejoin .join't) (ih mem hσ hv)
 
 theorem soundness {Γ} :
   (∀ (v : Val) A, Γ ⊢ v ∶ A → Γ ⊨ v ∶ A) ∧
@@ -138,43 +141,43 @@ theorem soundness {Γ} :
     simp [𝒱] at ih
     let ⟨m, h, e⟩ := ih σ hσ
     simp; rw [e]
-    exact ℰ.bwdRejoin (.once .π) h
+    exact ℰ.bwdRejoin .π h
   case lam ih =>
-    refine ℰ.bwdRejoin .refl (ℰ.lam (λ v hv ↦ ?_))
+    refine ℰ.bwdsRejoin .refl (ℰ.lam (λ v hv ↦ ?_))
     rw [← substUnion]
     exact ih (v +: σ) (semCtxt.cons hv hσ) .nil .nil
   case app ihm ihv =>
     simp [ℰ] at ihm; simp [𝒞] at ihm
     let ⟨_, ⟨rlam, _⟩, n, h, e⟩ := ihm σ hσ .nil .nil; subst e
-    exact ℰ.bwdRejoin (.trans' (Evals.app rlam) (.once .β)) (h _ (ihv σ hσ))
-  case ret ih => exact ℰ.bwdRejoin .refl (ℰ.ret (ih σ hσ))
+    exact ℰ.bwdsRejoin (.trans' (Evals.app rlam) (.once .β)) (h _ (ihv σ hσ))
+  case ret ih => exact ℰ.bwdsRejoin .refl (ℰ.ret (ih σ hσ))
   case letin ihret ih =>
     simp [ℰ, 𝒞] at ihret
     let ⟨_, ⟨rret, _⟩, v, hv, e⟩ := ihret σ hσ .nil .nil; subst e
     let h := ih (v +: σ) (semCtxt.cons hv hσ) _ (.weaken hjs)
     rw [substUnion, substJDrop] at h
-    exact ℰ.bwd (Evals.rejoin (.trans' (Evals.letin rret) (.once .ζ))) h
+    exact ℰ.bwds (Evals.rejoin (.trans' (Evals.letin rret) (.once .ζ))) h
   case case ihv ihm ihn =>
     simp [𝒱] at ihv
     match ihv σ hσ with
     | .inl ⟨v, hv, e⟩ =>
       let hm := ihm (v +: σ) (semCtxt.cons hv hσ) _ (.weaken hjs)
       simp [e]; rw [substUnion, substJDrop] at hm
-      exact ℰ.bwd (.rejoin (.once .ιl)) hm
+      exact ℰ.bwd (.rejoin .ιl) hm
     | .inr ⟨v, hv, e⟩ =>
       let hn := ihn (v +: σ) (semCtxt.cons hv hσ) _ (.weaken hjs)
       simp [e]; rw [substUnion, substJDrop] at hn
-      exact ℰ.bwd (.rejoin (.once .ιr)) hn
+      exact ℰ.bwd (.rejoin .ιr) hn
   case prod ihm ihn =>
-    exact ℰ.bwdRejoin .refl (ℰ.prod (ihm σ hσ .nil .nil) (ihn σ hσ .nil .nil))
+    exact ℰ.bwdsRejoin .refl (ℰ.prod (ihm σ hσ .nil .nil) (ihn σ hσ .nil .nil))
   case fst ih =>
     simp [ℰ] at ih; unfold 𝒞 at ih
     let ⟨_, ⟨rprod, _⟩, n₁, n₂, hm, _, e⟩ := ih σ hσ .nil .nil; subst e
-    exact ℰ.bwdRejoin (.trans' (Evals.fst rprod) (.once .π1)) hm
+    exact ℰ.bwdsRejoin (.trans' (Evals.fst rprod) (.once .π1)) hm
   case snd ih =>
     simp [ℰ] at ih; unfold 𝒞 at ih
     let ⟨_, ⟨rprod, nfprod⟩, n₁, n₂, _, hn, e⟩ := ih σ hσ .nil .nil; subst e
-    exact ℰ.bwdRejoin (.trans' (Evals.snd rprod) (.once .π2)) hn
+    exact ℰ.bwdsRejoin (.trans' (Evals.snd rprod) (.once .π2)) hn
   case join m _ _ _ _ _ ihm ihn =>
     let hn := ihn σ hσ (.cons m js) (.cons hjs (λ {σ v} hσ hv ↦ ?hm))
     case hm =>
