@@ -36,7 +36,7 @@ theorem 𝒞.lam {n A B} (h : ∀ v, 𝒱 A v → ℰ B (n⦃v⦄)) : 𝒞 (Arr 
 theorem 𝒞.prod {m n B₁ B₂} (hm : ℰ B₁ m) (hn : ℰ B₂ n) : 𝒞 (Prod B₁ B₂) (prod m n) := by simp [𝒞]; constructor <;> assumption
 
 -- Semantic computations are normal
-theorem 𝒞nf {B m} (h : m ∈ ⟦ B ⟧ᶜ) : nf m :=
+theorem 𝒞.nf {B m} (h : m ∈ ⟦ B ⟧ᶜ) : nf m :=
   match (generalizing := true) B with
   | F _ | Arr _ _ =>
     by unfold 𝒞 at h; let ⟨_, _, e⟩ := h; subst e; exact ⟨⟩
@@ -45,14 +45,14 @@ theorem 𝒞nf {B m} (h : m ∈ ⟦ B ⟧ᶜ) : nf m :=
 
 -- Semantic computations embed into semantic evaluations
 theorem 𝒞ℰ {B m} (h : m ∈ ⟦ B ⟧ᶜ) : m ∈ ⟦ B ⟧ᵉ :=
-  by unfold ℰ; exact ⟨m, ⟨.refl, 𝒞nf h⟩, h⟩
+  by unfold ℰ; exact ⟨m, ⟨.refl, 𝒞.nf h⟩, h⟩
 
 -- Semantic evaluations are backward closed under reduction
-theorem ℰbwd {B m n} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᵉ) : m ∈ ⟦ B ⟧ᵉ := by
+theorem ℰ.bwd {B m n} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᵉ) : m ∈ ⟦ B ⟧ᵉ := by
   unfold ℰ at *
   let ⟨n', ⟨r', nfn⟩, h⟩ := h
   refine ⟨n', ⟨.trans' r r', nfn⟩, h⟩
-theorem 𝒞bwd {B m n} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᶜ) : m ∈ ⟦ B ⟧ᵉ := ℰbwd r (𝒞ℰ h)
+theorem 𝒞.bwd {B m n} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᶜ) : m ∈ ⟦ B ⟧ᵉ := ℰ.bwd r (𝒞ℰ h)
 
 /-*----------------
   Semantic typing
@@ -105,11 +105,11 @@ theorem rejoinJump {Γ Δ js j A B} (mem : Δ ∋ j ∶ A ↗ B) (h : Γ ∣ Δ 
     cases mem
     case here =>
       intro σ v hσ hv; simp
-      refine ℰbwd (.rejoinCong (.once ?_)) (h hσ hv)
+      refine .bwd (.rejoinCong (.once ?_)) (h hσ hv)
       rw [substUnion]; exact .γ
     case there ih _ mem =>
       intro σ v hσ hv; simp
-      refine ℰbwd (.rejoinCong (.once .join't)) (ih mem hσ hv)
+      refine .bwd (.rejoinCong (.once .join't)) (ih mem hσ hv)
 
 theorem soundness {Γ} :
   (∀ (v : Val) A, Γ ⊢ v ∶ A → Γ ⊨ v ∶ A) ∧
@@ -129,32 +129,32 @@ theorem soundness {Γ} :
     simp [𝒱, ℰ] at ih
     let ⟨m, ⟨n, ⟨r, nfn⟩, h⟩, e⟩ := ih σ hσ
     simp; rw [e]
-    refine 𝒞bwd ?_ h
+    refine 𝒞.bwd ?_ h
     calc rejoin (force (thunk m)) (substJ σ js)
       _ ⇒  rejoin m (substJ σ js) := .rejoinCong .π
       _ ⇒⋆ rejoin n (substJ σ js) := .rejoinCong r
       _ ⇒⋆ n                     := nfn.rejoinDrop
   case lam ih =>
-    refine 𝒞bwd (nf.rejoinDrop ⟨⟩) (𝒞.lam (λ v hv ↦ ?_))
+    refine 𝒞.bwd (nf.rejoinDrop ⟨⟩) (𝒞.lam (λ v hv ↦ ?_))
     rw [← substUnion]
     exact ih (v +: σ) (semCtxt.cons hv hσ) .nil .nil
   case app m v _ _ _ _ ihm ihv =>
     simp [ℰ, 𝒞] at ihm
     let ⟨_, ⟨rlam, _⟩, n, h, e⟩ := ihm σ hσ .nil .nil; subst e
     let ⟨nv, ⟨rval, nfnv⟩, h⟩ := h _ (ihv σ hσ)
-    refine 𝒞bwd ?_ h
+    refine 𝒞.bwd ?_ h
     calc rejoin (app (m⦃σ⦄) (v⦃σ⦄)) (substJ σ js)
       _ ⇒⋆ rejoin (app (lam n) (v⦃σ⦄)) (substJ σ js) := .rejoinCong (.app rlam)
       _ ⇒  rejoin (n⦃v⦃σ⦄⦄) (substJ σ js)            := .rejoinCong .β
       _ ⇒⋆ rejoin nv (substJ σ js)                   := .rejoinCong rval
       _ ⇒⋆ nv                                        := nfnv.rejoinDrop
-  case ret ih => exact 𝒞bwd (nf.rejoinDrop ⟨⟩) (𝒞.ret (ih σ hσ))
+  case ret ih => exact 𝒞.bwd (nf.rejoinDrop ⟨⟩) (𝒞.ret (ih σ hσ))
   case letin m n _ _ _ _ ihret ih =>
     simp [ℰ, 𝒞] at ihret ih
     let ⟨_, ⟨rret, _⟩, v, hv, e⟩ := ihret σ hσ .nil .nil; subst e
     let ⟨nv, ⟨rlet, nflet⟩, h⟩ := ih (v +: σ) (semCtxt.cons hv hσ) _ (.weaken hjs)
     rw [substUnion, substJDrop] at rlet
-    refine 𝒞bwd ?_ h
+    refine 𝒞.bwd ?_ h
     calc rejoin (letin (m⦃σ⦄) (n⦃⇑ σ⦄)) (substJ σ js)
       _ ⇒⋆ rejoin (letin (ret v) (n⦃⇑ σ⦄)) (substJ σ js) := .rejoinCong (.letin rret)
       _ ⇒  rejoin (n⦃⇑ σ⦄⦃v⦄) (substJ σ js)              := .rejoinCong .ζ
@@ -165,23 +165,23 @@ theorem soundness {Γ} :
     | .inl ⟨v, hv, e⟩ =>
       let hm := ihm (v +: σ) (semCtxt.cons hv hσ) _ (.weaken hjs)
       simp [e]; rw [substUnion, substJDrop] at hm
-      exact ℰbwd (.rejoinCong (.once .ιl)) hm
+      exact ℰ.bwd (.rejoinCong (.once .ιl)) hm
     | .inr ⟨v, hv, e⟩ =>
       let hn := ihn (v +: σ) (semCtxt.cons hv hσ) _ (.weaken hjs)
       simp [e]; rw [substUnion, substJDrop] at hn
-      exact ℰbwd (.rejoinCong (.once .ιr)) hn
+      exact ℰ.bwd (.rejoinCong (.once .ιr)) hn
   case prod m n _ _ _ _ ihm ihn =>
     simp [ℰ, 𝒞] at ihm ihn
     let ⟨_, ⟨rm, _⟩, hm⟩ := ihm σ hσ .nil .nil
     let ⟨_, ⟨rn, _⟩, hn⟩ := ihn σ hσ .nil .nil
     simp at rm rn
-    exact 𝒞bwd (nf.rejoinDrop ⟨⟩) (𝒞.prod (𝒞bwd rm hm) (𝒞bwd rn hn))
+    exact 𝒞.bwd (nf.rejoinDrop ⟨⟩) (𝒞.prod (𝒞.bwd rm hm) (𝒞.bwd rn hn))
   case fst m _ _ _ ih =>
     simp [ℰ] at ih; unfold 𝒞 at ih
     let ⟨_, ⟨rprod, _⟩, n₁, n₂, hm, _, e⟩ := ih σ hσ .nil .nil
     subst e; simp at rprod; unfold ℰ at hm
     let ⟨n₁', ⟨r', nfn⟩, hm⟩ := hm
-    refine 𝒞bwd ?_ hm
+    refine 𝒞.bwd ?_ hm
     calc rejoin (fst (m⦃σ⦄)) (substJ σ js)
       _ ⇒⋆ rejoin (fst (prod n₁ n₂)) (substJ σ js) := .rejoinCong (.fst rprod)
       _ ⇒  rejoin n₁ (substJ σ js)                 := .rejoinCong .π1
@@ -192,7 +192,7 @@ theorem soundness {Γ} :
     let ⟨_, ⟨rprod, nfprod⟩, n₁, n₂, _, hn, e⟩ := ih σ hσ .nil .nil
     subst e; simp at rprod; unfold ℰ at hn
     let ⟨n₂', ⟨r', nfn⟩, hn⟩ := hn
-    refine 𝒞bwd ?_ hn
+    refine 𝒞.bwd ?_ hn
     calc rejoin (snd (m⦃σ⦄)) (substJ σ js)
       _ ⇒⋆ rejoin (snd (prod n₁ n₂)) (substJ σ js) := .rejoinCong (.snd rprod)
       _ ⇒  rejoin n₂ (substJ σ js)                 := .rejoinCong .π2
@@ -204,7 +204,7 @@ theorem soundness {Γ} :
     case hm =>
       let hm := ihm (v +: σ) (semCtxt.cons hv hσ) _ (.weaken hjs)
       rw [substRenameJ, substJExt ((v +: σ) ∘ succ) σ (λ _ ↦ rfl)] at hm; exact hm
-    exact 𝒞bwd r hn
+    exact 𝒞.bwd r hn
   case jump j v _ _ mem _ ihv => exact rejoinJump mem hjs hσ (ihv σ hσ)
 
 -- If a computation does not step, then it is in normal form
