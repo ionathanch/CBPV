@@ -233,7 +233,7 @@ theorem semCtxt.trans {Γ ρ σ τ} (hρσ : Γ ⊨ ρ ~ σ) (hστ : Γ ⊨ σ 
   λ mem ↦ 𝒱.trans (hρσ mem) (hστ mem)
 
 theorem semCtxt.rename {ξ σ τ} {Γ Δ : Ctxt} (hξ : Γ ⊢ ξ ∶ Δ) (h : Γ ⊨ σ ~ τ) : Δ ⊨ σ ∘ ξ ~ τ ∘ ξ :=
-  λ mem ↦ h (hξ _ _  mem)
+  λ mem ↦ h (hξ _ _ mem)
 
 /-* Semantic equivalence of join point contexts as a PER *-/
 

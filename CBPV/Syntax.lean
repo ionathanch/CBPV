@@ -162,6 +162,29 @@ def renameValComp ξ ζ v : renameVal ξ (renameVal ζ v) = renameVal (ξ ∘ ζ
 def renameComComp ξ ζ m : renameCom ξ (renameCom ζ m) = renameCom (ξ ∘ ζ) m :=
   (renameComp ξ ζ (ξ ∘ ζ) (λ _ ↦ rfl)).right m
 
+/-*------------------------------
+  Applying join point renamings
+------------------------------*-/
+
+@[simp]
+def renameJCom (ξ : Nat → Nat) : Com → Com
+  | letin m n => letin m (renameJCom ξ n)
+  | case v m n => case v (renameJCom ξ m) (renameJCom ξ n)
+  | join n m => join (renameJCom ξ n) (renameJCom (lift ξ) m)
+  | jump j v => jump (ξ j) v
+  | m => m
+
+theorem renameJComExt ξ ζ (h : ∀ x, ξ x = ζ x) : ∀ m, renameJCom ξ m = renameJCom ζ m := by
+  intro m; mutual_induction m generalizing ξ ζ
+  all_goals simp; try repeat' constructor
+  all_goals apply_rules [liftExt]
+
+theorem renameJComId : ∀ m, renameJCom id m = m := by
+  intro m; mutual_induction m
+  all_goals simp; try constructor
+  all_goals try assumption
+  case join ih => rw [renameJComExt (lift id) id (liftId _ (λ _ ↦ rfl))]; exact ih
+
 /-*----------------------
   Lifting substitutions
 ----------------------*-/
@@ -475,3 +498,24 @@ theorem wRenameLift {ξ : Nat → Nat} {Γ Δ A}
   cases mem with
   | here => exact In.here
   | there => apply_rules [In.there]
+
+/-*---------------------------------
+  Well-scoped join point renamings
+---------------------------------*-/
+
+def wRenameJ (ξ : Nat → Nat) (Δ Φ : Dtxt) := ∀ j A B, Δ ∋ j ∶ A ↗ B → Φ ∋ ξ j ∶ A ↗ B
+notation:40 Φ:41 "⊢" ξ:41 "∶" Δ:41 => wRenameJ ξ Δ Φ
+
+theorem wRenameJSucc {Δ A B} : Δ ∷ A ↗ B ⊢ succ ∶ Δ := by
+  intro x A B mem; constructor; assumption
+
+theorem wRenameJLift {ξ : Nat → Nat} {Δ Φ : Dtxt} {A B}
+  (h : Φ ⊢ ξ ∶ Δ) :
+  Φ ∷ A ↗ B ⊢ lift ξ ∶ Δ ∷ A ↗ B := by
+  intro x A B mem
+  cases mem with
+  | here => exact Jn.here
+  | there => apply_rules [Jn.there]
+
+theorem wRenameJNil {Δ : Dtxt} : Δ ⊢ id ∶ ⬝ := by
+  intro x A B mem; cases mem

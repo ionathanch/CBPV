@@ -116,6 +116,15 @@ theorem wtWeakenCom₂ {Γ Δ A₁ A₂ B} {m : Com} :
   Γ ∷ A₂ ∣ Δ ⊢ m ∶ B → Γ ∷ A₁ ∷ A₂ ∣ Δ ⊢ renameCom (lift succ) m ∶ B :=
   wtRenameCom (wRenameLift wRenameSucc)
 
+theorem wtRenameJ {ξ Γ}  {Δ Φ : Dtxt} {m} {B : ComType} (hξ : Φ ⊢ ξ ∶ Δ) :
+  Γ ∣ Δ ⊢ m ∶ B → Γ ∣ Φ ⊢ renameJCom ξ m ∶ B := by
+  intro h; mutual_induction h generalizing ξ Φ
+  all_goals constructor <;> apply_rules [wRenameJLift]
+
+theorem wtWeakenJNil {Γ Δ m} {B : ComType} (h : Γ ∣ ⬝ ⊢ m ∶ B) : Γ ∣ Δ ⊢ m ∶ B :=
+  let h := wtRenameJ wRenameJNil h
+  by rw [renameJComId] at h; exact h
+
 /-*--------------------------------------
   Rearrangement lemmas for commutations
 --------------------------------------*-/
