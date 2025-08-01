@@ -49,38 +49,6 @@ def substJ (σ : Nat → Val) : J → J
   | .nil => .nil
   | .cons m js => .cons (m⦃⇑ σ⦄) (substJ σ js)
 
-theorem substRenameJ σ ξ js : substJ σ (renameJ ξ js) = substJ (σ ∘ ξ) js := by
-  induction js <;> simp
-  case cons ih =>
-    refine ⟨?_, ih⟩
-    rw [substRenameCom, substComExt _ _ (λ n ↦ ?_)]; cases n <;> simp [up, lift]
-
-theorem renameSubstJ σ ξ js : renameJ ξ (substJ σ js) = substJ (renameVal ξ ∘ σ) js := by
-  induction js <;> simp
-  case cons ih =>
-    refine ⟨?_, ih⟩; rw [renameSubstCom]
-    apply substComExt; apply upRename; intros; rfl
-
-theorem substCompJ σ v js : substJ σ (substJ (v +: var) js) = substJ (substVal σ v +: σ) js := by
-  induction js <;> simp
-  case cons m _ ih => simp [ih, substUpUnion]
-
-theorem substJExt σ τ (h : ∀ x, σ x = τ x) js : substJ σ js = substJ τ js := by
-  induction js <;> simp
-  case cons ih => exact ⟨substComExt _ _ (upExt σ τ h) _, ih⟩
-
-theorem substJId' σ js (h : ∀ x, σ x = var x) : substJ σ js = js := by
-  induction js <;> simp
-  case cons ih => rw [(substId (⇑ σ) (upId σ h)).right]; simp [ih]
-
-theorem substJId js : substJ var js = js := substJId' var js (λ _ ↦ rfl)
-
-theorem substJDrop σ v js : substJ (v +: σ) (renameJ succ js) = substJ σ js := by
-  rw [substRenameJ]; exact substJExt _ _ (λ _ ↦ rfl) js
-
-theorem substRejoin σ m js : substCom σ (rejoin m js) = rejoin (m⦃σ⦄) (substJ σ js) := by
-  induction js generalizing m <;> apply_assumption
-
 theorem Eval.rejoin {m n js} (r : m ⇒ n) : rejoin m js ⇒ rejoin n js := by
   induction js generalizing m n
   case nil => exact r

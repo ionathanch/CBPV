@@ -25,8 +25,7 @@ theorem letLet {Γ Δ n m m' A} {B : ComType}
       := by simp only [substCom]; rw [← substUnion, renameDropSubst]
     _ ⇒⋆ letin (ret v₂) (m'⦃⇑τ⦄) := rlet₂.letin
     _ ⇒ m'⦃v₂ +: τ⦄ := by rw [substUnion]; exact .ζ
-  have goal := soundCom hm' (v₁ +: σ) (v₂ +: τ) (semCtxt.cons hA hστ) _ _ hjs.weaken
-  rw [substJDrop, substJDrop] at goal
+  have goal := soundCom hm' (v₁ +: σ) (v₂ +: τ) (semCtxt.cons hA hστ) js₁ js₂ hjs
   refine ℰ.bwds (.rejoin r₁') (.rejoin r₂') goal
 
 theorem appLet {Γ Δ n m v A B}
@@ -138,8 +137,7 @@ theorem letCase {Γ Δ v m₁ m₂ n A} {B : ComType}
           := by simp only [substCom]; rw [← substUnion, renameDropSubst]
         _ ⇒⋆ letin (ret v₂) (n⦃⇑ τ⦄) := rn₂.letin
         _ ⇒ n⦃v₂ +: τ⦄ := by rw [substUnion]; exact .ζ
-    have goal := soundCom hn (v₁ +: σ) (v₂ +: τ) (semCtxt.cons hA hστ) _ _ hjs.weaken
-    rw [substJDrop, substJDrop] at goal
+    have goal := soundCom hn (v₁ +: σ) (v₂ +: τ) (semCtxt.cons hA hστ) js₁ js₂ hjs
     exact ℰ.bwds (.rejoin r₁') (.rejoin r₂') goal
   | .inr ⟨w₁, w₂, hA₂, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at rv₂
@@ -159,8 +157,7 @@ theorem letCase {Γ Δ v m₁ m₂ n A} {B : ComType}
           := by simp only [substCom]; rw [← substUnion, renameDropSubst]
         _ ⇒⋆ letin (ret v₂) (n⦃⇑ τ⦄) := rn₂.letin
         _ ⇒ n⦃v₂ +: τ⦄ := by rw [substUnion]; exact .ζ
-    have goal := soundCom hn (v₁ +: σ) (v₂ +: τ) (semCtxt.cons hA hστ) _ _ hjs.weaken
-    rw [substJDrop, substJDrop] at goal
+    have goal := soundCom hn (v₁ +: σ) (v₂ +: τ) (semCtxt.cons hA hστ) js₁ js₂ hjs
     exact ℰ.bwds (.rejoin r₁') (.rejoin r₂') goal
 
 theorem appCase {Γ Δ v w m₁ m₂ A B}

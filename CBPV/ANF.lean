@@ -39,6 +39,14 @@ def substK (σ : Nat → Val) : K → K
   | .fst k => .fst (substK σ k)
   | .snd k => .snd (substK σ k)
 
+theorem Evals.plug {k m n} (r : m ⇒⋆ n) : (k[m]) ⇒⋆ (k[n]) := by
+  induction k generalizing m n
+  case nil => exact r
+  case app ih => exact ih (.app r)
+  case letin => exact .letin r
+  case fst ih => exact ih (.fst r)
+  case snd ih => exact ih (.snd r)
+
 theorem substPlug {σ n k} : substCom σ (plug n k) = plug (substCom σ n) (substK σ k) := by
   induction k generalizing n <;> simp
   case app ih | fst ih | snd ih => simp [ih]
@@ -49,9 +57,34 @@ theorem substRenameK {ξ σ k} : substK σ (renameK ξ k) = substK (σ ∘ ξ) k
   case letin m => exact (substRename _ _ _ (upLift _ _ _ (λ _ ↦ rfl))).right m
   case fst ih | snd ih => exact ih
 
+@[simp]
+def renameJK (ξ : Nat → Nat) : K → K
+  | .nil => .nil
+  | .app v k => .app v (renameJK ξ k)
+  | .letin m => .letin (renameJCom ξ m)
+  | .fst k => .fst (renameJK ξ k)
+  | .snd k => .snd (renameJK ξ k)
+
 /-*-----------------------------
   A-normal translation of CBPV
 -----------------------------*-/
+
+mutual
+@[simp]
+def Val.joinless : Val → Prop
+  | var _ | unit => True
+  | inl v | inr v => v.joinless
+  | thunk m => m.joinless
+
+@[simp]
+def Com.joinless : Com → Prop
+  | force v | ret v => v.joinless
+  | lam m | fst m | snd m => m.joinless
+  | app n v => n.joinless ∧ v.joinless
+  | letin m₁ m₂ | prod m₁ m₂ => m₁.joinless ∧ m₂.joinless
+  | case v m₁ m₂ => v.joinless ∧ m₁.joinless ∧ m₂.joinless
+  | join _ _ | jump _ _ => False
+end
 
 section
 set_option hygiene false
@@ -78,6 +111,8 @@ def Acom (k : K) : Com → Com
   | prod m₁ m₂ => k [ .prod ⟦ m₁ ⟧ₘ ⟦ m₂ ⟧ₘ ]
   | fst n => ⟦ n ⟧ₘ .fst k
   | snd n => ⟦ n ⟧ₘ .snd k
+  | join n m => join (⟦ n ⟧ₘ renameK succ k) (⟦ m ⟧ₘ renameJK succ k)
+  | jump j v => jump j (⟦ v ⟧ᵥ)
   /- I think this is the A-normalization with join points?
   | case v m₁ m₂ =>
     .letin (.ret (.thunk (.com (.lam ((renameK succ k) [ .force (.var 0) ])))))
@@ -120,6 +155,8 @@ def isCom : Com → Prop
 def isCfg : Com → Prop
   | letin n m => isCom n ∧ isCfg m
   | case _ m₁ m₂ => isCfg m₁ ∧ isCfg m₂
+  | join n m => isCfg n ∧ isCfg m
+  | jump _ v => isVal v
   | n => isCom n
 end
 
@@ -171,16 +208,36 @@ theorem isRenameValCfg {ξ} :
     let ⟨_, ihm₁⟩ := @ihm₁ ξ
     let ⟨_, ihm₂⟩ := @ihm₂ ξ
     exact ⟨ihm₁ ism₁, ihm₂ ism₂⟩
+  case join ihn ihm =>
+    intro isn ism
+    let ⟨_, ihn⟩ := @ihn (lift ξ)
+    let ⟨_, ihm⟩ := @ihm ξ
+    exact ⟨ihn isn, ihm ism⟩
+  case jump ih => exact ih
 
 def isVal.rename {ξ v} : isVal v → isVal (renameVal ξ v) := isRenameValCfg.left v
 def isCom.rename {ξ m} : isCom m → isCom (renameCom ξ m) := (isRenameValCfg.right m).left
 def isCfg.rename {ξ m} : isCfg m → isCfg (renameCom ξ m) := (isRenameValCfg.right m).right
+
+theorem isCfg.renameJ {ξ} : ∀ m, isCfg m → isCfg (renameJCom ξ m) := by
+  intro m ism; mutual_induction m generalizing ξ ism
+  all_goals simp at *; try assumption
+  case letin ih => let ⟨ism, isn⟩ := ism; exact ⟨ism, ih isn⟩
+  case case ihm₁ ihm₂ => let ⟨ism₁, ism₂⟩ := ism; exact ⟨ihm₁ ism₁, ihm₂ ism₂⟩
+  case join ihn ihm => let ⟨isn, ism⟩ := ism; exact ⟨ihn isn, ihm ism⟩
 
 theorem isK.rename {ξ k} (isk : isK k) : isK (renameK ξ k) := by
   induction k generalizing ξ
   all_goals simp at *
   case app ih => let ⟨isv, isk⟩ := isk; exact ⟨isv.rename, ih isk⟩
   case letin => exact isk.rename
+  case fst ih | snd ih => exact ih isk
+
+theorem isK.renameJ {ξ k} (isk : isK k) : isK (renameJK ξ k) := by
+  induction k generalizing ξ
+  all_goals simp at *
+  case app ih => let ⟨isv, isk⟩ := isk; exact ⟨isv, ih isk⟩
+  case letin => exact isk.renameJ
   case fst ih | snd ih => exact ih isk
 
 theorem isANF : (∀ v, isVal ⟦v⟧ᵥ) ∧ (∀ m k, isK k → isCfg (⟦m⟧ₘ k)) := by
@@ -196,6 +253,8 @@ theorem isANF : (∀ v, isVal ⟦v⟧ᵥ) ∧ (∀ m k, isK k → isCfg (⟦m⟧
   case case isc₁ isc₂ => exact ⟨isc₁ _ (isk.rename), isc₂ _ (isk.rename)⟩
   case prod isc₁ isc₂ => apply isk.plug; simp [isc₁, isc₂]
   case fst isc | snd isc => apply isc; simp [isk]
+  case join isc₁ isc₂ => exact ⟨isc₁ _ (isk.rename), isc₂ _ isk.renameJ⟩
+  case jump ih => exact ih
 
 def Val.ANF : ∀ v, isVal ⟦v⟧ᵥ := isANF.left
 def Com.ANF : ∀ m, isCfg ⟦m⟧ₘ := λ m ↦ isANF.right m .nil ⟨⟩
@@ -208,213 +267,156 @@ def Com.ANF : ∀ m, isCfg ⟦m⟧ₘ := λ m ↦ isANF.right m .nil ⟨⟩
 section
 set_option hygiene false
 open K
-local notation:40 Γ:41 "⊢" k:41 "∶" B₁:41 "⇒" B₂:41 => wtK Γ k B₁ B₂
-inductive wtK : Ctxt → K → ComType → ComType → Prop where
+local notation:40 Γ:41 "∣" Δ:41 "⊢" k:41 "∶" B₁:41 "⇒" B₂:41 => wtK Γ Δ k B₁ B₂
+inductive wtK : Ctxt → Dtxt → K → ComType → ComType → Prop where
   | nil {Γ B} :
     ---------------
-    Γ ⊢ nil ∶ B ⇒ B
-  | app {Γ k v B₁ B₂} {A : ValType} :
+    Γ ∣ ⬝ ⊢ nil ∶ B ⇒ B
+  | app {Γ Δ k v B₁ B₂} {A : ValType} :
     Γ ⊢ v ∶ A →
-    Γ ⊢ k ∶ B₁ ⇒ B₂ →
+    Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂ →
     -----------------------------
-    Γ ⊢ app v k ∶ (Arr A B₁) ⇒ B₂
-  | letin {Γ m A} {B : ComType} :
-    Γ ∷ A ⊢ m ∶ B →
+    Γ ∣ Δ ⊢ app v k ∶ (Arr A B₁) ⇒ B₂
+  | letin {Γ Δ m A} {B : ComType} :
+    Γ ∷ A ∣ Δ ⊢ m ∶ B →
     ---------------------
-    Γ ⊢ letin m ∶ F A ⇒ B
-  | fst {Γ k B₁ B₂ B₃} :
-    Γ ⊢ k ∶ B₁ ⇒ B₃ →
+    Γ ∣ Δ ⊢ letin m ∶ F A ⇒ B
+  | fst {Γ Δ k B₁ B₂ B₃} :
+    Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₃ →
     -----------------------------
-    Γ ⊢ fst k ∶ (Prod B₁ B₂) ⇒ B₃
-  | snd {Γ k B₁ B₂ B₃} :
-    Γ ⊢ k ∶ B₂ ⇒ B₃ →
+    Γ ∣ Δ ⊢ fst k ∶ (Prod B₁ B₂) ⇒ B₃
+  | snd {Γ Δ k B₁ B₂ B₃} :
+    Γ ∣ Δ ⊢ k ∶ B₂ ⇒ B₃ →
     -----------------------------
-    Γ ⊢ snd k ∶ (Prod B₁ B₂) ⇒ B₃
+    Γ ∣ Δ ⊢ snd k ∶ (Prod B₁ B₂) ⇒ B₃
 end
-notation:40 Γ:41 "⊢" k:41 "∶" B₁:41 "⇒" B₂:41 => wtK Γ k B₁ B₂
+notation:40 Γ:41 "∣" Δ:41 "⊢" k:41 "∶" B₁:41 "⇒" B₂:41 => wtK Γ Δ k B₁ B₂
 
-theorem wtK.rename {ξ k B₁ B₂} {Γ Δ : Ctxt} (hξ : Δ ⊢ ξ ∶ Γ) (h : Γ ⊢ k ∶ B₁ ⇒ B₂) :
-  Δ ⊢ renameK ξ k ∶ B₁ ⇒ B₂ := by
-  induction h generalizing ξ Δ
+theorem wtK.rename {ξ k B₁ B₂} {Γ Ξ : Ctxt} {Δ} (hξ : Ξ ⊢ ξ ∶ Γ) (h : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂) :
+  Ξ ∣ Δ ⊢ renameK ξ k ∶ B₁ ⇒ B₂ := by
+  induction h generalizing ξ Ξ
   all_goals constructor <;> apply_rules [wtRenameVal, wtRenameCom, wRenameLift]
 
-theorem wtK.weaken {Γ k A B₁ B₂} : Γ ⊢ k ∶ B₁ ⇒ B₂ → Γ ∷ A ⊢ renameK succ k ∶ B₁ ⇒ B₂ :=
+theorem wtK.weaken {Γ Δ k A B₁ B₂} : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂ → Γ ∷ A ∣ Δ ⊢ renameK succ k ∶ B₁ ⇒ B₂ :=
   wtK.rename wRenameSucc
 
-theorem wtK.plug {Γ n k B₁ B₂}
-  (hk : Γ ⊢ k ∶ B₁ ⇒ B₂) (h : Γ ⊢ n ∶ B₁) : Γ ⊢ (k [ n ]) ∶ B₂ := by
+theorem wtK.plug {Γ Δ n k B₁ B₂}
+  (hk : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂) (h : Γ ∣ ⬝ ⊢ n ∶ B₁) : Γ ∣ Δ ⊢ (k [ n ]) ∶ B₂ := by
   induction hk generalizing n
   case nil => exact h
-  case app hv _ hn => exact hn (.app h hv)
+  case app hv _ hn => simp; exact hn (.app h hv)
   case letin hm => exact .letin h hm
   case fst hn => exact hn (.fst h)
   case snd hn => exact hn (.snd h)
 
 theorem preservation {Γ} :
-  (∀ {v} {A : ValType}, Γ ⊢ v ∶ A → Γ ⊢ ⟦ v ⟧ᵥ ∶ A) ∧
-  (∀ {k m} {B₁ B₂ : ComType}, Γ ⊢ k ∶ B₁ ⇒ B₂ → Γ ⊢ m ∶ B₁ → Γ ⊢ ⟦ m ⟧ₘ k ∶ B₂) := by
-  refine ⟨λ h ↦ ?val, λ hk h ↦ ?com⟩
+  (∀ {v} {A : ValType}, v.joinless → Γ ⊢ v ∶ A → Γ ⊢ ⟦ v ⟧ᵥ ∶ A) ∧
+  (∀ {Δ k m} {B₁ B₂ : ComType}, m.joinless → Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂ → Γ ∣ ⬝ ⊢ m ∶ B₁ → Γ ∣ Δ ⊢ ⟦ m ⟧ₘ k ∶ B₂) := by
+  refine ⟨λ vj h ↦ ?val, λ mj hk h ↦ ?com⟩
+  case' com => generalize e : Dtxt.nil = Δ' at h
   mutual_induction h, h
   case var mem => exact .var mem
   case unit => exact .unit
-  case inl h => exact .inl h
-  case inr h => exact .inr h
-  case thunk h => exact .thunk (h .nil)
-  case force h _ _ => exact (wtK.plug hk (.force h))
-  case ret h _ _ => exact (wtK.plug hk (.ret h))
-  case lam h _ _ => exact (wtK.plug hk (.lam (h .nil)))
-  case app hn hv k _ => exact hn (.app hv hk)
-  case letin hn hm _ _ => exact hn (.letin (hm (wtK.weaken hk)))
-  case case hv hm₁ hm₂ _ _ => exact .case hv (hm₁ (wtK.weaken hk)) (hm₂ (wtK.weaken hk))
-  case prod hm₁ hm₂ _ _ => exact wtK.plug hk (.prod (hm₁ .nil) (hm₂ .nil))
-  case fst h _ _ => exact h (.fst hk)
-  case snd h _ _ => exact h (.snd hk)
-
-/-*-------------------------------------
-  Logical equivalence of continuations
--------------------------------------*-/
-
-section
-set_option hygiene false
-local notation:40 "(" k₁:41 "," k₂:41 ")" "∈" "⟦" B₁:41 "⇒" B₂:41 "⟧ᵏ'" => 𝒦' B₁ B₂ k₁ k₂
-local notation:40 "(" k₁:41 "," k₂:41 ")" "∈" "⟦" B₁:41 "⇒" B₂:41 "⟧ᵏ" => 𝒦 B₁ B₂ k₁ k₂
-mutual
-def 𝒦' (B₁ B₂ : ComType) (k₁ k₂ : K) : Prop :=
-  match B₁ with
-  | F A => ∃ m n, (∀ v w, (v, w) ∈ ⟦A⟧ᵛ → (m⦃v⦄, n⦃w⦄) ∈ ⟦B₂⟧ᵉ) ∧
-    k₁ = .letin m ∧ k₂ = .letin n
-  | Arr A B => ∃ v w k₁' k₂', (v, w) ∈ ⟦A⟧ᵛ ∧ (k₁', k₂') ∈ ⟦B ⇒ B₂⟧ᵏ ∧
-    k₁ = .app v k₁' ∧ k₂ = .app w k₂'
-  | .Prod B₀ B₁ =>
-    (∃ k₁' k₂', (k₁', k₂') ∈ ⟦B₀ ⇒ B₂⟧ᵏ ∧ k₁ = .fst k₁' ∧ k₂ = .fst k₂') ∨
-    (∃ k₁' k₂', (k₁', k₂') ∈ ⟦B₁ ⇒ B₂⟧ᵏ ∧ k₁ = .snd k₁' ∧ k₂ = .snd k₂')
-
-def 𝒦 (B₁ B₂ : ComType) (k₁ k₂ : K) : Prop :=
-  (B₁ = B₂ ∧ k₁ = .nil ∧ k₂ = .nil) ∨ (k₁, k₂) ∈ ⟦B₁ ⇒ B₂⟧ᵏ'
-end
-end
-
-notation:40 "(" k₁:41 "," k₂:41 ")" "∈" "⟦" B₁:41 "⇒" B₂:41 "⟧ᵏ'" => 𝒦' B₁ B₂ k₁ k₂
-notation:40 "(" k₁:41 "," k₂:41 ")" "∈" "⟦" B₁:41 "⇒" B₂:41 "⟧ᵏ" => 𝒦 B₁ B₂ k₁ k₂
-
-def 𝒦.nil {B} : (.nil, .nil) ∈ ⟦B ⇒ B⟧ᵏ := by simp [𝒦]
-def 𝒦.letin {m n A B} (h : ∀ v w, (v, w) ∈ ⟦A⟧ᵛ → (m⦃v⦄, n⦃w⦄) ∈ ⟦B⟧ᵉ) : (.letin m, .letin n) ∈ ⟦F A ⇒ B⟧ᵏ := by
-  unfold 𝒦 𝒦'; exact .inr ⟨_, _, h, rfl, rfl⟩
-def 𝒦.app {v w k₁ k₂ A B₁ B₂} (hA : (v, w) ∈ ⟦A⟧ᵛ) (h : (k₁, k₂) ∈ ⟦B₁ ⇒ B₂⟧ᵏ) : (.app v k₁, .app w k₂) ∈ ⟦Arr A B₁ ⇒ B₂⟧ᵏ := by
-  unfold 𝒦 𝒦'; exact .inr ⟨_, _, _ ,_, hA, h, rfl, rfl⟩
-def 𝒦.fst {k₁ k₂ B₁ B₂ B₃} (h : (k₁, k₂) ∈ ⟦B₁ ⇒ B₃⟧ᵏ) : (.fst k₁, .fst k₂) ∈ ⟦Prod B₁ B₂ ⇒ B₃⟧ᵏ := by
-  unfold 𝒦 𝒦'; exact .inr (.inl ⟨_, _, h, rfl, rfl⟩)
-def 𝒦.snd {k₁ k₂ B₁ B₂ B₃} (h : (k₁, k₂) ∈ ⟦B₂ ⇒ B₃⟧ᵏ) : (.snd k₁, .snd k₂) ∈ ⟦Prod B₁ B₂ ⇒ B₃⟧ᵏ := by
-  unfold 𝒦 𝒦'; exact .inr (.inr ⟨_, _, h, rfl, rfl⟩)
+  case inl h => exact .inl (h vj)
+  case inr h => exact .inr (h vj)
+  case thunk h => exact .thunk (h vj .nil rfl)
+  all_goals subst e
+  case force h _ _ _ => exact (wtK.plug hk (.force (h mj)))
+  case ret h _ _ _ => exact (wtK.plug hk (.ret (h mj)))
+  case lam h _ _ _ => exact (wtK.plug hk (.lam (h mj .nil rfl)))
+  case app hn hv k _ _ => let ⟨nj, vj⟩ := mj; exact hn nj (.app (hv vj) hk) rfl
+  case letin hn _ _ _ _ hm => let ⟨nj, mj⟩ := mj; exact hn nj (.letin (hm mj (wtK.weaken hk) rfl)) rfl
+  case case hv _ _ _ _ _ hm₁ hm₂ => let ⟨vj, mj₁, mj₂⟩ := mj; exact .case (hv vj) (hm₁ mj₁ (wtK.weaken hk) rfl) (hm₂ mj₂ (wtK.weaken hk) rfl)
+  case prod hm₁ hm₂ _ _ _ => let ⟨mj₁, mj₂⟩ := mj; exact wtK.plug hk (.prod (hm₁ mj₁ .nil rfl) (hm₂ mj₂ .nil rfl))
+  case fst h _ _ _ => exact h mj (.fst hk) rfl
+  case snd h _ _ _ => exact h mj (.snd hk) rfl
+  case join | jump => simp at mj
 
 /-*--------------------------------------
   Semantic equivalence of continuations
 --------------------------------------*-/
 
-def semK Γ k₁ k₂ B₁ B₂ := ∀ σ τ, Γ ⊨ σ ~ τ → (substK σ k₁, substK τ k₂) ∈ ⟦B₁ ⇒ B₂⟧ᵏ
-notation:40 Γ:41 "⊨" k₁:41 "~" k₂:41 "∶" B₁:41 "⇒" B₂:41 => semK Γ k₁ k₂ B₁ B₂
+@[simp]
+def semK (Γ : Ctxt) (Δ : Dtxt) k₁ k₂ B₁ B₂ :=
+  ∀ σ τ, Γ ⊨ σ ~ τ →
+  ∀ js₁ js₂, Δ ⊨ js₁ ~ js₂ →
+  ∀ n₁ n₂, (n₁, n₂) ∈ ⟦B₁⟧ᵉ →
+  (rejoin ((substK σ k₁) [n₁]) js₁, rejoin ((substK τ k₂) [n₂]) js₂) ∈ ⟦B₂⟧ᵉ
+notation:40 Γ:41 "∣" Δ:41 "⊨" k₁:41 "~" k₂:41 "∶" B₁:41 "⇒" B₂:41 => semK Γ Δ k₁ k₂ B₁ B₂
 
-def semK.nil {Γ B} : Γ ⊨ .nil ~ .nil ∶ B ⇒ B := λ _ _ _ ↦ 𝒦.nil
-def semK.fst {Γ k₁ k₂ B₁ B₂ B₃} (h : Γ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₃) : Γ ⊨ .fst k₁ ~ .fst k₂ ∶ Prod B₁ B₂ ⇒ B₃ :=
-  λ σ τ hστ ↦ 𝒦.fst (h σ τ hστ)
-def semK.snd {Γ k₁ k₂ B₁ B₂ B₃} (h : Γ ⊨ k₁ ~ k₂ ∶ B₂ ⇒ B₃) : Γ ⊨ .snd k₁ ~ .snd k₂ ∶ Prod B₁ B₂ ⇒ B₃ :=
-  λ σ τ hστ ↦ 𝒦.snd (h σ τ hστ)
+namespace semK
 
-theorem semK.app {Γ v w k₁ k₂ B₁ B₂} {A : ValType} (hA : Γ ⊨ v ~ w ∶ A) (h : Γ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₂) : Γ ⊨ .app v k₁ ~ .app w k₂ ∶ Arr A B₁ ⇒ B₂ :=
-  λ σ τ hστ ↦ 𝒦.app (hA σ τ hστ) (h σ τ hστ)
-
-theorem semK.letin {Γ m₁ m₂ A} {B : ComType} (h : Γ ∷ A ⊨ m₁ ~ m₂ ∶ B) : Γ ⊨ .letin m₁ ~ .letin m₂ ∶ F A ⇒ B := by
-  intro σ τ hστ; apply 𝒦.letin; intro v w hA; rw [← substUnion, ← substUnion]
-  exact h (v +: σ) (w +: τ) (semCtxt.cons hA hστ)
-
-theorem semK.rename {ξ k₁ k₂ B₁ B₂} {Γ Δ : Ctxt} (hξ : Γ ⊢ ξ ∶ Δ) (h : Δ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₂) : Γ ⊨ renameK ξ k₁ ~ renameK ξ k₂ ∶ B₁ ⇒ B₂ := by
-  intro σ τ hστ; rw [substRenameK, substRenameK]; exact h _ _ (semCtxt.rename hξ hστ)
-
-theorem semK.weaken {Γ k₁ k₂ A B₁ B₂} (h : Γ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₂) : Γ ∷ A ⊨ renameK succ k₁ ~ renameK succ k₂ ∶ B₁ ⇒ B₂ :=
-  semK.rename wRenameSucc h
+theorem weaken {Γ Δ k₁ k₂ A B₁ B₂} (h : Γ ∣ Δ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₂) : Γ ∷ A ∣ Δ ⊨ renameK succ k₁ ~ renameK succ k₂ ∶ B₁ ⇒ B₂ := by
+  intro σ τ hστ js₁ js₂ hjs n₁ n₂ hn
+  rw [substRenameK, substRenameK]
+  exact h _ _ (semCtxt.rename wRenameSucc hστ) js₁ js₂ hjs n₁ n₂ hn
 
 /-*--------------------------------------------------------------
   Fundamental theorem for semantic equivalence of continuations
 --------------------------------------------------------------*-/
 
-theorem soundK {Γ k B₁ B₂} (h : Γ ⊢ k ∶ B₁ ⇒ B₂) : Γ ⊨ k ~ k ∶ B₁ ⇒ B₂ := by
-  induction h <;> intro σ τ hστ
+def nil {Γ Δ B} : Γ ∣ Δ ⊨ .nil ~ .nil ∶ B ⇒ B :=
+  λ _ _ _ _ _ _ _ _ ↦ ℰ.bwdsRejoin .refl .refl
+
+def fst {Γ Δ k₁ k₂ B₁ B₂ B₃} (h : Γ ∣ Δ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₃) : Γ ∣ Δ ⊨ .fst k₁ ~ .fst k₂ ∶ Prod B₁ B₂ ⇒ B₃ := by
+  intro σ τ hστ js₁ js₂ hjs n₁ n₂ hn; simp
+  have ⟨n₁₁, n₁₂, n₂₁, n₂₂, rn₁, rn₂, hn₁⟩ := hn.fst
+  refine ℰ.bwds ?_ ?_ (h σ τ hστ js₁ js₂ hjs _ _ hn₁)
+  all_goals refine .rejoin (.plug ?_)
+  . exact .trans' (Evals.fst rn₁) (.once .π1)
+  . exact .trans' (Evals.fst rn₂) (.once .π1)
+
+def snd {Γ Δ k₁ k₂ B₁ B₂ B₃} (h : Γ ∣ Δ ⊨ k₁ ~ k₂ ∶ B₂ ⇒ B₃) : Γ ∣ Δ ⊨ .snd k₁ ~ .snd k₂ ∶ Prod B₁ B₂ ⇒ B₃ := by
+  intro σ τ hστ js₁ js₂ hjs n₁ n₂ hn; simp
+  have ⟨n₁₁, n₁₂, n₂₁, n₂₂, rn₁, rn₂, hn₂⟩ := hn.snd
+  refine ℰ.bwds ?_ ?_ (h σ τ hστ js₁ js₂ hjs _ _ hn₂)
+  all_goals refine .rejoin (.plug ?_)
+  . exact .trans' (Evals.snd rn₁) (.once .π2)
+  . exact .trans' (Evals.snd rn₂) (.once .π2)
+
+theorem app {Γ Δ v w k₁ k₂ B₁ B₂} {A : ValType} (hA : Γ ⊨ v ~ w ∶ A) (h : Γ ∣ Δ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₂) : Γ ∣ Δ ⊨ .app v k₁ ~ .app w k₂ ∶ Arr A B₁ ⇒ B₂ := by
+  intro σ τ hστ js₁ js₂ hjs n₁ n₂ hn; simp
+  have ⟨_, _, rn₁, rn₂, hm⟩ := hn.lam_inv
+  refine ℰ.bwds ?_ ?_ (h σ τ hστ js₁ js₂ hjs _ _ (hm _ _ (hA σ τ hστ)))
+  all_goals refine .rejoin (.plug ?_)
+  . exact .trans' (Evals.app rn₁) (.once .β)
+  . exact .trans' (Evals.app rn₂) (.once .β)
+
+theorem letin {Γ Δ m₁ m₂ A} {B : ComType} (h : Γ ∷ A ∣ Δ ⊨ m₁ ~ m₂ ∶ B) : Γ ∣ Δ ⊨ .letin m₁ ~ .letin m₂ ∶ F A ⇒ B := by
+  intro σ τ hστ js₁ js₂ hjs n₁ n₂ hn
+  have ⟨v, w, rn₁, rn₂, hA⟩ := hn.ret_inv
+  refine ℰ.bwds ?_ ?_ (h (v +: σ) (w +: τ) (semCtxt.cons hA hστ) js₁ js₂ hjs)
+  all_goals rw [substUnion]; refine .rejoin ?_; simp
+  . exact .trans' (Evals.letin rn₁) (.once .ζ)
+  . exact .trans' (Evals.letin rn₂) (.once .ζ)
+
+end semK
+
+theorem soundK {Γ Δ k B₁ B₂} (h : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂) : Γ ∣ Δ ⊨ k ~ k ∶ B₁ ⇒ B₂ := by
+  induction h
   case nil => exact .nil
-  case app hv _ ih => exact .app (soundVal hv σ τ hστ) (ih σ τ hστ)
-  case letin hm =>
-    refine .letin (λ v w hA ↦ ?_)
-    rw [← substUnion, ← substUnion]
-    refine soundCom hm (v +: σ) (w +: τ) (semCtxt.cons hA hστ)
-  case fst ih => exact .fst (ih σ τ hστ)
-  case snd ih => exact .snd (ih σ τ hστ)
+  case app hv _ ih => exact .app (soundVal hv) ih
+  case letin hm => exact .letin (soundCom hm)
+  case fst ih => exact .fst ih
+  case snd ih => exact .snd ih
 
 /-*----------------------------------------------
   Semantic equivalence of plugged continuations
 ----------------------------------------------*-/
 
-theorem 𝒦.semPlug {n₁ n₂ k₁ k₂ B₁ B₂} (hk : (k₁, k₂) ∈ ⟦B₁ ⇒ B₂⟧ᵏ) (hn : (n₁, n₂) ∈ ⟦B₁⟧ᵉ) : ((k₁[n₁]), (k₂[n₂])) ∈ ⟦B₂⟧ᵉ := by
-  unfold 𝒦 at hk
-  match hk with
-  | .inl ⟨eB, ek₁, ek₂⟩ => subst eB; rw [ek₁, ek₂]; exact hn
-  | .inr hk =>
-  mutual_induction B₁ generalizing k₁ k₂ n₁ n₂
-  case F =>
-    unfold 𝒦' at hk
-    let ⟨m, n, hB₂, ek₁, ek₂⟩ := hk
-    let ⟨v, w, rv, rw, hA⟩ := hn.ret_inv
-    specialize hB₂ v w hA
-    rw [ek₁, ek₂]
-    refine ℰ.bwds ?_ ?_ hB₂
-    . exact .trans' (Evals.let rv) (.once .ζ)
-    . exact .trans' (Evals.let rw) (.once .ζ)
-  case Arr B₁ ih _ =>
-    unfold 𝒦' at hk
-    let ⟨v, w, k₁', k₂', hA, hk, ek₁, ek₂⟩ := hk
-    let ⟨m, n, rm, rn, hB⟩ := hn.lam_inv
-    have happ : (.app n₁ v, .app n₂ w) ∈ ⟦B₁⟧ᵉ := ℰ.bwds
-      (.trans' (Evals.app rm) (.once .β))
-      (.trans' (Evals.app rn) (.once .β))
-      (hB v w hA)
-    rw [ek₁, ek₂]; unfold 𝒦 at hk
-    match hk with
-    | .inl ⟨eB₂, ek₁, ek₂⟩ => subst eB₂ ek₁ ek₂; exact happ
-    | .inr hk => unfold plug; exact ih happ (.inr hk) hk
-  case Prod B₁ B₂ ihB₁ ihB₂ _ =>
-    unfold 𝒦' at hk
-    match hk with
-    | .inl ⟨k₁, k₂, hk, ek₁, ek₂⟩ =>
-      let ⟨_, _, _, _, r₁, r₂, hB₁⟩ := hn.fst
-      have hfst : (.fst n₁, .fst n₂) ∈ ⟦B₁⟧ᵉ := ℰ.bwds
-        (.trans' (Evals.fst r₁) (.once .π1))
-        (.trans' (Evals.fst r₂) (.once .π1)) hB₁
-      rw [ek₁, ek₂]; unfold 𝒦 at hk
-      match hk with
-      | .inl ⟨eB, hk₁, hk₂⟩ => subst eB hk₁ hk₂; exact hfst
-      | .inr hk => apply ihB₁ hfst (.inr hk) hk
-    | .inr ⟨k₁, k₂, hk, ek₁, ek₂⟩ =>
-      let ⟨_, _, _, _, r₁, r₂, hB₂⟩ := hn.snd
-      have hsnd : (.snd n₁, .snd n₂) ∈ ⟦B₂⟧ᵉ := ℰ.bwds
-        (.trans' (Evals.snd r₁) (.once .π2))
-        (.trans' (Evals.snd r₂) (.once .π2)) hB₂
-      rw [ek₁, ek₂]; unfold 𝒦 at hk
-      match hk with
-      | .inl ⟨eB, hk₁, hk₂⟩ => subst eB hk₁ hk₂; exact hsnd
-      | .inr hk => unfold plug; apply ihB₂ hsnd (.inr hk) hk
+theorem semK.plug {Γ Δ n₁ n₂ k₁ k₂ B₁ B₂} (hk : Γ ∣ Δ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₂) (hn : Γ ∣ ⬝ ⊨ n₁ ~ n₂ ∶ B₁) : Γ ∣ Δ ⊨ (k₁[n₁]) ~ (k₂[n₂]) ∶ B₂ := by
+  intro σ τ hστ js₁ js₂ hjs; rw [substPlug, substPlug]
+  exact hk σ τ hστ js₁ js₂ hjs _ _ (hn σ τ hστ .nil .nil .nil)
 
-theorem semK.plug {Γ n₁ n₂ k₁ k₂ B₁ B₂} (hk : Γ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₂) (hn : Γ ⊨ n₁ ~ n₂ ∶ B₁) : Γ ⊨ (k₁[n₁]) ~ (k₂[n₂]) ∶ B₂ := by
-  intro σ τ hστ
-  rw [substPlug, substPlug]
-  exact 𝒦.semPlug (hk σ τ hστ) (hn σ τ hστ)
-
-theorem semPlug {Γ n₁ n₂ k B₁ B₂} (hk : Γ ⊢ k ∶ B₁ ⇒ B₂) (hn : Γ ⊨ n₁ ~ n₂ ∶ B₁) : Γ ⊨ (k [ n₁ ]) ~ (k [ n₂ ]) ∶ B₂ :=
-  (soundK hk).plug hn
+theorem semPlug {Γ Δ n₁ n₂ k B₁ B₂} (hk : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂) (hn : Γ ∣ ⬝ ⊨ n₁ ~ n₂ ∶ B₁) : Γ ∣ Δ ⊨ (k [ n₁ ]) ~ (k [ n₂ ]) ∶ B₂ :=
+  semK.plug (soundK hk) hn
 
 /-*--------------------------------------
   Plugging commutes with configurations
 --------------------------------------*-/
 
-theorem semKletin {Γ n m k B₁ B₂} (hk : Γ ⊢ k ∶ B₁ ⇒ B₂) (h : Γ ⊢ letin n m ∶ B₁) :
-  Γ ⊨ (k [letin n m]) ~ letin n ((renameK succ k) [m]) ∶ B₂ := by
+theorem semKletin {Γ Δ n m k B₁ B₂} (hk : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂) (h : Γ ∣ ⬝ ⊢ letin n m ∶ B₁) :
+  Γ ∣ Δ ⊨ (k [letin n m]) ~ letin n ((renameK succ k) [m]) ∶ B₂ := by
   induction hk generalizing n m
   case nil => exact soundCom h
   case app hv hk ih => apply semCom.trans (semPlug hk (appLet h hv)) (ih (wtLetApp h hv))
@@ -422,8 +424,8 @@ theorem semKletin {Γ n m k B₁ B₂} (hk : Γ ⊢ k ∶ B₁ ⇒ B₂) (h : Γ
   case fst hk ih => apply semCom.trans (semPlug hk (fstLet h)) (ih (wtLetFst h))
   case snd hk ih => apply semCom.trans (semPlug hk (sndLet h)) (ih (wtLetSnd h))
 
-theorem semKcase {Γ v m₁ m₂ k B₁ B₂} (hk : Γ ⊢ k ∶ B₁ ⇒ B₂) (h : Γ ⊢ case v m₁ m₂ ∶ B₁) :
-  Γ ⊨ (k [case v m₁ m₂]) ~ case v ((renameK succ k) [m₁]) ((renameK succ k) [m₂]) ∶ B₂ := by
+theorem semKcase {Γ Δ v m₁ m₂ k B₁ B₂} (hk : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂) (h : Γ ∣ ⬝ ⊢ case v m₁ m₂ ∶ B₁) :
+  Γ ∣ Δ ⊨ (k [case v m₁ m₂]) ~ case v ((renameK succ k) [m₁]) ((renameK succ k) [m₂]) ∶ B₂ := by
   induction hk generalizing v m₁ m₂
   case nil => exact soundCom h
   case app hv hk ih => apply semCom.trans (semPlug hk (appCase h hv)) (ih (wtCaseApp h hv))
@@ -436,53 +438,64 @@ theorem semKcase {Γ v m₁ m₂ k B₁ B₂} (hk : Γ ⊢ k ∶ B₁ ⇒ B₂) 
 -----------------------------------------------------------*-/
 
 theorem soundA {Γ} :
-  (∀ {v} {A : ValType}, Γ ⊢ v ∶ A → Γ ⊨ v ~ ⟦v⟧ᵥ ∶ A) ∧
-  (∀ {m k₁ k₂} {B₁ B₂ : ComType}, Γ ⊢ m ∶ B₁ → Γ ⊢ k₁ ∶ B₁ ⇒ B₂ →
-    Γ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₂ → Γ ⊨ (k₁[m]) ~ ⟦m⟧ₘ k₂ ∶ B₂) := by
-  refine ⟨λ h ↦ ?val, λ h wtk hk ↦ ?com⟩
+  (∀ {v} {A : ValType}, v.joinless → Γ ⊢ v ∶ A → Γ ⊨ v ~ ⟦v⟧ᵥ ∶ A) ∧
+  (∀ {Δ m k₁ k₂} {B₁ B₂ : ComType}, m.joinless → Γ ∣ ⬝ ⊢ m ∶ B₁ → Γ ∣ Δ ⊢ k₁ ∶ B₁ ⇒ B₂ →
+    Γ ∣ Δ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₂ → Γ ∣ Δ ⊨ (k₁[m]) ~ ⟦m⟧ₘ k₂ ∶ B₂) := by
+  refine ⟨λ vj h ↦ ?val, λ mj h wtk hk ↦ ?com⟩
+  case' com => generalize e : Dtxt.nil = Δ' at h
   mutual_induction h, h
-  case force ih _ _ _ =>
-    refine hk.plug (λ σ τ hστ ↦ ?_)
+  all_goals try subst e
+  case force ih _ _ _ _ =>
+    refine hk.plug (λ σ τ hστ _ _ _ ↦ ?_)
     unfold semVal 𝒱 at ih
-    let ⟨_, _, h, em, en⟩ := ih σ τ hστ
-    simp [em, en]; exact ℰ.bwd .π .π h
-  case lam ih B _ _ =>
-    refine hk.plug (λ σ τ hστ ↦ ℰ.lam (λ v w hA ↦ ?_))
+    let ⟨_, _, h, em, en⟩ := ih mj σ τ hστ
+    simp [em, en]; exact ℰ.bwdRejoin .π .π h
+  case lam B _ ih _ _ _ _ =>
+    refine hk.plug (λ σ τ hστ _ _ _ ↦ ℰ.bwdsRejoin .refl .refl (ℰ.lam (λ v w hA ↦ ?_)))
     rw [← substUnion, ← substUnion]
-    exact ih .nil (soundK .nil) (v +: σ) (w +: τ) (semCtxt.cons hA hστ)
-  case app hv ihm ihv k₁ k₂ _ => exact ihm (.app hv wtk) (.app ihv hk)
-  case ret ih _ _ _ => exact hk.plug (λ σ τ hστ ↦ ℰ.ret (ih σ τ hστ))
-  case letin hn hm ihn ihm _ _ _ =>
+    exact ih mj .nil (soundK .nil) rfl (v +: σ) (w +: τ) (semCtxt.cons hA hστ) .nil .nil .nil
+  case app hv ihm ihv _ k₁ k₂ _ =>
+    let ⟨mj, vj⟩ := mj
+    exact ihm mj (.app hv wtk) (.app (ihv vj) hk) rfl
+  case ret ih _ _ _ _ =>
+    exact hk.plug (λ σ τ hστ _ _ _ ↦ ℰ.bwdsRejoin .refl .refl (ℰ.ret (ih mj σ τ hστ)))
+  case letin hn ihn _ _ _ _ hm ihm =>
+    let ⟨nj, mj⟩ := mj
     refine .trans (semKletin wtk (.letin hn hm)) ?_
-    exact ihn
+    exact ihn nj
       (.letin (wtk.weaken.plug hm))
-      (.letin (ihm wtk.weaken hk.weaken))
-  case case hv hm₁ hm₂ ihv ihm₁ ihm₂ _ _ _ =>
-    refine .trans (semKcase wtk (.case hv hm₁ hm₂)) (λ σ τ hστ ↦ ?_)
+      (.letin (ihm mj wtk.weaken hk.weaken rfl)) rfl
+  case case hv ihv _ _ _ ihm₁ hm₁ hm₂ ihm₁ ihm₂ =>
+    let ⟨vj, mj₁, mj₂⟩ := mj
+    refine .trans (semKcase wtk (.case hv hm₁ hm₂)) (λ σ τ hστ js₁ js₂ hjs ↦ ?_)
     unfold semVal 𝒱 at ihv
-    match ihv σ τ hστ with
+    match ihv vj σ τ hστ with
     | .inl ⟨v, w, hA₁, ev, ew⟩ =>
       simp [ev, ew]
-      refine ℰ.bwd ?_ ?_ (ihm₁ wtk.weaken hk.weaken (v +: σ) (w +: τ) (semCtxt.cons hA₁ hστ))
-      all_goals rw [substUnion]; exact .ιl
+      refine ℰ.bwd ?_ ?_ (ihm₁ mj₁ wtk.weaken hk.weaken rfl (v +: σ) (w +: τ) (semCtxt.cons hA₁ hστ) js₁ js₂ hjs)
+      all_goals rw [substUnion]; exact (.rejoin .ιl)
     | .inr ⟨v, w, hA₂, ev, ew⟩ =>
       simp [ev, ew]
-      refine ℰ.bwd ?_ ?_ (ihm₂ wtk.weaken hk.weaken (v +: σ) (w +: τ) (semCtxt.cons hA₂ hστ))
-      all_goals rw [substUnion]; exact .ιr
-  case prod ihn₁ ihn₂ _ _ _ =>
-    refine hk.plug (λ σ τ hστ ↦ ?_)
-    exact ℰ.prod (ihn₁ .nil (soundK .nil) σ τ hστ) (ihn₂ .nil (soundK .nil) σ τ hστ)
-  case fst ih _ _ _ => exact ih (.fst wtk) (.fst hk)
-  case snd ih _ _ _ => exact ih (.snd wtk) (.snd hk)
+      refine ℰ.bwd ?_ ?_ (ihm₂ mj₂ wtk.weaken hk.weaken rfl (v +: σ) (w +: τ) (semCtxt.cons hA₂ hστ) js₁ js₂ hjs)
+      all_goals rw [substUnion]; exact (.rejoin .ιr)
+  case prod ihn₁ ihn₂ _ _ _ _ =>
+    let ⟨nj₁, nj₂⟩ := mj
+    refine hk.plug (λ σ τ hστ js₁ js₂ hjs ↦ ?_)
+    exact ℰ.bwdsRejoin .refl .refl
+      (ℰ.prod (ihn₁ nj₁ .nil (soundK .nil) rfl σ τ hστ .nil .nil .nil)
+              (ihn₂ nj₂ .nil (soundK .nil) rfl σ τ hστ .nil .nil .nil))
+  case fst ih _ _ _ _ => exact ih mj (.fst wtk) (.fst hk) rfl
+  case snd ih _ _ _ _ => exact ih mj (.snd wtk) (.snd hk) rfl
+  case join | jump => cases mj
   all_goals intro σ τ hστ
   case var mem => exact hστ mem
   case unit => exact 𝒱.unit
-  case inl ih => exact 𝒱.inl (ih σ τ hστ)
-  case inr ih => exact 𝒱.inr (ih σ τ hστ)
-  case thunk ih => exact 𝒱.thunk (ih .nil (soundK .nil) σ τ hστ)
+  case inl ih => exact 𝒱.inl (ih vj σ τ hστ)
+  case inr ih => exact 𝒱.inr (ih vj σ τ hστ)
+  case thunk ih => exact 𝒱.thunk (ih vj .nil (soundK .nil) rfl σ τ hστ .nil .nil .nil)
 
-theorem soundAnil {Γ m} {B : ComType} (h : Γ ⊢ m ∶ B) : Γ ⊨ m ~ ⟦m⟧ₘ ∶ B :=
-  soundA.right h .nil .nil
+theorem soundAnil {Γ m B} (mj : m.joinless) (h : Γ ∣ ⬝ ⊢ m ∶ B) : Γ ∣ ⬝ ⊨ m ~ ⟦m⟧ₘ ∶ B :=
+  soundA.right mj h .nil .nil
 
 /-*------------------------------------------------------------
   A-normalized ground returners compute the same normal forms
@@ -504,18 +517,18 @@ theorem 𝒱.ground {v w A} (h : (v, w) ∈ ⟦A⟧ᵛ) (g : isGround A) : v = w
     | .inr ⟨_, _, hA₂, ev, ew⟩ => subst ev ew; simp; exact ihA₂ hA₂ g.right
   case U => simp at g
 
-theorem retGroundA {m n A} (h : ⬝ ⊢ m ∶ F A) (g : isGround A) (nm : m ⇓ₙ n) : ⟦m⟧ₘ ⇒⋆ n := by
+theorem retGroundA {m n A} (mj : m.joinless) (h : ⬝ ∣ ⬝ ⊢ m ∶ F A) (g : isGround A) (nm : m ⇓ₙ n) : ⟦m⟧ₘ ⇒⋆ n := by
   let ⟨r, nfm⟩ := nm
-  let hm := soundAnil h var var semCtxt.nil
+  let hm := soundAnil mj h var var semCtxt.nil .nil .nil .nil
   rw [substComId, substComId] at hm
   unfold ℰ 𝒞 at hm
   let ⟨_, _, ⟨r', _⟩, ⟨ra', _⟩, ⟨v₁, v₂, hA, eret₁, eret₂⟩⟩ := hm
-  subst eret₁ eret₂
+  subst eret₁ eret₂; simp at r' ra'
   rw [← hA.ground g] at ra'
   let ⟨_, rn, rret⟩ := confluence r r'
   rw [← rret.ret_inv] at rn
   simp [nfm.steps rn, ra']
 
-theorem retGroundACK {m n A} (h : ⬝ ⊢ m ∶ F A) (g : isGround A) (nm : nf n) :
+theorem retGroundACK {m n A} (mj : m.joinless) (h : ⬝ ∣ ⬝ ⊢ m ∶ F A) (g : isGround A) (nm : nf n) :
   ⟨m, []⟩ ⤳⋆ ⟨n, []⟩ → ⟨⟦m⟧ₘ, []⟩ ⤳⋆ ⟨n, []⟩ :=
-  λ r ↦ evalStep nm (retGroundA h g ⟨stepEvalsNil r, nm⟩)
+  λ r ↦ evalStep nm (retGroundA mj h g ⟨stepEvalsNil r, nm⟩)

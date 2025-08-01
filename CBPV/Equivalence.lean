@@ -200,18 +200,22 @@ def ℰ.trans {B} := @trans𝒞ℰ B 𝒞.trans
   LE evals are backward closed
 -----------------------------*-/
 
-theorem ℰ.bwds {m m' n n' B} (rm : m ⇒⋆ m') (rn : n ⇒⋆ n') (h : (m', n') ∈ ⟦B⟧ᵉ) : (m, n) ∈ ⟦B⟧ᵉ := by
+namespace ℰ
+
+theorem bwds {m m' n n' B} (rm : m ⇒⋆ m') (rn : n ⇒⋆ n') (h : (m', n') ∈ ⟦B⟧ᵉ) : (m, n) ∈ ⟦B⟧ᵉ := by
   unfold ℰ at *
   let ⟨m'', n'', nm', nn', h⟩ := h
   exact ⟨m'', n'', nm'.bwds rm, nn'.bwds rn, h⟩
 
-theorem ℰ.bwdsRejoin {m m' n n' js₁ js₂ B} (rm : m ⇒⋆ m') (rn : n ⇒⋆ n') (h : (m', n') ∈ ⟦B⟧ᵉ) : (rejoin m js₁, rejoin n js₂) ∈ ⟦B⟧ᵉ := by
+theorem bwdsRejoin {m m' n n' js₁ js₂ B} (rm : m ⇒⋆ m') (rn : n ⇒⋆ n') (h : (m', n') ∈ ⟦B⟧ᵉ) : (rejoin m js₁, rejoin n js₂) ∈ ⟦B⟧ᵉ := by
   unfold ℰ at *
   let ⟨m'', n'', nm', nn', h⟩ := h
   refine ⟨m'', n'', nm'.bwdsRejoin rm, nn'.bwdsRejoin rn, h⟩
 
-theorem ℰ.bwd {m m' n n' B} (rm : m ⇒ m') (rn : n ⇒ n') : (m', n') ∈ ⟦B⟧ᵉ → (m, n) ∈ ⟦B⟧ᵉ := ℰ.bwds (.once rm) (.once rn)
-theorem ℰ.bwdRejoin {m m' n n' js₁ js₂ B} (rm : m ⇒ m') (rn : n ⇒ n') : (m', n') ∈ ⟦B⟧ᵉ → (rejoin m js₁, rejoin n js₂) ∈ ⟦B⟧ᵉ := ℰ.bwdsRejoin (.once rm) (.once rn)
+theorem bwd {m m' n n' B} (rm : m ⇒ m') (rn : n ⇒ n') : (m', n') ∈ ⟦B⟧ᵉ → (m, n) ∈ ⟦B⟧ᵉ := ℰ.bwds (.once rm) (.once rn)
+theorem bwdRejoin {m m' n n' js₁ js₂ B} (rm : m ⇒ m') (rn : n ⇒ n') : (m', n') ∈ ⟦B⟧ᵉ → (rejoin m js₁, rejoin n js₂) ∈ ⟦B⟧ᵉ := ℰ.bwdsRejoin (.once rm) (.once rn)
+
+end ℰ
 
 /-*---------------------
   Semantic equivalence
@@ -222,58 +226,49 @@ theorem ℰ.bwdRejoin {m m' n n' js₁ js₂ B} (rm : m ⇒ m') (rn : n ⇒ n') 
 def semCtxt Γ (σ τ : Nat → Val) := ∀ {x A}, Γ ∋ x ∶ A → (σ x, τ x) ∈ ⟦ A ⟧ᵛ
 notation:40 Γ:41 "⊨" σ:41 "~" τ:41 => semCtxt Γ σ τ
 
-theorem semCtxt.nil : ⬝ ⊨ var ~ var := by intro _ _ mem; cases mem
-theorem semCtxt.cons {Γ σ τ v w A} (h : (v, w) ∈ ⟦ A ⟧ᵛ) (hστ : Γ ⊨ σ ~ τ) : Γ ∷ A ⊨ v +: σ ~ w +: τ
+namespace semCtxt
+
+theorem nil : ⬝ ⊨ var ~ var := λ mem ↦ by cases mem
+theorem cons {Γ σ τ v w A} (h : (v, w) ∈ ⟦ A ⟧ᵛ) (hστ : Γ ⊨ σ ~ τ) : Γ ∷ A ⊨ v +: σ ~ w +: τ
   | _, _, .here => h
   | _, _, .there mem => hστ mem
 
-theorem semCtxt.sym {Γ σ τ} (h : Γ ⊨ σ ~ τ) : Γ ⊨ τ ~ σ := λ mem ↦ (h mem).sym
+theorem sym {Γ σ τ} (h : Γ ⊨ σ ~ τ) : Γ ⊨ τ ~ σ := 𝒱.sym ∘ h
+theorem trans {Γ ρ σ τ} (hρσ : Γ ⊨ ρ ~ σ) (hστ : Γ ⊨ σ ~ τ) : Γ ⊨ ρ ~ τ := λ mem ↦ 𝒱.trans (hρσ mem) (hστ mem)
+theorem rename {ξ σ τ} {Γ Δ : Ctxt} (hξ : Γ ⊢ ξ ∶ Δ) (h : Γ ⊨ σ ~ τ) : Δ ⊨ σ ∘ ξ ~ τ ∘ ξ := h ∘ hξ _ _
 
-theorem semCtxt.trans {Γ ρ σ τ} (hρσ : Γ ⊨ ρ ~ σ) (hστ : Γ ⊨ σ ~ τ) : Γ ⊨ ρ ~ τ :=
-  λ mem ↦ 𝒱.trans (hρσ mem) (hστ mem)
-
-theorem semCtxt.rename {ξ σ τ} {Γ Δ : Ctxt} (hξ : Γ ⊢ ξ ∶ Δ) (h : Γ ⊨ σ ~ τ) : Δ ⊨ σ ∘ ξ ~ τ ∘ ξ :=
-  λ mem ↦ h (hξ _ _ mem)
+end semCtxt
 
 /-* Semantic equivalence of join point contexts as a PER *-/
 
 section
 set_option hygiene false
-local notation:40 Γ:41 "∣" Δ:41 "⊨" js₁:41 "~" js₂:41 => semDtxt Γ Δ js₁ js₂
-inductive semDtxt (Γ : Ctxt) : Dtxt → J → J → Prop where
-  | nil : Γ ∣ ⬝ ⊨ .nil ~ .nil
-  | cons {Δ js₁ js₂ m n A B} : Γ ∣ Δ ⊨ js₁ ~ js₂ →
-    (∀ {σ τ v w}, Γ ⊨ σ ~ τ → (v, w) ∈ ⟦ A ⟧ᵛ → (rejoin (m⦃v +: σ⦄) (substJ σ js₁), rejoin (n⦃w +: τ⦄) (substJ τ js₂)) ∈ ⟦ B ⟧ᵉ) →
-    Γ ∣ Δ ∷ A ↗ B ⊨ .cons m js₁ ~ .cons n js₂
+local notation:40 Δ:41 "⊨" js₁:41 "~" js₂:41 => semDtxt Δ js₁ js₂
+inductive semDtxt : Dtxt → J → J → Prop where
+  | nil : ⬝ ⊨ .nil ~ .nil
+  | cons {Δ : Dtxt} {js₁ js₂ m n A B} : Δ ⊨ js₁ ~ js₂ →
+    (∀ {v w}, (v, w) ∈ ⟦ A ⟧ᵛ → (rejoin (m⦃v⦄) js₁, rejoin (n⦃w⦄) js₂) ∈ ⟦ B ⟧ᵉ) →
+    Δ ∷ A ↗ B ⊨ .cons m js₁ ~ .cons n js₂
 end
-notation:40 Γ:41 "∣" Δ:41 "⊨" js₁:41 "~" js₂:41 => semDtxt Γ Δ js₁ js₂
+notation:40 Δ:41 "⊨" js₁:41 "~" js₂:41 => semDtxt Δ js₁ js₂
 
-theorem semDtxt.sym {Γ Δ js₁ js₂} (h : Γ ∣ Δ ⊨ js₁ ~ js₂) : Γ ∣ Δ ⊨ js₂ ~ js₁ := by
+theorem semDtxt.sym {Δ : Dtxt} {js₁ js₂} (h : Δ ⊨ js₁ ~ js₂) : Δ ⊨ js₂ ~ js₁ := by
   induction h
   case nil => exact .nil
-  case cons h ih => exact .cons ih (λ hστ hvw ↦  .sym (h hστ.sym hvw.sym))
+  case cons h ih => exact .cons ih (λ hvw ↦  .sym (h hvw.sym))
 
-theorem semDtxt.trans {Γ Δ js₁ js₂ js₃} (h₁₂ : Γ ∣ Δ ⊨ js₁ ~ js₂) (h₂₃ : Γ ∣ Δ ⊨ js₂ ~ js₃) : Γ ∣ Δ ⊨ js₁ ~ js₃ := by
+theorem semDtxt.trans {Δ : Dtxt} {js₁ js₂ js₃} (h₁₂ : Δ ⊨ js₁ ~ js₂) (h₂₃ : Δ ⊨ js₂ ~ js₃) : Δ ⊨ js₁ ~ js₃ := by
   induction h₁₂ generalizing js₃
   case nil => exact h₂₃
   case cons h₁₂ ih =>
     cases h₂₃; case cons hjs h₂₃ =>
-    refine .cons (ih hjs) (λ hστ hvw ↦  ?_)
-    exact ℰ.trans (h₁₂ hστ hvw) (h₂₃ (semCtxt.trans hστ.sym hστ) (𝒱.trans hvw.sym hvw))
-
-theorem semDtxt.weaken {Γ Δ js₁ js₂ A} (h : Γ ∣ Δ ⊨ js₁ ~ js₂) : Γ ∷ A ∣ Δ ⊨ renameJ succ js₁ ~ renameJ succ js₂ := by
-  induction h <;> constructor; assumption
-  case cons m n _ _ _ ih _ =>
-    intro σ τ v w hστ hvw
-    have e {σ v} {m : Com} : (m⦃(v +: σ) ∘ lift succ⦄) = (m⦃v +: σ ∘ succ⦄) := by
-      apply substComExt _ _ (λ n ↦ ?_); cases n <;> simp [lift]
-    rw [substRenameCom, substRenameCom, substRenameJ, substRenameJ, e, e]
-    exact ih (λ mem ↦ hστ (.there mem)) hvw
+    refine .cons (ih hjs) (λ hvw ↦  ?_)
+    exact ℰ.trans (h₁₂ hvw) (h₂₃ (𝒱.trans hvw.sym hvw))
 
 /-* Semantic equivalence of values and computations *-/
 
-@[simp] def semVal Γ v w A := ∀ σ τ, Γ ⊨ σ ~ τ → (v⦃σ⦄, w⦃τ⦄) ∈ ⟦ A ⟧ᵛ
-@[simp] def semCom Γ Δ m n B := ∀ σ τ, Γ ⊨ σ ~ τ → ∀ js₁ js₂, Γ ∣ Δ ⊨ js₁ ~ js₂ → (rejoin (m⦃σ⦄) (substJ σ js₁), rejoin (n⦃τ⦄) (substJ τ js₂)) ∈ ⟦ B ⟧ᵉ
+@[simp] def semVal (Γ : Ctxt) (v w : Val) A := ∀ σ τ, Γ ⊨ σ ~ τ → (v⦃σ⦄, w⦃τ⦄) ∈ ⟦ A ⟧ᵛ
+@[simp] def semCom (Γ : Ctxt) (Δ : Dtxt) (m n : Com) B := ∀ σ τ, Γ ⊨ σ ~ τ → ∀ js₁ js₂, Δ ⊨ js₁ ~ js₂ → (rejoin (m⦃σ⦄) js₁, rejoin (n⦃τ⦄) js₂) ∈ ⟦ B ⟧ᵉ
 notation:40 Γ:41 "⊨" v:41 "~" w:41 "∶" A:41 => semVal Γ v w A
 notation:40 Γ:41 "∣" Δ:41 "⊨" m:41 "~" n:41 "∶" B:41 => semCom Γ Δ m n B
 
@@ -294,20 +289,19 @@ theorem semCom.trans {Γ Δ m₁ m₂ m₃} {B : ComType} (h₁₂ : Γ ∣ Δ �
   of syntactic typing wrt semantic equivalence
 ---------------------------------------------*-/
 
-theorem rejoinJump {Γ Δ js₁ js₂ j A B} (mem : Δ ∋ j ∶ A ↗ B) (h : Γ ∣ Δ ⊨ js₁ ~ js₂) :
+theorem rejoinJump {Γ : Ctxt} {Δ js₁ js₂ j A B} (mem : Δ ∋ j ∶ A ↗ B) (h : Δ ⊨ js₁ ~ js₂) :
   ∀ {σ τ v w}, Γ ⊨ σ ~ τ → (v, w) ∈ ⟦ A ⟧ᵛ →
-  (rejoin (jump j v) (substJ σ js₁), rejoin (jump j w) (substJ τ js₂)) ∈ ⟦ B ⟧ᵉ := by
+  (rejoin (jump j v) js₁, rejoin (jump j w) js₂) ∈ ⟦ B ⟧ᵉ := by
   induction h generalizing j A B
   case nil => cases mem
   case cons js₁ js₂ m n _ _ _ h _ =>
     cases mem
     case here =>
       intro σ τ v w hστ hvw; simp
-      refine ℰ.bwd (.rejoin ?_) (.rejoin ?_) (h hστ hvw)
-      all_goals rw [substUnion]; exact .γ
+      exact ℰ.bwd (.rejoin .γ) (.rejoin .γ) (h hvw)
     case there ih _ mem =>
       intro σ τ v w hστ hvw; simp
-      refine .bwd (.rejoin .join't) (.rejoin .join't) (ih mem hστ hvw)
+      exact .bwd (.rejoin .join't) (.rejoin .join't) (ih mem hστ hvw)
 
 theorem soundness {Γ} :
   (∀ (v : Val) A, Γ ⊢ v ∶ A → Γ ⊨ v ~ v ∶ A) ∧
@@ -336,8 +330,8 @@ theorem soundness {Γ} :
   case ret ih => exact ℰ.bwdsRejoin .refl .refl (ℰ.ret (ih σ τ hστ))
   case letin ihm ihn =>
     let ⟨v, w, r₁, r₂, hA⟩ := (ihm σ τ hστ .nil .nil .nil).ret_inv
-    refine ℰ.bwds ?_ ?_ (ihn (v +: σ) (w +: τ) (semCtxt.cons hA hστ) _ _ hjs.weaken)
-    all_goals rw [substUnion, substJDrop]
+    refine ℰ.bwds ?_ ?_ (ihn (v +: σ) (w +: τ) (semCtxt.cons hA hστ) js₁ js₂ hjs)
+    all_goals rw [substUnion]
     . exact Evals.rejoin (.trans' (Evals.letin r₁) (.once .ζ))
     . exact Evals.rejoin (.trans' (Evals.letin r₂) (.once .ζ))
   case case ihv ihm ihn =>
@@ -345,12 +339,12 @@ theorem soundness {Γ} :
     match ihv σ τ hστ with
     | .inl ⟨v, w, hA₁, ev, ew⟩ =>
       simp [ev, ew]
-      refine ℰ.bwd ?_ ?_ (ihm (v +: σ) (w +: τ) (semCtxt.cons hA₁ hστ) _ _ hjs.weaken)
-      all_goals rw [substUnion, substJDrop]; exact .rejoin .ιl
+      refine ℰ.bwd ?_ ?_ (ihm (v +: σ) (w +: τ) (semCtxt.cons hA₁ hστ) js₁ js₂ hjs)
+      all_goals rw [substUnion]; exact .rejoin .ιl
     | .inr ⟨v, w, hA₂, ev, ew⟩ =>
       simp [ev, ew]
-      refine ℰ.bwd ?_ ?_ (ihn (v +: σ) (w +: τ) (semCtxt.cons hA₂ hστ) _ _ hjs.weaken)
-      all_goals rw [substUnion, substJDrop]; exact .rejoin .ιr
+      refine ℰ.bwd ?_ ?_ (ihn (v +: σ) (w +: τ) (semCtxt.cons hA₂ hστ) js₁ js₂ hjs)
+      all_goals rw [substUnion]; exact .rejoin .ιr
   case prod ihm ihn =>
     exact ℰ.bwdsRejoin .refl .refl (ℰ.prod (ihm σ τ hστ .nil .nil .nil) (ihn σ τ hστ .nil .nil .nil))
   case fst ih =>
@@ -360,13 +354,10 @@ theorem soundness {Γ} :
     let ⟨_, _, _, _, r₁, r₂, hB₂⟩ := (ih σ τ hστ .nil .nil .nil).snd
     exact ℰ.bwdsRejoin (.trans' (Evals.snd r₁) (.once .π2)) (.trans' (Evals.snd r₂) (.once .π2)) hB₂
   case join m n _ _ _ _ ihm ihn =>
-    let hn := ihn σ τ hστ (.cons m js₁) (.cons m js₂) (.cons hjs (λ {σ τ v w} hστ hvw ↦ ?hm))
+    let hn := ihn σ τ hστ (.cons (m⦃⇑ σ⦄) js₁) (.cons (m⦃⇑ τ⦄) js₂) (.cons hjs (λ {v w} hvw ↦ ?hm))
     case hm =>
-      let hm := ihm (v +: σ) (w +: τ) (semCtxt.cons hvw hστ) _ _ hjs.weaken
-      rw [substRenameJ, substRenameJ,
-          substJExt ((v +: σ) ∘ succ) σ (λ _ ↦ rfl),
-          substJExt ((w +: τ) ∘ succ) τ (λ _ ↦ rfl)] at hm
-      exact hm
+      rw [← substUnion, ← substUnion]
+      exact ihm (v +: σ) (w +: τ) (semCtxt.cons hvw hστ) js₁ js₂ hjs
     exact hn
   case jump mem _ ihv => exact rejoinJump mem hjs hστ (ihv σ τ hστ)
 

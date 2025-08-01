@@ -81,28 +81,19 @@ theorem semCtxt.cons {Γ σ v A} (h : v ∈ ⟦ A ⟧ᵛ) (hσ : Γ ⊨ σ) : Γ
 
 section
 set_option hygiene false
-local notation:40 Γ:41 "∣" Δ:41 "⊨" js:41 => semDtxt Γ Δ js
-inductive semDtxt (Γ : Ctxt) : Dtxt → J → Prop where
-  | nil : Γ ∣ ⬝ ⊨ .nil
-  | cons {Δ js m A B} : Γ ∣ Δ ⊨ js →
-    (∀ {σ v}, Γ ⊨ σ → v ∈ ⟦ A ⟧ᵛ → (rejoin (m⦃v +: σ⦄) (substJ σ js)) ∈ ⟦ B ⟧ᵉ) →
-    Γ ∣ Δ ∷ A ↗ B ⊨ .cons m js
+local notation:40 Δ:41 "⊨" js:41 => semDtxt Δ js
+inductive semDtxt : Dtxt → J → Prop where
+  | nil : ⬝ ⊨ .nil
+  | cons {Δ : Dtxt} {js m A B} : Δ ⊨ js →
+    (∀ {v}, v ∈ ⟦ A ⟧ᵛ → (rejoin (m⦃v⦄) js) ∈ ⟦ B ⟧ᵉ) →
+    Δ ∷ A ↗ B ⊨ .cons m js
 end
-notation:40 Γ:41 "∣" Δ:41 "⊨" js:41 => semDtxt Γ Δ js
-
-theorem semDtxt.weaken {Γ Δ js A} (h : Γ ∣ Δ ⊨ js) : Γ ∷ A ∣ Δ ⊨ renameJ succ js := by
-  induction h <;> constructor; assumption
-  case cons m _ _ _ ih _ =>
-    intro σ v hσ hv
-    have e : (m⦃(v +: σ) ∘ lift succ⦄) = (m⦃v +: σ ∘ succ⦄) := by
-      apply substComExt _ _ (λ n ↦ ?_); cases n <;> simp [lift]
-    rw [substRenameCom, substRenameJ, e]
-    exact ih (λ mem ↦ hσ (.there mem)) hv
+notation:40 Δ:41 "⊨" js:41 => semDtxt Δ js
 
 /-* Semantic typing of values and computations *-/
 
 @[simp] def semVal (Γ : Ctxt) v A := ∀ σ, Γ ⊨ σ → v⦃σ⦄ ∈ ⟦ A ⟧ᵛ
-@[simp] def semCom (Γ : Ctxt) (Δ : Dtxt) m B := ∀ σ, Γ ⊨ σ → ∀ js, Γ ∣ Δ ⊨ js → rejoin (m⦃σ⦄) (substJ σ js) ∈ ⟦ B ⟧ᵉ
+@[simp] def semCom (Γ : Ctxt) (Δ : Dtxt) m B := ∀ σ, Γ ⊨ σ → ∀ js, Δ ⊨ js → rejoin (m⦃σ⦄) js ∈ ⟦ B ⟧ᵉ
 notation:40 Γ:41 "⊨" v:41 "∶" A:41 => semVal Γ v A
 notation:40 Γ:41 "∣" Δ:41 "⊨" m:41 "∶" B:41 => semCom Γ Δ m B
 
@@ -111,19 +102,18 @@ notation:40 Γ:41 "∣" Δ:41 "⊨" m:41 "∶" B:41 => semCom Γ Δ m B
   of syntactic typing wrt semantic typing
 ----------------------------------------*-/
 
-theorem rejoinJump {Γ Δ js j A B} (mem : Δ ∋ j ∶ A ↗ B) (h : Γ ∣ Δ ⊨ js) :
-  ∀ {σ v}, Γ ⊨ σ → v ∈ ⟦ A ⟧ᵛ → (rejoin (jump j v) (substJ σ js)) ∈ ⟦ B ⟧ᵉ := by
+theorem rejoinJump {Γ : Ctxt} {Δ : Dtxt} {js j A B} (mem : Δ ∋ j ∶ A ↗ B) (h : Δ ⊨ js) :
+  ∀ {σ v}, Γ ⊨ σ → v ∈ ⟦ A ⟧ᵛ → (rejoin (jump j v) js) ∈ ⟦ B ⟧ᵉ := by
   induction h generalizing j A B
   case nil => cases mem
   case cons h _ =>
     cases mem
     case here =>
       intro σ v hσ hv; simp
-      refine .bwd (.rejoin ?_) (h hσ hv)
-      rw [substUnion]; exact .γ
+      exact .bwd (.rejoin .γ) (h hv)
     case there ih _ mem =>
       intro σ v hσ hv; simp
-      refine .bwd (.rejoin .join't) (ih mem hσ hv)
+      exact .bwd (.rejoin .join't) (ih mem hσ hv)
 
 theorem soundness {Γ} :
   (∀ (v : Val) A, Γ ⊢ v ∶ A → Γ ⊨ v ∶ A) ∧
@@ -154,19 +144,19 @@ theorem soundness {Γ} :
   case letin ihret ih =>
     simp [ℰ, 𝒞] at ihret
     let ⟨_, ⟨rret, _⟩, v, hv, e⟩ := ihret σ hσ .nil .nil; subst e
-    let h := ih (v +: σ) (semCtxt.cons hv hσ) _ (.weaken hjs)
-    rw [substUnion, substJDrop] at h
+    let h := ih (v +: σ) (semCtxt.cons hv hσ) js hjs
+    rw [substUnion] at h
     exact ℰ.bwds (Evals.rejoin (.trans' (Evals.letin rret) (.once .ζ))) h
   case case ihv ihm ihn =>
     simp [𝒱] at ihv
     match ihv σ hσ with
     | .inl ⟨v, hv, e⟩ =>
-      let hm := ihm (v +: σ) (semCtxt.cons hv hσ) _ (.weaken hjs)
-      simp [e]; rw [substUnion, substJDrop] at hm
+      let hm := ihm (v +: σ) (semCtxt.cons hv hσ) js hjs
+      simp [e]; rw [substUnion] at hm
       exact ℰ.bwd (.rejoin .ιl) hm
     | .inr ⟨v, hv, e⟩ =>
-      let hn := ihn (v +: σ) (semCtxt.cons hv hσ) _ (.weaken hjs)
-      simp [e]; rw [substUnion, substJDrop] at hn
+      let hn := ihn (v +: σ) (semCtxt.cons hv hσ) js hjs
+      simp [e]; rw [substUnion] at hn
       exact ℰ.bwd (.rejoin .ιr) hn
   case prod ihm ihn =>
     exact ℰ.bwdsRejoin .refl (ℰ.prod (ihm σ hσ .nil .nil) (ihn σ hσ .nil .nil))
@@ -179,10 +169,10 @@ theorem soundness {Γ} :
     let ⟨_, ⟨rprod, nfprod⟩, n₁, n₂, _, hn, e⟩ := ih σ hσ .nil .nil; subst e
     exact ℰ.bwdsRejoin (.trans' (Evals.snd rprod) (.once .π2)) hn
   case join m _ _ _ _ _ ihm ihn =>
-    let hn := ihn σ hσ (.cons m js) (.cons hjs (λ {σ v} hσ hv ↦ ?hm))
+    let hn := ihn σ hσ (.cons (m⦃⇑ σ⦄) js) (.cons hjs (λ {v} hv ↦ ?hm))
     case hm =>
-      let hm := ihm (v +: σ) (semCtxt.cons hv hσ) _ (.weaken hjs)
-      rw [substRenameJ, substJExt ((v +: σ) ∘ succ) σ (λ _ ↦ rfl)] at hm; exact hm
+      rw [← substUnion]
+      exact ihm (v +: σ) (semCtxt.cons hv hσ) js hjs
     exact hn
   case jump mem _ ihv => exact rejoinJump mem hjs hσ (ihv σ hσ)
 
