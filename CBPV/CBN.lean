@@ -288,7 +288,7 @@ theorem transSubst {σ σ' t} (h : ∀ x, σ x ↦ₙ .force (σ' x)) : CBN.subs
   case var => exact h _
   case lam ih => exact .lam (ih (transUp h))
   case case ihs iht ihu =>
-    simp [transTerm]; rw [← renameUpLiftSubst, ← renameUpLiftSubst]
+    simp [transTerm]; rw [renameUpUpSubst, renameUpUpSubst]
     exact .case (ihs h) (iht (transUp h)) (ihu (transUp h))
   all_goals constructor <;> apply_rules
 
@@ -309,13 +309,13 @@ theorem simulation {t u k k'} (r : ⟨t, k⟩ ⤳ₙ ⟨u, k'⟩) : ∃ m, ⟨�
     calc
       _ ⤳ _ := .ζ
       _ ⤳ _ := by exact .ιl
-      _ = _ := by rw [← substUnion, substDrop₂]
+      _ = _ := by rw [substUnion, substDrop₂]
   case ιr s _ u =>
     refine ⟨⟦ u ⟧ᵗ ⦃ .thunk (⟦ s ⟧ᵗ)⦄, ?_, transSubstSingle⟩
     calc
       _ ⤳ _ := .ζ
       _ ⤳ _ := by exact .ιr
-      _ = _ := by rw [← substUnion, substDrop₂]
+      _ = _ := by rw [substUnion, substDrop₂]
   case π1 => exact ⟨_, .once .π1, transTransTerm⟩
   case π2 => exact ⟨_, .once .π2, transTransTerm⟩
   case app => exact ⟨_, .once .app, transTransTerm⟩

@@ -39,16 +39,6 @@ def rejoin (m : Com) : J → Com
   | .nil => m
   | .cons n js => rejoin (join n m) js
 
-@[simp]
-def renameJ (ξ : Nat → Nat) : J → J
-  | .nil => .nil
-  | .cons m js => .cons (renameCom (lift ξ) m) (renameJ ξ js)
-
-@[simp]
-def substJ (σ : Nat → Val) : J → J
-  | .nil => .nil
-  | .cons m js => .cons (m⦃⇑ σ⦄) (substJ σ js)
-
 theorem Eval.rejoin {m n js} (r : m ⇒ n) : rejoin m js ⇒ rejoin n js := by
   induction js generalizing m n
   case nil => exact r

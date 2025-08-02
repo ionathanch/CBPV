@@ -386,7 +386,7 @@ theorem letin {Γ Δ m₁ m₂ A} {B : ComType} (h : Γ ∷ A ∣ Δ ⊨ m₁ ~ 
   intro σ τ hστ js₁ js₂ hjs n₁ n₂ hn
   have ⟨v, w, rn₁, rn₂, hA⟩ := hn.ret_inv
   refine ℰ.bwds ?_ ?_ (h (v +: σ) (w +: τ) (semCtxt.cons hA hστ) js₁ js₂ hjs)
-  all_goals rw [substUnion]; refine .rejoin ?_; simp
+  all_goals rw [← substUnion]; refine .rejoin ?_; simp
   . exact .trans' (Evals.letin rn₁) (.once .ζ)
   . exact .trans' (Evals.letin rn₂) (.once .ζ)
 
@@ -452,7 +452,7 @@ theorem soundA {Γ} :
     simp [em, en]; exact ℰ.bwdRejoin .π .π h
   case lam B _ ih _ _ _ _ =>
     refine hk.plug (λ σ τ hστ _ _ _ ↦ ℰ.bwdsRejoin .refl .refl (ℰ.lam (λ v w hA ↦ ?_)))
-    rw [← substUnion, ← substUnion]
+    rw [substUnion, substUnion]
     exact ih mj .nil (soundK .nil) rfl (v +: σ) (w +: τ) (semCtxt.cons hA hστ) .nil .nil .nil
   case app hv ihm ihv _ k₁ k₂ _ =>
     let ⟨mj, vj⟩ := mj
@@ -473,11 +473,11 @@ theorem soundA {Γ} :
     | .inl ⟨v, w, hA₁, ev, ew⟩ =>
       simp [ev, ew]
       refine ℰ.bwd ?_ ?_ (ihm₁ mj₁ wtk.weaken hk.weaken rfl (v +: σ) (w +: τ) (semCtxt.cons hA₁ hστ) js₁ js₂ hjs)
-      all_goals rw [substUnion]; exact (.rejoin .ιl)
+      all_goals rw [← substUnion]; exact (.rejoin .ιl)
     | .inr ⟨v, w, hA₂, ev, ew⟩ =>
       simp [ev, ew]
       refine ℰ.bwd ?_ ?_ (ihm₂ mj₂ wtk.weaken hk.weaken rfl (v +: σ) (w +: τ) (semCtxt.cons hA₂ hστ) js₁ js₂ hjs)
-      all_goals rw [substUnion]; exact (.rejoin .ιr)
+      all_goals rw [← substUnion]; exact (.rejoin .ιr)
   case prod ihn₁ ihn₂ _ _ _ _ =>
     let ⟨nj₁, nj₂⟩ := mj
     refine hk.plug (λ σ τ hστ js₁ js₂ hjs ↦ ?_)

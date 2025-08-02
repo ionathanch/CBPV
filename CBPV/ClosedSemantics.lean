@@ -134,7 +134,7 @@ theorem soundness {Γ} :
     exact ℰ.bwdRejoin .π h
   case lam ih =>
     refine ℰ.bwdsRejoin .refl (ℰ.lam (λ v hv ↦ ?_))
-    rw [← substUnion]
+    rw [substUnion]
     exact ih (v +: σ) (semCtxt.cons hv hσ) .nil .nil
   case app ihm ihv =>
     simp [ℰ] at ihm; simp [𝒞] at ihm
@@ -145,18 +145,18 @@ theorem soundness {Γ} :
     simp [ℰ, 𝒞] at ihret
     let ⟨_, ⟨rret, _⟩, v, hv, e⟩ := ihret σ hσ .nil .nil; subst e
     let h := ih (v +: σ) (semCtxt.cons hv hσ) js hjs
-    rw [substUnion] at h
+    rw [← substUnion] at h
     exact ℰ.bwds (Evals.rejoin (.trans' (Evals.letin rret) (.once .ζ))) h
   case case ihv ihm ihn =>
     simp [𝒱] at ihv
     match ihv σ hσ with
     | .inl ⟨v, hv, e⟩ =>
       let hm := ihm (v +: σ) (semCtxt.cons hv hσ) js hjs
-      simp [e]; rw [substUnion] at hm
+      simp [e]; rw [← substUnion] at hm
       exact ℰ.bwd (.rejoin .ιl) hm
     | .inr ⟨v, hv, e⟩ =>
       let hn := ihn (v +: σ) (semCtxt.cons hv hσ) js hjs
-      simp [e]; rw [substUnion] at hn
+      simp [e]; rw [← substUnion] at hn
       exact ℰ.bwd (.rejoin .ιr) hn
   case prod ihm ihn =>
     exact ℰ.bwdsRejoin .refl (ℰ.prod (ihm σ hσ .nil .nil) (ihn σ hσ .nil .nil))
@@ -171,7 +171,7 @@ theorem soundness {Γ} :
   case join m _ _ _ _ _ ihm ihn =>
     let hn := ihn σ hσ (.cons (m⦃⇑ σ⦄) js) (.cons hjs (λ {v} hv ↦ ?hm))
     case hm =>
-      rw [← substUnion]
+      rw [substUnion]
       exact ihm (v +: σ) (semCtxt.cons hv hσ) js hjs
     exact hn
   case jump mem _ ihv => exact rejoinJump mem hjs hσ (ihv σ hσ)

@@ -313,7 +313,7 @@ theorem transRename {ξ} :
   case unit => rfl
   case lam ih | inl ih | inr ih | val ih | fst ih | snd ih => simp [lift, ih]
   case pair ihv ihw => simp [ihv, ihw]
-  case app iht ihu => simp [lift, iht, ← ihu, renameLiftRenameCom]
+  case app iht ihu => simp [lift, iht, ← ihu, ← renameLiftRename]
   case case ihs iht ihu =>
     simp [ihs, ← iht, ← ihu, renameLiftLiftRename]; rfl
 
@@ -333,10 +333,10 @@ theorem transSubst {σ} :
   case lam ih => simp [← ih, transUp]
   case inl ih | inr ih | val ih | fst ih | snd ih => simp [up, ih]
   case pair ihv ihw => simp [ihv, ihw]
-  case app iht ihu => simp [iht, ← ihu, ← renameUpSubstCom]; simp [up]
+  case app iht ihu => simp [iht, ← ihu, renameUpSubstCom]; simp [up]
   case case ihs iht ihu =>
     simp [ihs, ← iht, ← ihu]; repeat' constructor
-    all_goals rw [← transUp, ← renameUpLiftSubst]
+    all_goals rw [← transUp, renameUpUpSubst]
 
 def transSubstVal {σ v} := (transSubst (σ := σ)).left (v := v)
 def transSubstCom {σ t} := (transSubst (σ := σ)).right (t := t)
@@ -356,21 +356,21 @@ theorem simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨⟦ t ⟧
       _ ⤳ _ := Step.π
       _ ⤳ _ := Step.β
       _ = _ := by
-        rw [← substUnion, substDrop₂, ← transSubstCom, substComExt]
+        rw [substUnion, substDrop₂, ← transSubstCom, substComExt]
         intro n; cases n <;> rfl
   case ιl =>
     calc
       _ ⤳ _ := Step.ζ
       _ ⤳ _ := by exact Step.ιl
       _ = _ := by
-        rw [← substUnion, substDrop₂, ← transSubstCom, substComExt]
+        rw [substUnion, substDrop₂, ← transSubstCom, substComExt]
         intro n; cases n <;> rfl
   case ιr =>
     calc
       _ ⤳ _ := Step.ζ
       _ ⤳ _ := by exact Step.ιr
       _ = _ := by
-        rw [← substUnion, substDrop₂, ← transSubstCom, substComExt]
+        rw [substUnion, substDrop₂, ← transSubstCom, substComExt]
         intro n; cases n <;> rfl
   case π1 =>
     simp
@@ -391,7 +391,7 @@ theorem simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨⟦ t ⟧
     calc
       _ ⤳ _ := Step.ζ
       _ ⤳ _ := by exact Step.letin
-      _ = _ := by simp [up, ← substDropCom]
+      _ = _ := by simp [up, substDropCom]
   case case => exact .once .letin
   case fst => exact .once .letin
   case snd => exact .once .letin

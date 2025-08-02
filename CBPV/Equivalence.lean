@@ -321,7 +321,7 @@ theorem soundness {Γ} :
     simp [em, en]; exact ℰ.bwdRejoin .π .π h
   case lam ih =>
     refine ℰ.bwdsRejoin .refl .refl (ℰ.lam (λ v w hA ↦ ?_))
-    rw [← substUnion, ← substUnion]
+    rw [substUnion, substUnion]
     exact ih (v +: σ) (w +: τ) (semCtxt.cons hA hστ) .nil .nil .nil
   case app ihm ihv =>
     let ⟨_ ,_, r₁, r₂, hAB⟩ := (ihm σ τ hστ .nil .nil .nil).lam_inv
@@ -331,7 +331,7 @@ theorem soundness {Γ} :
   case letin ihm ihn =>
     let ⟨v, w, r₁, r₂, hA⟩ := (ihm σ τ hστ .nil .nil .nil).ret_inv
     refine ℰ.bwds ?_ ?_ (ihn (v +: σ) (w +: τ) (semCtxt.cons hA hστ) js₁ js₂ hjs)
-    all_goals rw [substUnion]
+    all_goals rw [← substUnion]
     . exact Evals.rejoin (.trans' (Evals.letin r₁) (.once .ζ))
     . exact Evals.rejoin (.trans' (Evals.letin r₂) (.once .ζ))
   case case ihv ihm ihn =>
@@ -340,11 +340,11 @@ theorem soundness {Γ} :
     | .inl ⟨v, w, hA₁, ev, ew⟩ =>
       simp [ev, ew]
       refine ℰ.bwd ?_ ?_ (ihm (v +: σ) (w +: τ) (semCtxt.cons hA₁ hστ) js₁ js₂ hjs)
-      all_goals rw [substUnion]; exact .rejoin .ιl
+      all_goals rw [← substUnion]; exact .rejoin .ιl
     | .inr ⟨v, w, hA₂, ev, ew⟩ =>
       simp [ev, ew]
       refine ℰ.bwd ?_ ?_ (ihn (v +: σ) (w +: τ) (semCtxt.cons hA₂ hστ) js₁ js₂ hjs)
-      all_goals rw [substUnion]; exact .rejoin .ιr
+      all_goals rw [← substUnion]; exact .rejoin .ιr
   case prod ihm ihn =>
     exact ℰ.bwdsRejoin .refl .refl (ℰ.prod (ihm σ τ hστ .nil .nil .nil) (ihn σ τ hστ .nil .nil .nil))
   case fst ih =>
@@ -356,7 +356,7 @@ theorem soundness {Γ} :
   case join m n _ _ _ _ ihm ihn =>
     let hn := ihn σ τ hστ (.cons (m⦃⇑ σ⦄) js₁) (.cons (m⦃⇑ τ⦄) js₂) (.cons hjs (λ {v w} hvw ↦ ?hm))
     case hm =>
-      rw [← substUnion, ← substUnion]
+      rw [substUnion, substUnion]
       exact ihm (v +: σ) (w +: τ) (semCtxt.cons hvw hστ) js₁ js₂ hjs
     exact hn
   case jump mem _ ihv => exact rejoinJump mem hjs hστ (ihv σ τ hστ)

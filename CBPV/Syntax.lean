@@ -327,6 +327,7 @@ theorem substComp ρ σ τ (h : ∀ x, (substVal ρ ∘ σ) x = τ x) :
 def substValComp ρ σ := (substComp ρ σ (substVal ρ ∘ σ) (λ _ ↦ rfl)).left
 def substComComp ρ σ := (substComp ρ σ (substVal ρ ∘ σ) (λ _ ↦ rfl)).right
 
+-- Renamings are substitutions
 theorem renameToSubst ξ :
   (∀ v, renameVal ξ v = substVal (var ∘ ξ) v) ∧
   (∀ m, renameCom ξ m = substCom (var ∘ ξ) m) := by
@@ -339,102 +340,72 @@ theorem renameToSubst ξ :
 def renameToSubstVal ξ := (renameToSubst ξ).left
 def renameToSubstCom ξ := (renameToSubst ξ).right
 
-/-*-------------------------------------------------
-  Handy dandy derived renaming substitution lemmas
--------------------------------------------------*-/
+/-*-----------------------------------------------------
+  Handy dandy derived renaming and substitution lemmas
+-----------------------------------------------------*-/
 
-theorem substDropVal v w : w = substVal (v +: var) (renameVal succ w) := by
-  calc
-    w = substVal var w                         := by rw [substValId]
-    _ = substVal (v +: var) (renameVal succ w) := by rw [substRenameVal]; rfl
+/-* Dropping and combining extended substitutions *-/
 
-theorem substDropCom v m : m = substCom (v +: var) (renameCom succ m) := by
-  calc
-    m = substCom var m                         := by rw [substComId]
-    _ = substCom (v +: var) (renameCom succ m) := by rw [substRenameCom]; rfl
+theorem substDropVal v w : substVal (v +: var) (renameVal succ w) = w := by
+  calc substVal (v +: var) (renameVal succ w)
+    _ = substVal var w := by rw [substRenameVal]; rfl
+    _ = w := by rw [substValId]
+
+theorem substDropCom v m : substCom (v +: var) (renameCom succ m) = m := by
+  calc substCom (v +: var) (renameCom succ m)
+    _ = substCom var m := by rw [substRenameCom]; rfl
+    _ = m := by rw [substComId]
 
 theorem substDrop₂ σ v₁ v₂ m : substCom (v₁ +: v₂ +: σ) (renameCom (lift succ) m) = substCom (v₁ +: σ) m := by
   calc substCom (v₁ +: v₂ +: σ) (renameCom (lift succ) m)
-    _ = substCom (v₁ +: v₂ +: σ) (substCom (var ∘ lift succ) m)   := by rw [renameToSubstCom]
-    _ = (substCom (v₁ +: v₂ +: σ) ∘ substCom (var ∘ lift succ)) m := rfl
-    _ = substCom (substVal (v₁ +: v₂ +: σ) ∘ (var ∘ lift succ)) m := by rw [substComComp]
-    _ = substCom (v₁ +: σ) m                                      := by rw [substComExt]; intro n; cases n <;> rfl
+    _ = substCom ((v₁ +: v₂ +: σ) ∘ lift succ) m   := by rw [substRenameCom]
+    _ = substCom (v₁ +: σ) m                       := by rw [substComExt]; intro n; cases n <;> rfl
 
-theorem substUnion σ a m : substCom (a +: σ) m = substCom (a +: var) (substCom (⇑ σ) m) := by
-  calc substCom (a +: σ) m
+theorem substUnion σ a m : substCom (a +: var) (substCom (⇑ σ) m) = substCom (a +: σ) m := by
+  calc substCom (a +: var) (substCom (⇑ σ) m)
+    _ = (substCom (a +: var) ∘ substCom (⇑ σ)) m := rfl
     _ = substCom (substVal (a +: var) ∘ (var 0 +: (renameVal succ ∘ σ))) m :=
-        by apply substComExt; intro n; cases n <;> simp; rw [← substDropVal]
-    _ = substCom (a +: var) (substCom (⇑ σ) m) :=
-        by rw [← substComComp]; rfl
+      by rw [substComComp]; rfl
+    _ = substCom (a +: σ) m :=
+      by apply substComExt; intro n; cases n <;> simp; rw [substDropVal]
 
-theorem substPush {σ : Nat → Val} {m : Com} {v : Val} : (m⦃v⦄⦃σ⦄) = substCom ((v⦃σ⦄) +: σ) m := by
-  calc (m⦃v⦄⦃σ⦄)
-    _ = (substCom σ ∘ substCom (v +: var)) m := rfl
-    _ = (m⦃substVal σ ∘ (v +: var)⦄) := by rw [substComComp σ (v +: var) m]
-    _ = substCom ((v⦃σ⦄) +: σ) m     := by rw [substComExt]; intro n; cases n <;> rfl
+/-* Pushing in lifts and ups through renamings *-/
 
-theorem renameDist ξ a m : substCom (renameVal ξ a +: var) (renameCom (lift ξ) m) = renameCom ξ (substCom (a +: var) m) := by
-  calc substCom (renameVal ξ a +: var) (renameCom (lift ξ) m)
-    _ = substCom ((renameVal ξ a +: var) ∘ lift ξ) m := by rw [substRenameCom]
-    _ = substCom (renameVal ξ ∘ (a +: var)) m        := by apply substComExt; intro n; cases n <;> rfl
-    _ = renameCom ξ (substCom (a +: var) m)          := by rw [← renameSubstCom]
-
-theorem substDist σ v m : substCom (substVal σ v +: var) (substCom (⇑ σ) m) = substCom σ (substCom (v +: var) m) := by
-  calc substCom (substVal σ v +: var) (substCom (⇑ σ) m)
-      = substCom (substVal σ v +: σ) m       := by rw [← substUnion]
-    _ = substCom (substVal σ ∘ (v +: var)) m := by apply substComExt; intro n; cases n <;> rfl
-    _ = (substCom σ ∘ substCom (v +: var)) m := by rw [← substComComp]
-
-theorem substToRename x m : substCom (var x +: var) m = renameCom (x +: id) m := by
-  calc substCom (var x +: var) m
-    _ = substCom (var ∘ (x +: id)) m := by apply substComExt; intro n; cases n <;> simp
-    _ = renameCom (x +: id) m        := by rw [renameToSubstCom]
-
-theorem substVar σ x m : substCom (var x +: σ) m = renameCom (x +: id) (substCom (⇑ σ) m) := by
-  calc substCom (var x +: σ) m
-    _ = substCom (var x +: var) (substCom (⇑ σ) m) := substUnion σ (var x) m
-    _ = renameCom (x +: id) (substCom (⇑ σ) m)     := substToRename x _
-
-theorem renameLiftRenameVal ξ v : renameVal succ (renameVal ξ v) = renameVal (lift ξ) (renameVal succ v) := by
-  calc renameVal succ (renameVal ξ v)
-    _ = renameVal (succ ∘ ξ) v                := by rw [renameValComp]
-    _ = renameVal (lift ξ ∘ succ) v           := by rw [renameValExt]; exact liftSucc ξ
-    _ = renameVal (lift ξ) (renameVal succ v) := by rw [← renameValComp]
-
-theorem renameLiftRenameCom ξ m : renameCom succ (renameCom ξ m) = renameCom (lift ξ) (renameCom succ m) := by
-  calc renameCom succ (renameCom ξ m)
-    _ = renameCom (succ ∘ ξ) m                := by rw [renameComComp]
-    _ = renameCom (lift ξ ∘ succ) m           := by rw [renameComExt]; exact liftSucc ξ
-    _ = renameCom (lift ξ) (renameCom succ m) := by rw [← renameComComp]
+theorem renameLiftRename ξ m : renameCom (lift ξ) (renameCom succ m) = renameCom succ (renameCom ξ m) := by
+  calc renameCom (lift ξ) (renameCom succ m)
+    _ = renameCom (lift ξ ∘ succ) m    := by rw [renameComComp]
+    _ = renameCom (succ ∘ ξ) m         := by rw [renameComExt]; exact liftSucc ξ
+    _ = renameCom succ (renameCom ξ m) := by rw [renameComComp]
 
 theorem renameLiftLiftRename ξ m : renameCom (lift (lift ξ)) (renameCom (lift succ) m) = renameCom (lift succ) (renameCom (lift ξ) m) := by
   calc renameCom (lift (lift ξ)) (renameCom (lift succ) m)
     _ = renameCom (lift (lift ξ) ∘ lift succ) m      := by rw [renameComComp]
     _ = renameCom (lift succ ∘ lift ξ) m             := by rw [renameComExt]; exact liftLiftSucc ξ
-    _ = renameCom (lift succ) (renameCom (lift ξ) m) := by rw [← renameComComp]
+    _ = renameCom (lift succ) (renameCom (lift ξ) m) := by rw [renameComComp]
 
-theorem renameUpSubstVal σ v : renameVal succ (substVal σ v) = substVal (⇑ σ) (renameVal succ v) := by
-  calc renameVal succ (substVal σ v)
-    _ = substVal (renameVal succ ∘ σ) v   := by rw [renameSubstVal]
-    _ = substVal (⇑ σ ∘ succ) v           := by rw [substValExt]; exact upSucc σ
-    _ = substVal (⇑ σ) (renameVal succ v) := by rw [substRenameVal]
+theorem renameUpSubstVal σ v : substVal (⇑ σ) (renameVal succ v) = renameVal succ (substVal σ v) := by
+  calc substVal (⇑ σ) (renameVal succ v)
+  _ = substVal (⇑ σ ∘ succ) v         := by rw [substRenameVal]
+  _ = substVal (renameVal succ ∘ σ) v := by rw [substValExt _ _ (upSucc σ)]
+  _ = renameVal succ (substVal σ v)   := by rw [renameSubstVal]
 
-theorem renameUpSubstCom σ m : renameCom succ (substCom σ m) = substCom (⇑ σ) (renameCom succ m) := by
-  calc renameCom succ (substCom σ m)
-    _ = substCom (renameVal succ ∘ σ) m   := by rw [renameSubstCom]
-    _ = substCom (⇑ σ ∘ succ) m           := by rw [substComExt]; exact upSucc σ
-    _ = substCom (⇑ σ) (renameCom succ m) := by rw [substRenameCom]
+theorem renameUpSubstCom σ m : substCom (⇑ σ) (renameCom succ m) = renameCom succ (substCom σ m) := by
+  calc substCom (⇑ σ) (renameCom succ m)
+  _ = substCom (⇑ σ ∘ succ) m         := by rw [substRenameCom]
+  _ = substCom (renameVal succ ∘ σ) m := by rw [substComExt _ _ (upSucc σ)]
+  _ = renameCom succ (substCom σ m)   := by rw [renameSubstCom]
 
-theorem renameUpLiftSubst σ m : renameCom (lift succ) (substCom (⇑ σ) m) = substCom (⇑ ⇑ σ) (renameCom (lift succ) m) := by
-  calc renameCom (lift succ) (substCom (⇑ σ) m)
-    _ = substCom (renameVal (lift succ) ∘ (⇑ σ)) m := by rw [renameSubstCom]
-    _ = substCom (⇑ ⇑ σ ∘ lift succ) m             := by rw [substComExt]; intro n; rw [upUpSucc σ n]
-    _ = substCom (⇑ ⇑ σ) (renameCom (lift succ) m) := by rw [substRenameCom]
+theorem renameUpUpSubst σ m : substCom (⇑ ⇑ σ) (renameCom (lift succ) m) = renameCom (lift succ) (substCom (⇑ σ) m) := by
+  calc substCom (⇑ ⇑ σ) (renameCom (lift succ) m)
+    _ = substCom (⇑ ⇑ σ ∘ lift succ) m             := by rw [substRenameCom]
+    _ = substCom (renameVal (lift succ) ∘ (⇑ σ)) m := by rw [substComExt _ _ (upUpSucc σ)]
+    _ = renameCom (lift succ) (substCom (⇑ σ) m)   := by rw [renameSubstCom]
 
--- terrible name but extremely specific lemma for Equivalence.letLet I will never use again
+/-* Terrible name but extremely specific lemma for Equivalence.letLet/.letCase I will never use again *-/
+
 theorem renameDropSubst σ m v : ((renameCom (lift succ) m)⦃⇑⇑ σ⦄⦃⇑ (v +: var)⦄) = (m⦃⇑ σ⦄) := by
   calc (renameCom (lift succ) m)⦃⇑⇑ σ⦄⦃⇑ (v +: var)⦄
-    _ = (renameCom (lift succ) (m ⦃⇑ σ⦄)⦃⇑ (v +: var)⦄) := by rw [renameUpLiftSubst]
+    _ = (renameCom (lift succ) (m ⦃⇑ σ⦄)⦃⇑ (v +: var)⦄) := by rw [renameUpUpSubst]
     _ = (renameCom (lift succ) (m ⦃⇑ σ⦄)⦃var 0 +: renameVal succ v +: var ∘ succ⦄)
       := by rw [substComExt]; intro n; cases n with | zero => rfl | succ n => cases n <;> rfl
     _ = (m⦃⇑ σ⦄⦃var 0 +: var ∘ succ⦄)                   := by rw [substDrop₂]
