@@ -7,11 +7,11 @@ theorem letLet {Γ Δ n m m' A} {B : ComType}
   (hm' : Γ ∷ A ∣ Δ ⊢ m' ∶ B) :
   Γ ∣ Δ ⊨ letin (letin n m) m' ~ letin n (letin m (renameCom (lift succ) m')) ∶ B := by
   intro σ τ hστ js₁ js₂ hjs
-  let ⟨v₁, v₂, rv₁, rv₂, hA⟩ := (soundCom hlet σ τ hστ .nil .nil .nil).ret_inv
+  let ⟨v₁, v₂, rv₁, rv₂, hA⟩ := (soundCom hlet hστ .nil).ret_inv
   have r₁' : letin ((letin n m)⦃σ⦄) (m'⦃⇑ σ⦄) ⇒⋆ m'⦃v₁ +: σ⦄ := by
     rw [← substUnion]; exact .trans' rv₁.letin (.once .ζ)
   cases hlet with | letin hn hm =>
-  let ⟨w₁, w₂, rw₁, rw₂, _⟩ := (soundCom hn σ τ hστ .nil .nil .nil).ret_inv
+  let ⟨w₁, w₂, rw₁, rw₂, _⟩ := (soundCom hn hστ .nil).ret_inv
   have rlet : letin (n⦃τ⦄) (m⦃⇑ τ⦄) ⇒⋆ m⦃w₂ +: τ⦄ := calc
     _ ⇒⋆ letin (ret w₂) (m⦃⇑ τ⦄) := rw₂.letin
     _ ⇒  m⦃w₂ +: τ⦄ := by rw [← substUnion]; exact .ζ
@@ -25,7 +25,7 @@ theorem letLet {Γ Δ n m m' A} {B : ComType}
       := by simp only [substCom]; rw [substUnion, renameDropSubst]
     _ ⇒⋆ letin (ret v₂) (m'⦃⇑τ⦄) := rlet₂.letin
     _ ⇒ m'⦃v₂ +: τ⦄ := by rw [← substUnion]; exact .ζ
-  have goal := soundCom hm' (v₁ +: σ) (v₂ +: τ) (semCtxt.cons hA hστ) js₁ js₂ hjs
+  have goal := soundCom hm' (semCtxt.cons hA hστ) hjs
   refine ℰ.bwds (.rejoin r₁') (.rejoin r₂') goal
 
 theorem appLet {Γ Δ n m v A B}
@@ -33,12 +33,12 @@ theorem appLet {Γ Δ n m v A B}
   (hv : Γ ⊢ v ∶ A) :
   Γ ∣ Δ ⊨ app (letin n m) v ~ letin n (app m (renameVal succ v)) ∶ B := by
   intro σ τ hστ js₁ js₂ hjs
-  let ⟨n₁, n₂, r₁, r₂, hB⟩ := (soundCom hlet σ τ hστ .nil .nil .nil).lam_inv
+  let ⟨n₁, n₂, r₁, r₂, hB⟩ := (soundCom hlet hστ .nil).lam_inv
   have r₁' : app ((letin n m)⦃σ⦄) (v⦃σ⦄) ⇒⋆ n₁⦃v⦃σ⦄⦄ := .trans' r₁.app (.once .β)
   simp only [substCom] at *
   cases hlet with | letin hn hm =>
-  let ⟨w₁, w₂, _, rw₂, hA'⟩ := (soundCom hn σ τ hστ .nil .nil .nil).ret_inv
-  let ⟨_, m₂, _, rm₂, _⟩ := (soundCom hm (w₁ +: σ) (w₂ +: τ) (semCtxt.cons hA' hστ) .nil .nil .nil).lam_inv
+  let ⟨w₁, w₂, _, rw₂, hA'⟩ := (soundCom hn hστ .nil).ret_inv
+  let ⟨_, m₂, _, rm₂, _⟩ := (soundCom hm (semCtxt.cons hA' hστ) .nil).lam_inv
   have rlet : letin (n⦃τ⦄) (m⦃⇑ τ⦄) ⇒⋆ lam m₂ := calc
     _ ⇒⋆ letin (ret w₂) (m⦃⇑ τ⦄) := rw₂.letin
     _ ⇒  m⦃w₂ +: τ⦄ := by rw [← substUnion]; exact .ζ
@@ -54,18 +54,18 @@ theorem appLet {Γ Δ n m v A B}
       := by simp only [substCom]; rw [substUnion, renameUpSubstVal, substDropVal]
     _ ⇒⋆ app (lam n₂) (v⦃τ⦄) := rm₂.app
     _ ⇒  n₂⦃v⦃τ⦄⦄ := .β
-  exact ℰ.bwdsRejoin r₁' r₂' (hB _ _ (soundVal hv σ τ hστ))
+  exact ℰ.bwdsRejoin r₁' r₂' (hB _ _ (soundVal hv hστ))
 
 theorem fstLet {Γ Δ n m B₁ B₂}
   (hlet : Γ ∣ ⬝ ⊢ letin n m ∶ Prod B₁ B₂) :
   Γ ∣ Δ ⊨ fst (letin n m) ~ letin n (fst m) ∶ B₁ := by
   intro σ τ hστ js₁ js₂ hjs
-  let ⟨n₁, _, n₂, _, r₁, r₂, hB₁⟩ := (soundCom hlet σ τ hστ .nil .nil .nil).fst
+  let ⟨n₁, _, n₂, _, r₁, r₂, hB₁⟩ := (soundCom hlet hστ .nil).fst
   have r₁' : fst ((letin n m)⦃σ⦄) ⇒⋆ n₁ := .trans' r₁.fst (.once .π1)
   simp only [substCom] at *
   cases hlet with | letin hn hm =>
-  let ⟨w₁, w₂, _, rw₂, hA'⟩ := (soundCom hn σ τ hστ .nil .nil .nil).ret_inv
-  let ⟨m₁, _, m₂, _, _, r₂', _⟩ := (soundCom hm (w₁ +: σ) (w₂ +: τ) (semCtxt.cons hA' hστ) .nil .nil .nil).fst
+  let ⟨w₁, w₂, _, rw₂, hA'⟩ := (soundCom hn hστ .nil).ret_inv
+  let ⟨m₁, _, m₂, _, _, r₂', _⟩ := (soundCom hm (semCtxt.cons hA' hστ) .nil).fst
   have rlet : letin (n⦃τ⦄) (m⦃⇑ τ⦄) ⇒⋆ prod m₂ _ := calc
     _ ⇒⋆ letin (ret w₂) (m⦃⇑ τ⦄) := rw₂.letin
     _ ⇒  m⦃w₂ +: τ⦄              := by rw [← substUnion]; exact .ζ
@@ -85,12 +85,12 @@ theorem sndLet {Γ Δ n m B₁ B₂}
   (hlet : Γ ∣ ⬝ ⊢ letin n m ∶ Prod B₁ B₂) :
   Γ ∣ Δ ⊨ snd (letin n m) ~ letin n (snd m) ∶ B₂ := by
   intro σ τ hστ js₁ js₂ hjs
-  let ⟨_, n₁, _, n₂, r₁, r₂, hB₂⟩ := (soundCom hlet σ τ hστ .nil .nil .nil).snd
+  let ⟨_, n₁, _, n₂, r₁, r₂, hB₂⟩ := (soundCom hlet hστ .nil).snd
   have r₁' : snd ((letin n m)⦃σ⦄) ⇒⋆ n₁ := .trans' r₁.snd (.once .π2)
   simp only [substCom] at *
   cases hlet with | letin hn hm =>
-  let ⟨w₁, w₂, _, rw₂, hA'⟩ := (soundCom hn σ τ hστ .nil .nil .nil).ret_inv
-  let ⟨m₁, _, m₂, _, _, r₂', _⟩ := (soundCom hm (w₁ +: σ) (w₂ +: τ) (semCtxt.cons hA' hστ) .nil .nil .nil).fst
+  let ⟨w₁, w₂, _, rw₂, hA'⟩ := (soundCom hn hστ .nil).ret_inv
+  let ⟨m₁, _, m₂, _, _, r₂', _⟩ := (soundCom hm (semCtxt.cons hA' hστ) .nil).fst
   have rlet : letin (n⦃τ⦄) (m⦃⇑ τ⦄) ⇒⋆ prod m₂ _ := calc
     _ ⇒⋆ letin (ret w₂) (m⦃⇑ τ⦄) := rw₂.letin
     _ ⇒  m⦃w₂ +: τ⦄              := by rw [← substUnion]; exact .ζ
@@ -112,16 +112,16 @@ theorem letCase {Γ Δ v m₁ m₂ n A} {B : ComType}
   Γ ∣ Δ ⊨ letin (case v m₁ m₂) n
     ~ case v (letin m₁ (renameCom (lift succ) n)) (letin m₂ (renameCom (lift succ) n)) ∶ B := by
   intro σ τ hστ js₁ js₂ hjs
-  let ⟨v₁, v₂, rv₁, rv₂, hA⟩ := (soundCom hcase σ τ hστ .nil .nil .nil).ret_inv
+  let ⟨v₁, v₂, rv₁, rv₂, hA⟩ := (soundCom hcase hστ .nil).ret_inv
   have r₁' : letin ((case v m₁ m₂)⦃σ⦄) (n⦃⇑ σ⦄) ⇒⋆ n⦃v₁ +: σ⦄ := by
     rw [← substUnion]; exact .trans' rv₁.letin (.once .ζ)
   simp only [substCom] at *
   cases hcase with | case hv hm₁ hm₂ =>
-  let hv := soundVal hv σ τ hστ; unfold 𝒱 at hv
+  let hv := soundVal hv hστ; unfold 𝒱 at hv
   match hv with
   | .inl ⟨w₁, w₂, hA₁, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at rv₂
-    let ⟨n₁, n₂, rn₁, rn₂, _⟩ := (soundCom hm₁ (w₁ +: σ) (w₂ +: τ) (semCtxt.cons hA₁ hστ) .nil .nil .nil).ret_inv
+    let ⟨n₁, n₂, rn₁, rn₂, _⟩ := (soundCom hm₁ (semCtxt.cons hA₁ hστ) .nil).ret_inv
     let rcase : case (inl w₂) (m₁⦃⇑ τ⦄) (m₂⦃⇑ τ⦄) ⇒⋆ ret n₂ := calc
       _ ⇒ m₁⦃w₂ +: τ⦄ := by rw [← substUnion]; exact .ιl
       _ ⇒⋆ ret n₂     := rn₂
@@ -137,11 +137,11 @@ theorem letCase {Γ Δ v m₁ m₂ n A} {B : ComType}
           := by simp only [substCom]; rw [substUnion, renameDropSubst]
         _ ⇒⋆ letin (ret v₂) (n⦃⇑ τ⦄) := rn₂.letin
         _ ⇒ n⦃v₂ +: τ⦄ := by rw [← substUnion]; exact .ζ
-    have goal := soundCom hn (v₁ +: σ) (v₂ +: τ) (semCtxt.cons hA hστ) js₁ js₂ hjs
+    have goal := soundCom hn (semCtxt.cons hA hστ) hjs
     exact ℰ.bwds (.rejoin r₁') (.rejoin r₂') goal
   | .inr ⟨w₁, w₂, hA₂, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at rv₂
-    let ⟨n₁, n₂, rn₁, rn₂, _⟩ := (soundCom hm₂ (w₁ +: σ) (w₂ +: τ) (semCtxt.cons hA₂ hστ) .nil .nil .nil).ret_inv
+    let ⟨n₁, n₂, rn₁, rn₂, _⟩ := (soundCom hm₂ (semCtxt.cons hA₂ hστ) .nil).ret_inv
     let rcase : case (inr w₂) (m₁⦃⇑ τ⦄) (m₂⦃⇑ τ⦄) ⇒⋆ ret n₂ := calc
       _ ⇒ m₂⦃w₂ +: τ⦄ := by rw [← substUnion]; exact .ιr
       _ ⇒⋆ ret n₂     := rn₂
@@ -157,7 +157,7 @@ theorem letCase {Γ Δ v m₁ m₂ n A} {B : ComType}
           := by simp only [substCom]; rw [substUnion, renameDropSubst]
         _ ⇒⋆ letin (ret v₂) (n⦃⇑ τ⦄) := rn₂.letin
         _ ⇒ n⦃v₂ +: τ⦄ := by rw [← substUnion]; exact .ζ
-    have goal := soundCom hn (v₁ +: σ) (v₂ +: τ) (semCtxt.cons hA hστ) js₁ js₂ hjs
+    have goal := soundCom hn (semCtxt.cons hA hστ) hjs
     exact ℰ.bwds (.rejoin r₁') (.rejoin r₂') goal
 
 theorem appCase {Γ Δ v w m₁ m₂ A B}
@@ -165,15 +165,15 @@ theorem appCase {Γ Δ v w m₁ m₂ A B}
   (hw : Γ ⊢ w ∶ A) :
   Γ ∣ Δ ⊨ app (case v m₁ m₂) w ~ case v (app m₁ (renameVal succ w)) (app m₂ (renameVal succ w)) ∶ B := by
   intro σ τ hστ js₁ js₂ hjs
-  let ⟨n₁, n₂, r₁, r₂, hB₁⟩ := (soundCom hcase σ τ hστ .nil .nil .nil).lam_inv
+  let ⟨n₁, n₂, r₁, r₂, hB₁⟩ := (soundCom hcase hστ .nil).lam_inv
   have r₁' : app ((case v m₁ m₂)⦃σ⦄) (w⦃σ⦄) ⇒⋆ n₁⦃w⦃σ⦄⦄ := .trans' r₁.app (.once .β)
   simp only [substCom] at *
   cases hcase with | case hv hm₁ hm₂ =>
-  let hv := soundVal hv σ τ hστ; unfold 𝒱 at hv
+  let hv := soundVal hv hστ; unfold 𝒱 at hv
   match hv with
   | .inl ⟨v₁, v₂, hA₁, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at r₂
-    let ⟨_, _, _, r₂', _⟩ := (soundCom hm₁ (v₁ +: σ) (v₂ +: τ) (semCtxt.cons hA₁ hστ) .nil .nil .nil).lam_inv
+    let ⟨_, _, _, r₂', _⟩ := (soundCom hm₁ (semCtxt.cons hA₁ hστ) .nil).lam_inv
     let ⟨_, rlam₁, r'⟩ := confluence r₂ (.once .ιl); rw [substUnion] at r'
     let ⟨_, rlam₂, r'⟩ := confluence r₂' r'; rw [← rlam₂.lam_inv] at r'
     injection Evals.lam_inv (.trans' rlam₁ r') with en₂; subst en₂
@@ -186,10 +186,10 @@ theorem appCase {Γ Δ v w m₁ m₂ A B}
         := by simp only [substCom]; rw [substUnion, renameUpSubstVal, substDropVal]
       _ ⇒⋆ app (lam n₂) (w⦃τ⦄) := r₂'.app
       _ ⇒  n₂⦃w⦃τ⦄⦄ := .β
-    exact ℰ.bwdsRejoin r₁' r₂' (hB₁ _ _ (soundVal hw σ τ hστ))
+    exact ℰ.bwdsRejoin r₁' r₂' (hB₁ _ _ (soundVal hw hστ))
   | .inr ⟨v₁, v₂, hA₂, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at r₂
-    let ⟨_, _, _, r₂', _⟩ := (soundCom hm₂ (v₁ +: σ) (v₂ +: τ) (semCtxt.cons hA₂ hστ) .nil .nil .nil).lam_inv
+    let ⟨_, _, _, r₂', _⟩ := (soundCom hm₂ (semCtxt.cons hA₂ hστ) .nil).lam_inv
     let ⟨_, rlam₁, r'⟩ := confluence r₂ (.once .ιr); rw [substUnion] at r'
     let ⟨_, rlam₂, r'⟩ := confluence r₂' r'; rw [← rlam₂.lam_inv] at r'
     injection Evals.lam_inv (.trans' rlam₁ r') with en₂; subst en₂
@@ -202,21 +202,21 @@ theorem appCase {Γ Δ v w m₁ m₂ A B}
         := by simp only [substCom]; rw [substUnion, renameUpSubstVal, substDropVal]
       _ ⇒⋆ app (lam n₂) (w⦃τ⦄) := r₂'.app
       _ ⇒  n₂⦃w⦃τ⦄⦄ := .β
-    exact ℰ.bwdsRejoin r₁' r₂' (hB₁ _ _ (soundVal hw σ τ hστ))
+    exact ℰ.bwdsRejoin r₁' r₂' (hB₁ _ _ (soundVal hw hστ))
 
 theorem fstCase {Γ Δ v m₁ m₂ B₁ B₂}
   (hcase : Γ ∣ ⬝ ⊢ case v m₁ m₂ ∶ Prod B₁ B₂) :
   Γ ∣ Δ ⊨ fst (case v m₁ m₂) ~ case v (fst m₁) (fst m₂) ∶ B₁ := by
   intro σ τ hστ js₁ js₂ hjs
-  let ⟨n₁, _, n₂, _, r₁, r₂, hB₁⟩ := (soundCom hcase σ τ hστ .nil .nil .nil).fst
+  let ⟨n₁, _, n₂, _, r₁, r₂, hB₁⟩ := (soundCom hcase hστ .nil).fst
   have r₁' : fst ((case v m₁ m₂)⦃σ⦄) ⇒⋆ n₁ := .trans' r₁.fst (.once .π1)
   simp only [substCom] at *
   cases hcase with | case hv hm₁ hm₂ =>
-  let hv := soundVal hv σ τ hστ; unfold 𝒱 at hv
+  let hv := soundVal hv hστ; unfold 𝒱 at hv
   match hv with
   | .inl ⟨v₁, v₂, hA₁, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at r₂
-    let ⟨_, _, _, _, _, r₂', _⟩ := (soundCom hm₁ (v₁ +: σ) (v₂ +: τ) (semCtxt.cons hA₁ hστ) .nil .nil .nil).fst
+    let ⟨_, _, _, _, _, r₂', _⟩ := (soundCom hm₁ (semCtxt.cons hA₁ hστ) .nil).fst
     let ⟨_, rprod₁, r'⟩ := confluence r₂ (.once .ιl); rw [substUnion] at r'
     let ⟨_, rprod₂, r'⟩ := confluence r₂' r'; rw [← rprod₂.prod_inv] at r'
     injection Evals.prod_inv (.trans' rprod₁ r') with en₁ en₂; subst en₁ en₂
@@ -230,7 +230,7 @@ theorem fstCase {Γ Δ v m₁ m₂ B₁ B₂}
     exact ℰ.bwdsRejoin r₁' r₂' hB₁
   | .inr ⟨v₁, v₂, hA₂, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at r₂
-    let ⟨_, _, _, _, _, r₂', _⟩ := (soundCom hm₂ (v₁ +: σ) (v₂ +: τ) (semCtxt.cons hA₂ hστ) .nil .nil .nil).fst
+    let ⟨_, _, _, _, _, r₂', _⟩ := (soundCom hm₂ (semCtxt.cons hA₂ hστ) .nil).fst
     let ⟨_, rprod₁, r'⟩ := confluence r₂ (.once .ιr); rw [substUnion] at r'
     let ⟨_, rprod₂, r'⟩ := confluence r₂' r'; rw [← rprod₂.prod_inv] at r'
     injection Evals.prod_inv (.trans' rprod₁ r') with en₁ en₂; subst en₁ en₂
@@ -247,15 +247,15 @@ theorem sndCase {Γ Δ v m₁ m₂ B₁ B₂}
   (hcase : Γ ∣ ⬝ ⊢ case v m₁ m₂ ∶ Prod B₁ B₂) :
   Γ ∣ Δ ⊨ snd (case v m₁ m₂) ~ case v (snd m₁) (snd m₂) ∶ B₂ := by
   intro σ τ hστ js₁ js₂ hjs
-  let ⟨_, n₁, _, n₂, r₁, r₂, hB₁⟩ := (soundCom hcase σ τ hστ .nil .nil .nil).snd
+  let ⟨_, n₁, _, n₂, r₁, r₂, hB₁⟩ := (soundCom hcase hστ .nil).snd
   have r₁' : snd ((case v m₁ m₂)⦃σ⦄) ⇒⋆ n₁ := .trans' r₁.snd (.once .π2)
   simp only [substCom] at *
   cases hcase with | case hv hm₁ hm₂ =>
-  let hv := soundVal hv σ τ hστ; unfold 𝒱 at hv
+  let hv := soundVal hv hστ; unfold 𝒱 at hv
   match hv with
   | .inl ⟨v₁, v₂, hA₁, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at r₂
-    let ⟨_, _, _, _, _, r₂', _⟩ := (soundCom hm₁ (v₁ +: σ) (v₂ +: τ) (semCtxt.cons hA₁ hστ) .nil .nil .nil).snd
+    let ⟨_, _, _, _, _, r₂', _⟩ := (soundCom hm₁ (semCtxt.cons hA₁ hστ) .nil).snd
     let ⟨_, rprod₁, r'⟩ := confluence r₂ (.once .ιl); rw [substUnion] at r'
     let ⟨_, rprod₂, r'⟩ := confluence r₂' r'; rw [← rprod₂.prod_inv] at r'
     injection Evals.prod_inv (.trans' rprod₁ r') with en₁ en₂; subst en₁ en₂
@@ -269,7 +269,7 @@ theorem sndCase {Γ Δ v m₁ m₂ B₁ B₂}
     exact ℰ.bwdsRejoin r₁' r₂' hB₁
   | .inr ⟨v₁, v₂, hA₂, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at r₂
-    let ⟨_, _, _, _, _, r₂', _⟩ := (soundCom hm₂ (v₁ +: σ) (v₂ +: τ) (semCtxt.cons hA₂ hστ) .nil .nil .nil).snd
+    let ⟨_, _, _, _, _, r₂', _⟩ := (soundCom hm₂ (semCtxt.cons hA₂ hστ) .nil).snd
     let ⟨_, rprod₁, r'⟩ := confluence r₂ (.once .ιr); rw [substUnion] at r'
     let ⟨_, rprod₂, r'⟩ := confluence r₂' r'; rw [← rprod₂.prod_inv] at r'
     injection Evals.prod_inv (.trans' rprod₁ r') with en₁ en₂; subst en₁ en₂
