@@ -65,6 +65,42 @@ def renameJK (ξ : Nat → Nat) : K → K
   | .fst k => .fst (renameJK ξ k)
   | .snd k => .snd (renameJK ξ k)
 
+/-*--------------------------------------------------
+  If a K has the shape
+    let x ← k₁[...[kᵢ[□]]] in m,
+  return m and the original K with a jump:
+    let x ← k₁[...[kᵢ[□]]] in jump 0 x
+--------------------------------------------------*-/
+
+inductive JumpK : Type where
+  | no : JumpK
+  | yes : K → Com → JumpK
+
+@[simp]
+def K.jumpify : K → JumpK
+  | .nil => .no
+  | .letin m => .yes (.letin (jump 0 (var 0))) m
+  | .app v k =>
+    match k.jumpify with
+    | .no => .no
+    | .yes k' m => .yes (app v k') m
+  | .fst k =>
+    match k.jumpify with
+    | .no => .no
+    | .yes k' m => .yes (fst k') m
+  | .snd k =>
+    match k.jumpify with
+    | .no => .no
+    | .yes k' m => .yes (snd k') m
+
+theorem JumpK.rename {ξ k k' m} (e : k.jumpify = yes k' m) : (renameK ξ k).jumpify = yes (renameK ξ k') (renameCom (lift ξ) m) := by
+  induction k generalizing k' m
+  case nil => cases e
+  case letin => simp at *; let ⟨ek, em⟩ := e; subst ek em; simp [lift]
+  case app ih | fst ih | snd ih =>
+    simp at e; split at e; cases e; injection e with ek em; subst ek em
+    case _ e => simp; rw [ih e]
+
 /-*-----------------------------
   A-normal translation of CBPV
 -----------------------------*-/
@@ -107,19 +143,15 @@ def Acom (k : K) : Com → Com
   | lam m   => k [ .lam ⟦ m ⟧ₘ ]
   | app n v   => ⟦ n ⟧ₘ .app ⟦ v ⟧ᵥ k
   | letin n m => ⟦ n ⟧ₘ .letin (⟦ m ⟧ₘ renameK succ k)
-  | case v m₁ m₂ => .case ⟦ v ⟧ᵥ (⟦ m₁ ⟧ₘ renameK succ k) (⟦ m₂ ⟧ₘ renameK succ k)
   | prod m₁ m₂ => k [ .prod ⟦ m₁ ⟧ₘ ⟦ m₂ ⟧ₘ ]
   | fst n => ⟦ n ⟧ₘ .fst k
   | snd n => ⟦ n ⟧ₘ .snd k
   | join n m => join (⟦ n ⟧ₘ renameK succ k) (⟦ m ⟧ₘ renameJK succ k)
   | jump j v => jump j (⟦ v ⟧ᵥ)
-  /- I think this is the A-normalization with join points?
   | case v m₁ m₂ =>
-    .letin (.ret (.thunk (.com (.lam ((renameK succ k) [ .force (.var 0) ])))))
-      (.case (⟦ v ⟧ᵥ)
-        (.com (.app (.force (.var 1)) (.thunk (ANF.renameCfg (lift succ) (⟦ m₁ ⟧ₘ)))))
-        (.com (.app (.force (.var 1)) (.thunk (ANF.renameCfg (lift succ) (⟦ m₂ ⟧ₘ))))))
-  -/
+    match k.jumpify with
+    | .no => .case ⟦ v ⟧ᵥ (⟦ m₁ ⟧ₘ renameK succ k) (⟦ m₂ ⟧ₘ renameK succ k)
+    | .yes k m => .join m (.case ⟦ v ⟧ᵥ (⟦ m₁ ⟧ₘ renameK succ k) (⟦ m₂ ⟧ₘ renameK succ k))
 end
 end
 notation:1023 "⟦" v "⟧ᵥ" => Aval v
@@ -133,7 +165,7 @@ notation:1022 "⟦" m "⟧ₘ" k => Acom k m
     n ::= v! | λx. m | n v | return v | (m, m) | n.1 | n.2
     m ::= n | k[n] | let x ← n in m
       | case v of {inl x => m; inr x => m}
-    k ::= ⬝ | k[⬝ v] | let x ← ⬝ in m | k[fst ⬝] | k[snd ⬝]
+    k ::= □ | k[□ v] | let x ← □ in m | k[fst □] | k[snd □]
 -----------------------------------------------------------------*-/
 
 mutual
@@ -240,6 +272,26 @@ theorem isK.renameJ {ξ k} (isk : isK k) : isK (renameJK ξ k) := by
   case letin => exact isk.renameJ
   case fst ih | snd ih => exact ih isk
 
+theorem isK.jumpify {k k' m} (isk : isK k) (e : k.jumpify = .yes k' m) : isK k' ∧ isCfg m := by
+  induction k generalizing k' m
+  case nil => simp at e
+  case letin =>
+    injection e with ek em; subst ek em
+    simp; exact isk
+  case app ih =>
+    let ⟨isv, isk⟩ := isk
+    simp at e; split at e; cases e
+    case _ e' =>
+      injection e with ek em; subst ek em
+      let ⟨isk, ism⟩ := ih isk e'
+      exact ⟨⟨isv, isk⟩, ism⟩
+  case fst ih | snd ih =>
+    simp at e; split at e; cases e
+    case _ e' =>
+      injection e with ek em; subst ek em
+      let ⟨isk, ism⟩ := ih isk e'
+      exact ⟨isk, ism⟩
+
 theorem isANF : (∀ v, isVal ⟦v⟧ᵥ) ∧ (∀ m k, isK k → isCfg (⟦m⟧ₘ k)) := by
   refine ⟨λ v ↦ ?val, λ m k ↦ ?com⟩
   mutual_induction v, m
@@ -250,11 +302,16 @@ theorem isANF : (∀ v, isVal ⟦v⟧ᵥ) ∧ (∀ m k, isK k → isCfg (⟦m⟧
   case lam ih | ret ih => apply isk.plug; simp [ih]
   case app isc isv => apply isc; simp [isv, isk]
   case letin isc₁ isc₂ => apply isc₁; apply isc₂; simp [isk.rename]
-  case case isc₁ isc₂ => exact ⟨isc₁ _ (isk.rename), isc₂ _ (isk.rename)⟩
   case prod isc₁ isc₂ => apply isk.plug; simp [isc₁, isc₂]
   case fst isc | snd isc => apply isc; simp [isk]
   case join isc₁ isc₂ => exact ⟨isc₁ _ (isk.rename), isc₂ _ isk.renameJ⟩
   case jump ih => exact ih
+  case case isc₁ isc₂ =>
+    split <;> simp
+    case _ => exact ⟨isc₁ _ (isk.rename), isc₂ _ (isk.rename)⟩
+    case _ e =>
+      let ⟨isk, ism⟩ := isk.jumpify e
+      exact ⟨ism, isc₁ _ (isk.rename), isc₂ _ (isk.rename)⟩
 
 def Val.ANF : ∀ v, isVal ⟦v⟧ᵥ := isANF.left
 def Com.ANF : ∀ m, isCfg ⟦m⟧ₘ := λ m ↦ isANF.right m .nil ⟨⟩
@@ -309,6 +366,22 @@ theorem wtK.plug {Γ Δ n k B₁ B₂}
   case fst hn => exact hn (.fst h)
   case snd hn => exact hn (.snd h)
 
+theorem wtK.jumpify {Γ Δ k k' m B₁ B₂}
+  (hk : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂) (e : k.jumpify = .yes k' m) :
+  ∃ A, Γ ∣ Δ ∷ A ↗ B₂ ⊢ k' ∶ B₁ ⇒ B₂ ∧ Γ ∷ A ∣ Δ ⊢ m ∶ B₂ := by
+  induction hk generalizing k' m
+  case nil => cases e
+  case letin A _ hm =>
+    simp at e; let ⟨ek, em⟩ := e; subst ek em
+    exact ⟨A, .letin (.jump .here (.var .here)) , hm⟩
+  case app hv _ ih | fst ih | snd ih =>
+    simp at e; split at e; cases e
+    case _ e' =>
+      injection e with ek em; subst ek em
+      let ⟨A, hk, hm⟩ := ih e'
+      refine ⟨A, ?_, hm⟩
+      all_goals constructor <;> assumption
+
 theorem preservation {Γ} :
   (∀ {v} {A : ValType}, v.joinless → Γ ⊢ v ∶ A → Γ ⊢ ⟦ v ⟧ᵥ ∶ A) ∧
   (∀ {Δ k m} {B₁ B₂ : ComType}, m.joinless → Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂ → Γ ∣ ⬝ ⊢ m ∶ B₁ → Γ ∣ Δ ⊢ ⟦ m ⟧ₘ k ∶ B₂) := by
@@ -326,11 +399,17 @@ theorem preservation {Γ} :
   case lam h _ _ _ => exact (wtK.plug hk (.lam (h mj .nil rfl)))
   case app hn hv k _ _ => let ⟨nj, vj⟩ := mj; exact hn nj (.app (hv vj) hk) rfl
   case letin hn _ _ _ _ hm => let ⟨nj, mj⟩ := mj; exact hn nj (.letin (hm mj (wtK.weaken hk) rfl)) rfl
-  case case hv _ _ _ _ _ hm₁ hm₂ => let ⟨vj, mj₁, mj₂⟩ := mj; exact .case (hv vj) (hm₁ mj₁ (wtK.weaken hk) rfl) (hm₂ mj₂ (wtK.weaken hk) rfl)
   case prod hm₁ hm₂ _ _ _ => let ⟨mj₁, mj₂⟩ := mj; exact wtK.plug hk (.prod (hm₁ mj₁ .nil rfl) (hm₂ mj₂ .nil rfl))
   case fst h _ _ _ => exact h mj (.fst hk) rfl
   case snd h _ _ _ => exact h mj (.snd hk) rfl
   case join | jump => simp at mj
+  case case hv _ _ _ _ _ hm₁ hm₂ =>
+    let ⟨vj, mj₁, mj₂⟩ := mj; simp; split
+    case _ =>
+      exact .case (hv vj) (hm₁ mj₁ (wtK.weaken hk) rfl) (hm₂ mj₂ (wtK.weaken hk) rfl)
+    case _ e =>
+      let ⟨_, hk, hm⟩ := hk.jumpify e
+      exact (.join hm (.case (hv vj) (hm₁ mj₁ (wtK.weaken hk) rfl) (hm₂ mj₂ (wtK.weaken hk) rfl)))
 
 /-*--------------------------------------
   Semantic equivalence of continuations
