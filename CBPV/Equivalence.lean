@@ -289,7 +289,14 @@ theorem semCom.trans {Γ Δ m₁ m₂ m₃} {B : ComType} (h₁₂ : Γ ∣ Δ �
   of syntactic typing wrt semantic equivalence
 ---------------------------------------------*-/
 
-theorem rejoinJump {Γ : Ctxt} {Δ js₁ js₂ j A B} (mem : Δ ∋ j ∶ A ↗ B) (h : Δ ⊨ js₁ ~ js₂) :
+theorem semCom.join {Γ Δ A B m₁ m₂ n₁ n₂} (hm : Γ ∷ A ∣ Δ ⊨ m₁ ~ m₂ ∶ B) (hn : Γ ∣ Δ ∷ A ↗ B ⊨ n₁ ~ n₂ ∶ B) :
+  Γ ∣ Δ ⊨ join m₁ n₁ ~ join m₂ n₂ ∶ B := by
+  intro σ τ hστ js₁ js₂ hjs
+  refine hn hστ (.cons hjs (λ {v w} hvw ↦ ?ihm))
+  rw [substUnion, substUnion]
+  exact hm (semCtxt.cons hvw hστ) hjs
+
+theorem semCom.jump {Γ : Ctxt} {Δ js₁ js₂ j A B} (mem : Δ ∋ j ∶ A ↗ B) (h : Δ ⊨ js₁ ~ js₂) :
   ∀ {σ τ v w}, Γ ⊨ σ ~ τ → (v, w) ∈ ⟦ A ⟧ᵛ →
   (rejoin (jump j v) js₁, rejoin (jump j w) js₂) ∈ ⟦ B ⟧ᵉ := by
   induction h generalizing j A B
@@ -353,13 +360,8 @@ theorem soundness {Γ} :
   case snd ih =>
     let ⟨_, _, _, _, r₁, r₂, hB₂⟩ := (ih hστ .nil).snd
     exact ℰ.bwdsRejoin (.trans' (Evals.snd r₁) (.once .π2)) (.trans' (Evals.snd r₂) (.once .π2)) hB₂
-  case join m n _ _ _ _ ihm ihn =>
-    let hn := ihn hστ (.cons (m := m⦃⇑ σ⦄) (n := m⦃⇑ τ⦄) hjs (λ {v w} hvw ↦ ?hm))
-    case hm =>
-      rw [substUnion, substUnion]
-      exact ihm (semCtxt.cons hvw hστ) hjs
-    exact hn
-  case jump mem _ ihv => exact rejoinJump mem hjs hστ (ihv hστ)
+  case join m n _ _ _ _ ihm ihn => exact semCom.join ihm ihn hστ hjs
+  case jump mem _ ihv => exact semCom.jump mem hjs hστ (ihv hστ)
 
 def soundVal {Γ v} {A : ValType} : Γ ⊢ v ∶ A → Γ ⊨ v ~ v ∶ A := soundness.left v A
 def soundCom {Γ Δ m} {B : ComType} : Γ ∣ Δ ⊢ m ∶ B → Γ ∣ Δ ⊨ m ~ m ∶ B := soundness.right m B

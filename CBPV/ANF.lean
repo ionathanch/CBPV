@@ -72,12 +72,12 @@ def renameJK (ξ : Nat → Nat) : K → K
     let x ← k₁[...[kᵢ[□]]] in jump 0 x
 --------------------------------------------------*-/
 
-inductive JumpK : Type where
-  | no : JumpK
-  | yes : K → Com → JumpK
+inductive Jump : Type where
+  | no : Jump
+  | yes : K → Com → Jump
 
 @[simp]
-def K.jumpify : K → JumpK
+def K.jumpify : K → Jump
   | .nil => .no
   | .letin m => .yes (.letin (jump 0 (var 0))) m
   | .app v k =>
@@ -93,7 +93,7 @@ def K.jumpify : K → JumpK
     | .no => .no
     | .yes k' m => .yes (snd k') m
 
-theorem JumpK.rename {ξ k k' m} (e : k.jumpify = yes k' m) : (renameK ξ k).jumpify = yes (renameK ξ k') (renameCom (lift ξ) m) := by
+theorem Jump.rename {ξ k k' m} (e : k.jumpify = yes k' m) : (renameK ξ k).jumpify = yes (renameK ξ k') (renameCom (lift ξ) m) := by
   induction k generalizing k' m
   case nil => cases e
   case letin => simp at *; let ⟨ek, em⟩ := e; subst ek em; simp [lift]
@@ -411,6 +411,9 @@ theorem preservation {Γ} :
       let ⟨_, hk, hm⟩ := hk.jumpify e
       exact (.join hm (.case (hv vj) (hm₁ mj₁ (wtK.weaken hk) rfl) (hm₂ mj₂ (wtK.weaken hk) rfl)))
 
+def ValWt.preservation {Γ} := @(@_root_.preservation Γ).left
+def ComWt.preservation {Γ} := @(@_root_.preservation Γ).right
+
 /-*--------------------------------------
   Semantic equivalence of continuations
 --------------------------------------*-/
@@ -512,15 +515,91 @@ theorem semKcase {Γ Δ v m₁ m₂ k B₁ B₂} (hk : Γ ∣ Δ ⊢ k ∶ B₁ 
   case fst hk ih => exact semCom.trans (semPlug hk (fstCase h)) (ih (wtCaseFst h))
   case snd hk ih => exact semCom.trans (semPlug hk (sndCase h)) (ih (wtCaseSnd h))
 
+/-*---------------------------------------------
+  Jumpification preserves semantic equivalence
+---------------------------------------------*-/
+
+theorem semJumpPlug {Γ Δ k k' m n B₁ B₂} (hk : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂) (hn : Γ ∣ ⬝ ⊢ n ∶ B₁) (e : k.jumpify = .yes k' m) :
+  Γ ∣ Δ ⊨ (k [ n ]) ~ join m (k' [ n ]) ∶ B₂ := by
+  induction hk generalizing k' n
+  case nil => cases e
+  case letin hm =>
+    simp at e; let ⟨ek, em⟩ := e; subst ek em
+    intro σ τ hστ js₁ js₂ hjs
+    let ⟨_, _, rn₁, rn₂, hA⟩ := (soundCom hn hστ .nil).ret_inv
+    refine ℰ.bwds ?left ?right (soundCom hm (semCtxt.cons hA hστ) hjs)
+    all_goals refine .rejoin ?_; rw [← substUnion]
+    case left => exact .trans' (Evals.letin rn₁) (.once .ζ)
+    case right => exact .trans' (Evals.join (.trans' (Evals.letin rn₂) (.once .ζ))) (.once .γ)
+  case app hv _ ih | fst ih | snd ih =>
+    simp at e; split at e; cases e; injection e with ek em; subst ek em
+    rename _ = _ => e
+    refine ih ?_ e; constructor <;> assumption
+
+-- Should this go in Commutation once it's proven?
+theorem joinJoin {Γ Δ n₁ n₂ m A B} (hn₁ : Γ ∷ A ∣ Δ ⊢ n₁ ∶ B) (hn₂ : Γ ∷ A ∣ Δ ⊢ n₂ ∶ B) (hm : Γ ∣ Δ ∷ A ↗ B ⊢ m ∶ B) :
+  Γ ∣ Δ ⊨ join (join (renameCom (lift succ) n₁) n₂) m ~ join n₁ (join n₂ (renameJCom (lift succ) m)) ∶ B := by
+  intro σ τ hστ js₁ js₂ hjs
+  refine ℰ.bwdsRejoin .refl .refl ?_
+  have hjsn₁ := semDtxt.cons hjs (λ hvw ↦
+    have hn := soundCom hn₁ (semCtxt.cons hvw hστ) hjs
+    by rw [← substUnion σ, ← substUnion τ] at hn; exact hn)
+  have what := soundCom hm hστ hjsn₁; simp at what
+  sorry
+
+theorem semJumpA {Γ Δ k k' m m' B₁ B₂} (mj : m.joinless) (hk : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂) (hm : Γ ∣ ⬝ ⊢ m ∶ B₁) (e : k.jumpify = .yes k' m') :
+  Γ ∣ Δ ⊨ ⟦m⟧ₘ k ~ join m' (⟦m⟧ₘ k') ∶ B₂ := by
+  generalize eΔ : Dtxt.nil = Δ' at hm
+  mutual_induction hm generalizing k k' m' mj eΔ
+  all_goals subst eΔ; intro σ τ
+  -- impossible
+  case join | jump => cases mj
+  -- plugging cases
+  case force hv => exact semJumpPlug hk (.force (.preservation mj hv)) e
+  case lam hm _ => simp at mj; exact semJumpPlug hk (.lam (.preservation mj .nil hm)) e
+  case ret hv => exact semJumpPlug hk (.ret (.preservation mj hv)) e
+  case prod hm₁ hm₂ _ _ =>
+    simp at mj; let ⟨mj₁, mj₂⟩ := mj
+    exact semJumpPlug hk (.prod (.preservation mj₁ .nil hm₁) (.preservation mj₂ .nil hm₂)) e
+  -- extended continuation cases
+  case app v _ _ _ hv ih =>
+    let ⟨mj, vj⟩ := mj
+    have goal := ih (k' := .app ⟦v⟧ᵥ k') (m' := m') mj (.app (.preservation vj hv) hk)
+    simp only [K.jumpify, e] at goal; exact goal ⟨⟩ ⟨⟩
+  case fst ih =>
+    have goal := ih (k' := .fst k') (m' := m') mj (.fst hk)
+    simp only [K.jumpify, e] at goal; exact goal ⟨⟩ ⟨⟩
+  case snd ih =>
+    have goal := ih (k' := .snd k') (m' := m') mj (.snd hk)
+    simp only [K.jumpify, e] at goal; exact goal ⟨⟩ ⟨⟩
+  -- configuration cases
+  case letin Γ n m A B hn ihn hm ihm =>
+    intro hστ js₁ js₂ hjs; simp
+    let ⟨nj, mj⟩ := mj
+    have ahm := ComWt.preservation mj hk.weaken hm
+    have ahn := ComWt.preservation (Δ := Δ ∷ A ↗ B₂) nj (.letin (.jump .here (.var .here))) hn
+    have aihm : Γ ∷ A ∣ Δ ⊨ (⟦ m ⟧ₘ renameK succ k) ~ join (renameCom (lift succ) m') (⟦ m ⟧ₘ renameK succ k') ∶ B₂ :=
+      λ {σ τ} ↦ ihm mj hk.weaken (Jump.rename e) rfl (σ := σ) (τ := τ)
+    have hττ : Γ ⊨ τ ~ τ := semCtxt.trans hστ.sym hστ
+    have hjs₂₂ : Δ ⊨ js₂ ~ js₂ := semDtxt.trans hjs.sym hjs
+    apply ℰ.trans (ihn nj (wtK.letin ahm) rfl rfl hστ hjs)
+    apply ℰ.trans (semCom.join aihm (soundCom ahn) hττ hjs₂₂)
+    apply ℰ.trans (joinJoin ?_ ?_ ?_ hττ hjs₂₂); simp
+    rw [← rejoin.eq_2 _ (m'⦃⇑ τ⦄), ← rejoin.eq_2 _ (m'⦃⇑ τ⦄)]
+    apply ℰ.bwdsRejoin .refl .refl ?_
+    all_goals sorry
+  case case => sorry
+
 /-*-----------------------------------------------------------
   Soundness of A-normal translation wrt semantic equivalence
 -----------------------------------------------------------*-/
 
 theorem soundA {Γ} :
   (∀ {v} {A : ValType}, v.joinless → Γ ⊢ v ∶ A → Γ ⊨ v ~ ⟦v⟧ᵥ ∶ A) ∧
-  (∀ {Δ m k₁ k₂} {B₁ B₂ : ComType}, m.joinless → Γ ∣ ⬝ ⊢ m ∶ B₁ → Γ ∣ Δ ⊢ k₁ ∶ B₁ ⇒ B₂ →
+  (∀ {Δ m k₁ k₂} {B₁ B₂ : ComType}, m.joinless →
+    Γ ∣ ⬝ ⊢ m ∶ B₁ → Γ ∣ Δ ⊢ k₁ ∶ B₁ ⇒ B₂ → Γ ∣ Δ ⊢ k₂ ∶ B₁ ⇒ B₂ →
     Γ ∣ Δ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₂ → Γ ∣ Δ ⊨ (k₁[m]) ~ ⟦m⟧ₘ k₂ ∶ B₂) := by
-  refine ⟨λ vj h ↦ ?val, λ mj h wtk hk ↦ ?com⟩
+  refine ⟨λ vj h ↦ ?val, λ mj h wtk₁ wtk₂ hk ↦ ?com⟩
   case' com => generalize e : Dtxt.nil = Δ' at h
   mutual_induction h, h
   all_goals intro σ τ; try subst e
@@ -532,50 +611,73 @@ theorem soundA {Γ} :
   case lam ih _ _ _ _ =>
     refine hk.plug (λ hστ _ _ _ ↦ ℰ.bwdsRejoin .refl .refl (ℰ.lam (λ v w hA ↦ ?_)))
     rw [substUnion, substUnion]
-    exact ih mj .nil (soundK .nil) rfl (semCtxt.cons hA hστ) .nil
+    exact ih mj .nil .nil (soundK .nil) rfl (semCtxt.cons hA hστ) .nil
   case app hv ihm ihv _ k₁ k₂ _ =>
     let ⟨mj, vj⟩ := mj
-    exact ihm mj (.app hv wtk) (semK.app (ihv vj) hk) rfl
+    exact ihm mj (.app hv wtk₁) (.app (.preservation vj hv) wtk₂) (semK.app (ihv vj) hk) rfl
   case ret ih _ _ _ _ =>
     refine hk.plug (λ hστ _ _ _ ↦  ?_)
     exact ℰ.bwdsRejoin .refl .refl (ℰ.ret (ih mj hστ))
   case letin hn ihn _ _ _ _ hm ihm =>
     let ⟨nj, mj⟩ := mj
-    refine semCom.trans (semKletin wtk (.letin hn hm)) ?_
+    refine semCom.trans (semKletin wtk₁ (.letin hn hm)) ?_
     exact ihn nj
-      (.letin (wtk.weaken.plug hm))
-      (semK.letin (ihm mj wtk.weaken hk.weaken rfl)) rfl
-  case case hv ihv _ _ _ ihm₁ hm₁ hm₂ ihm₁ ihm₂ =>
+      (.letin (wtk₁.weaken.plug hm))
+      (.letin (.preservation mj wtk₂.weaken hm))
+      (semK.letin (ihm mj wtk₁.weaken wtk₂.weaken hk.weaken rfl)) rfl
+  case case Γ v m n A₁ A₂ B₁ hv ihv Δ k₁ k₂ B₂ hm₁ hm₂ ihm₁ ihm₂ =>
     let ⟨vj, mj₁, mj₂⟩ := mj
-    refine semCom.trans (semKcase wtk (.case hv hm₁ hm₂)) (λ hστ js₁ js₂ hjs ↦ ?_)
+    refine semCom.trans (semKcase wtk₁ (.case hv hm₁ hm₂)) (λ hστ js₁ js₂ hjs ↦ ?_)
     unfold semVal 𝒱 at ihv
     match ihv vj hστ with
     | .inl ⟨v, w, hA₁, ev, ew⟩ =>
-      simp [ev, ew]
-      refine ℰ.bwd ?_ ?_ (ihm₁ mj₁ wtk.weaken hk.weaken rfl (semCtxt.cons hA₁ hστ) hjs)
-      all_goals rw [← substUnion]; exact (.rejoin .ιl)
+      have hB₂ := ihm₁ mj₁ wtk₁.weaken wtk₂.weaken hk.weaken rfl (semCtxt.cons hA₁ hστ) hjs
+      simp; split <;> simp [ev, ew]
+      . refine ℰ.bwd (.rejoin .ιl) (.rejoin .ιl) ?_
+        rw [substUnion, substUnion]; exact hB₂
+      . rename K => k'; rename Com => m'; rename _ = _ => e
+        rw [← rejoin.eq_2]
+        refine ℰ.bwd (.rejoin .ιl) (.rejoin .ιl) ?_
+        rw [substUnion, substUnion]
+        refine ℰ.trans hB₂ ?_
+        have goal :=
+          semJumpA mj₁ wtk₂.weaken hm₁ (Jump.rename e)
+            (semCtxt.trans (semCtxt.sym (semCtxt.cons hA₁ hστ)) (semCtxt.cons hA₁ hστ))
+            (semDtxt.trans (semDtxt.sym hjs) hjs)
+        simp [renameUpSubstCons] at goal; exact goal
     | .inr ⟨v, w, hA₂, ev, ew⟩ =>
-      simp [ev, ew]
-      refine ℰ.bwd ?_ ?_ (ihm₂ mj₂ wtk.weaken hk.weaken rfl (semCtxt.cons hA₂ hστ) hjs)
-      all_goals rw [← substUnion]; exact (.rejoin .ιr)
+      have hB₂ := ihm₂ mj₂ wtk₁.weaken wtk₂.weaken hk.weaken rfl (semCtxt.cons hA₂ hστ) hjs
+      simp; split <;> simp [ev, ew]
+      . refine ℰ.bwd (.rejoin .ιr) (.rejoin .ιr) ?_
+        rw [substUnion, substUnion]; exact hB₂
+      . rename K => k'; rename Com => m'; rename _ = _ => e
+        rw [← rejoin.eq_2]
+        refine ℰ.bwd (.rejoin .ιr) (.rejoin .ιr) ?_
+        rw [substUnion, substUnion]
+        refine ℰ.trans hB₂ ?_
+        have goal :=
+          semJumpA mj₂ wtk₂.weaken hm₂ (Jump.rename e)
+            (semCtxt.trans (semCtxt.sym (semCtxt.cons hA₂ hστ)) (semCtxt.cons hA₂ hστ))
+            (semDtxt.trans (semDtxt.sym hjs) hjs)
+        simp [renameUpSubstCons] at goal; exact goal
   case prod ihn₁ ihn₂ _ _ _ _ =>
     let ⟨nj₁, nj₂⟩ := mj
     refine hk.plug (λ hστ _ _ _ ↦ ?_)
     exact ℰ.bwdsRejoin .refl .refl
-      (ℰ.prod (ihn₁ nj₁ .nil (soundK .nil) rfl hστ .nil)
-              (ihn₂ nj₂ .nil (soundK .nil) rfl hστ .nil))
-  case fst ih _ _ _ _ => exact ih mj (.fst wtk) (semK.fst hk) rfl
-  case snd ih _ _ _ _ => exact ih mj (.snd wtk) (semK.snd hk) rfl
+      (ℰ.prod (ihn₁ nj₁ .nil .nil (soundK .nil) rfl hστ .nil)
+              (ihn₂ nj₂ .nil .nil (soundK .nil) rfl hστ .nil))
+  case fst ih _ _ _ _ => exact ih mj (.fst wtk₁) (.fst wtk₂) (semK.fst hk) rfl
+  case snd ih _ _ _ _ => exact ih mj (.snd wtk₁) (.snd wtk₂) (semK.snd hk) rfl
   case join | jump => cases mj
   all_goals intro hστ
   case var mem => exact hστ mem
   case unit => exact 𝒱.unit
   case inl ih => exact 𝒱.inl (ih vj hστ)
   case inr ih => exact 𝒱.inr (ih vj hστ)
-  case thunk ih => exact 𝒱.thunk (ih vj .nil (soundK .nil) rfl hστ .nil)
+  case thunk ih => exact 𝒱.thunk (ih vj .nil .nil (soundK .nil) rfl hστ .nil)
 
 theorem soundAnil {Γ m B} (mj : m.joinless) (h : Γ ∣ ⬝ ⊢ m ∶ B) : Γ ∣ ⬝ ⊨ m ~ ⟦m⟧ₘ ∶ B :=
-  soundA.right mj h .nil semK.nil
+  soundA.right mj h .nil .nil semK.nil
 
 /-*------------------------------------------------------------
   A-normalized ground returners compute the same normal forms
