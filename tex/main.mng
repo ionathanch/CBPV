@@ -19,7 +19,8 @@
 \usepackage[supertabular]{ottalt}
 \let\newlist\relax
 \let\renewlist\relax
-\usepackage{cleveref,enumitem,booktabs,xspace,doi}
+\usepackage[capitalize,nameinlink,noabbrev]{cleveref}
+\usepackage{enumitem,booktabs,xspace,doi}
 \usepackage{mathpartir,stmaryrd,colonequals}
 \usepackage[bottom,flushmargin,multiple,para]{footmisc} % para spacing is weird and ugly
 
@@ -50,6 +51,9 @@
 \setlength{\intextsep}{0.25\baselineskip}
 \setlength{\jot}{0\baselineskip}
 
+\mathtoolsset{showmanualtags}
+\newtagform{brack}{[}{]}
+\Crefformat{equation}{#2Equation~#1#3}
 \urlstyle{tt}
 
 \citestyle{acmauthoryear}
@@ -178,10 +182,14 @@ An important benefit of performing commuting conversions is that it exposes inli
 that is, subexpressions that can be reduced to simplify code.
 For instance, we can commute a let-bound conditional to reveal direct bindings of returned values.
 %
-\begin{align*}
+\usetagform{brack}
+\begin{align}
+  \nonumber
   & [[let b ← (if v then return false else return w) in m]] \\
-  \Longrightarrow \quad & [[if v then (let b ← return false in m) else (let b ← return w in m)]]
-\end{align*}
+  \label{eq:let-if}
+  \Longrightarrow \ & [[if v then (let b ← return false in m) else (let b ← return w in m)]]
+\end{align}
+\usetagform{default}
 
 Now we may choose to inline $[[false]]$ inside of $[[m]]$ in place of $[[b]]$
 and simplify the then branch.
@@ -262,8 +270,8 @@ Consider the following sequence of a commutation followed by an inlining that re
 %
 \begin{align}
   &[[(let x ← n1 in (λy'. let y ← y'! in m1)) {let z ← n2 in m2}]] \nonumber \\
-  &\Longrightarrow [[let x ← n1 in ((λy'. let y ← y'! in m1) {let z ← n2 in m2})]] \tag{commute} \\
-  &\Longrightarrow [[let x ← n1 in (let y ← {let z ← n2 in m2}! in m1)]] \tag{inline}
+  &\Longrightarrow [[let x ← n1 in ((λy'. let y ← y'! in m1) {let z ← n2 in m2})]] \tag{\textit{commute}} \\
+  &\Longrightarrow [[let x ← n1 in (let y ← {let z ← n2 in m2}! in m1)]] \tag{\textit{inline}}
 \end{align}
 
 The resulting term is in CCNF, but if we force the thunk,
@@ -271,6 +279,61 @@ we end up with a nested let expression, which is not in CCNF.
 Therefore, renormalization is required after cascading inlinings that involve forcing thunks.
 
 \subsection{Join points}
+
+There is a glaring code optimization issue with the commuting conversion in \cref{eq:let-if},
+and in general with commuting let-bound case expressions:
+the let body $[[m]]$ gets duplicated across the branches of the case expression.
+%
+\usetagform{brack}
+\begin{align}
+  \nonumber
+  &[[let x ← (case v of inl y1 ⇒ m1 ; inr y2 ⇒ m2) in m]] \\
+  \Longrightarrow \ &[[case v of inl y1 ⇒ (let x ← m1 in m) ; inr y2 ⇒ (let x ← m1 in m)]]
+\end{align}
+\usetagform{default}
+
+If the size of $[[m]]$ is very large, this can cause code bloat,
+especially if the branches contain further case expressions.
+The usual solution for the lambda calculus with let expressions
+is to let-bind a closure containing $[[m]]$ to be called at the end of the branch,
+also known as a \emph{join point}.
+Similarly, in CBPV, we can bind a thunked function to be forced and applied.
+%
+\usetagform{brack}
+\begin{align}
+  \Longrightarrow \ &[[let z ← return {λx. m} in _]] \\
+  & \nonumber \phantom{\kw{let} \gap}
+  [[case v of inl y1 ⇒ (let x ← m1 in z! x) ; inr y2 ⇒ (let x ← m2 in z! x)]]
+\end{align}
+\usetagform{default}
+
+To the next compiler passes that see this code,
+the thunk is a value that may capture variables and escape its scope,
+so somewhere along the pipeline, the thunk will be converted into a closure and lifted out,
+and $[[z! x]]$ will correspond to a function call.
+However, we know from the commuting conversion that the thunk will never escape its scope,
+since it's never passed to a function or stored in another thunk;
+all that we do to it is force it and apply the function within.
+Its purpose is only to join up branches of a computation,
+and should be compiled to a local code block that is jumped to.
+%
+\begin{align}
+  m &\dblcolon= \dots \mid [[join j x = m in m]] \mid [[jump j v]]
+  \tag{join points, jumps}
+\end{align}
+
+Inspired by (TODO: cite Compiling Without Continuations),
+who tackle the same issue with commuting conversion in System F with case expressions,
+we too add explicit join point and jump constructs to CBPV,
+along with typing rules that restrict where join points may be used.
+In contrast to (TODO: author ref),
+our jumps are configurations and may only appear in tail position,
+as commuting-conversion normalization discards contexts around jumps.
+All in all, these restrictions ensure that join points are only ever used by local tail jumps.
+
+TODO: case-in-case
+
+\subsection{Contributions}
 
 \iffalse
 \begin{align}
