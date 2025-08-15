@@ -1,0 +1,227 @@
+embed
+  {{ tex-preamble
+    \setoperatorfont\mathsf
+    \newcommand{\op}[1]{ \operatorname{#1} }
+    \newcommand{\gap}{\:}
+    \newcommand{\kw}[1]{ \mathsf{#1} }
+  }}
+
+metavar x, y, z ::=
+  {{ com term variables }}
+  {{ lex alphanum }}
+
+metavar j ::=
+  {{ com join point variables }}
+  {{ lex alphanum }}
+
+grammar
+
+A :: 'valty_' ::= {{ com value types }}
+  | ⊤ :: :: Unit
+    {{ tex \top }}
+  | A1 + A2 :: :: Sum
+    {{ tex [[A1]] \mathbin{+} [[A2]] }}
+  | U B :: :: Thunk
+    {{ tex \kw{U} [[B]] }}
+
+B :: 'comty_' ::= {{ com computation types }}
+  | A → B :: :: Fun
+    {{ tex [[A]] \mathbin{\to} [[B]] }}
+  | B1 & B2 :: :: Pair
+    {{ tex [[B1]] \mathbin{\&} [[B2]] }}
+  | F A :: :: Return
+    {{ tex \kw{F} [[A]] }}
+
+T :: 'termty_' ::= {{ com ground types }}
+  | ⊤ :: :: Unit
+  | T1 + T2 :: :: Sum
+
+v, w :: 'val_' ::= {{ com values }}
+  | x :: :: Var
+    {{ tex \mathit{[[x]]} }}
+  | () :: :: Unit
+    {{ tex (\gap) }}
+  | inl v :: :: Inl
+    {{ tex \kw{inl} \gap [[v]] }}
+  | inr v :: :: Inr
+    {{ tex \kw{inr} \gap [[v]] }}
+  | true :: :: True
+    {{ tex \kw{true} }}
+  | false :: :: False
+    {{ tex \kw{false} }}
+  | { m } :: :: Thunk
+    {{ tex \mathopen{\lbrace} [[m]] \mathclose{\rbrace} }}
+
+m, n :: 'com_' ::= {{ com computations }}
+  | v ! :: :: Force
+    {{ tex [[v]] ! }}
+  | return v :: :: Return
+    {{ tex \kw{return} \gap [[v]] }}
+  | let x ← n in m :: :: Let
+    (+ bind x in m +)
+    {{ tex \kw{let} \gap [[x]] \mathrel{\leftarrow} [[n]] \mathrel{ \kw{in} } [[m]] }}
+  | λ x . m :: :: Fun
+    (+ bind x in m +)
+    {{ tex \lambda [[x]] \mathpunct{.} [[m]] }}
+  | n v :: :: App
+    {{ tex [[n]] \gap [[v]] }}
+  | case v of inl x ⇒ m1 ; inr y ⇒ m2 :: :: Case
+    (+ bind x in m1 +)
+    (+ bind y in m2 +)
+    {{ tex \kw{case} \gap [[v]] \mathrel{ \kw{of} } \mathopen{\lbrace} \kw{inl} \gap [[x]] \mathbin{\Rightarrow} [[m1]] \mathpunct{;} \kw{inr} \gap [[y]] \mathbin{\Rightarrow} [[m2]] \mathclose{\rbrace} }}
+  | if v then m1 else m2 :: :: If
+    {{ tex \kw{if} \gap [[v]] \mathrel{ \kw{then} } [[m1]] \mathrel{ \kw{else} }[[m2]] }}
+  | ⟨ m1 , m2 ⟩ :: :: Pair
+    {{ tex \langle [[m1]] \mathpunct{,} [[m2]] \rangle }}
+  | fst m :: :: Fst
+    {{ tex \kw{fst} \gap [[m]] }}
+  | snd m :: :: Snd
+    {{ tex \kw{snd} \gap [[m]] }}
+  | join j x = m1 in m2 :: :: Join
+    (+ bind x in m1 +)
+    {{ tex \kw{join} \gap [[j]] \gap [[x]] \mathrel{=} [[m1]] \mathrel{ \kw{in} } [[m2]] }}
+  | jump j v :: :: Jump
+    {{ tex \kw{jump} \gap [[j]] \mathrel{ \kw{with} } [[v]] }}
+  | K [ n ] :: :: Plug
+    {{ com plugging into a continuation }}
+    {{ tex [[K]] [ [[n]] ] }}
+  | E [ n ] :: :: Eval
+    {{ com plugging into an evaluation context }}
+    {{ tex [[E]] [ [[n]] ] }}
+  | L [ m ] :: :: Tail
+    {{ com plugging into a tail context }}
+    {{ tex [[L]] [ [[m]] ] }}
+  | w { x ↦ v } :: :: SubstVal
+    {{ com single substitution into values }}
+    {{ tex [[w]] \lbrace [[x]] \mapsto [[v]] \rbrace }}
+  | m { x ↦ v } :: :: SubstCom
+    {{ com single substitution into computations }}
+    {{ tex [[m]] \lbrace [[x]] \mapsto [[v]] \rbrace }}
+  | v { s } :: :: SubstsVal
+    {{ com simultaneous substitution into values }}
+    {{ tex [[v]] \lbrace [[s]] \rbrace }}
+  | m { s } :: :: SubstsCom
+    {{ com simultaneous substitution into computations }}
+    {{ tex [[m]] \lbrace [[s]] \rbrace }}
+  | _ :: :: Hole
+    {{ com hole }}
+    {{ tex \relax }}
+  | ( m ) :: S :: Parens
+    {{ com parentheses }}
+    {{ tex ([[m]]) }}
+  | (# m #) :: S :: SParens
+    {{ com invisible parentheses }}
+    {{ tex [[m]] }}
+
+tm {{ tex \mathit{tm} }} :: 'term_' ::= {{ com terminals }}
+  | return v :: :: Return
+  | λ x . m :: :: Fun
+  | ⟨ m1 , m2 ⟩ :: :: Pair
+
+lc {{ tex \mathit{lc} }} :: 'lc_' ::= {{ com lambda calculus terms }}
+  | x :: :: Var
+    {{ tex \mathit{[[x]]} }}
+  | λ x . lc :: :: Fun
+    {{ tex \lambda [[x]] \mathpunct{.} [[lc]] }}
+  | lc1 lc2 :: :: App
+    {{ tex [[lc1]] \gap [[lc2]] }}
+  | ( lc ) :: S :: Parens
+    {{ tex ([[lc]]) }}
+
+E :: 'eval_' ::= {{ com evaluation contexts }}
+  | let x ← □ in m :: :: Let
+    {{ tex \kw{let} \gap [[x]] \mathrel{\leftarrow} \square \mathrel{ \kw{in} } [[m]] }}
+  | □ v :: :: App
+    {{ tex \square \gap [[v]] }}
+  | fst □ :: :: Fst
+    {{ tex \kw{fst} \gap \square }}
+  | snd □ :: :: Snd
+    {{ tex \kw{snd} \gap \square }}
+
+L :: 'tail_' ::= {{ com tail contexts }}
+  | let x ← n in □ :: :: Let
+    {{ tex \kw{let} \gap [[x]] \mathrel{\leftarrow} [[n]] \mathrel{ \kw{in} } \square }}
+  | case v of inl x ⇒ □ ; inr y ⇒ □ :: :: Case
+    {{ tex \kw{case} \gap [[v]] \mathrel{ \kw{of} } \mathopen{\lbrace} \kw{inl} \gap [[x]] \mathbin{\Rightarrow} \square \mathpunct{;} \kw{inr} \gap [[y]] \mathbin{\Rightarrow} \square \mathclose{\rbrace} }}
+
+K :: 'kont_' ::= {{ com continuations }}
+  | □ :: :: Empty
+    {{ tex \square }}
+  | let x ← □ in m :: :: Let
+    {{ tex \kw{let} \gap [[x]] \mathrel{\leftarrow} \square \mathrel{ \kw{in} } [[m]] }}
+  | K [ □ v ] :: :: App
+    {{ tex [[K]] [ \square \gap [[v]] ] }}
+  | K [ fst □ ] :: :: Fst
+    {{ tex [[K]] [ \kw{fst} \gap \square ] }}
+  | K [ snd □ ] :: :: Snd
+    {{ tex [[K]] [ \kw{snd} \gap \square ] }}
+
+r {{ tex \rho }}, s {{ tex \sigma }}, t {{ tex \tau }} :: 'subst_' ::= {{ com substitutions }}
+  | • :: :: Nil
+    {{ tex \cdot }}
+  | s , x ↦ v :: :: Cons
+    {{ tex [[s]] \mathpunct{,} [[x]] \mathbin{\mapsto} [[v]] }}
+
+J, p {{ tex \varphi }}, q {{ tex \psi }} :: 'join_' ::= {{ com join points }}
+  | □ :: :: Nil
+    {{ tex \square }}
+  | J , j x = m :: :: Cons
+    {{ tex [[J]] [ \kw{join} [[j]] \gap [[x]] \mathrel{=} [[m]] \kw{in} \square ] }}
+
+G {{ tex \Gamma }} :: 'ctxt_' ::= {{ com term contexts }}
+  | • :: :: Nil
+    {{ tex \cdot }}
+  | x : A :: S :: Singleton
+    {{ tex [[x]] \mathbin{:} [[A]] }}
+  | G , x : A :: :: Cons
+    {{ tex [[G]] \mathpunct{,} [[x]] \mathrel{:} [[A]] }}
+  | G1 , G2 :: M :: Append
+    {{ tex [[G1]] \mathpunct{,} [[G2]] }}
+
+D {{ tex \Delta }} :: 'dtxt_' ::= {{ com join contexts }}
+  | • :: :: Nil
+    {{ tex \cdot }}
+  | j : A ↗ B :: S :: Singleton
+    {{ tex [[j]] \mathbin{:} [[A]] \mathbin{\nnearrow}\! [[B]] }}
+  | D , j : A ↗ B :: :: Cons
+    {{ tex [[D]] \mathpunct{,} [[j]] \mathbin{:} [[A]] \mathbin{\nnearrow}\! [[B]] }}
+  | D1 , D2 :: M :: Append
+    {{ tex [[D1]] \mathpunct{,} [[D2]] }}
+
+formula :: 'formula_' ::=
+  | judgement :: :: judgement
+  % syntactics
+  | x : A ∈ G :: :: In
+    {{ tex [[x]] \mathbin{:} [[A]] \mathrel{\in} [[G]] }}
+  | j : A ↗ B ∈ D :: :: Jn
+    {{ tex [[j]] \mathbin{:} [[A]] \mathbin{\nnearrow}\! [[B]] \mathrel{\in} [[D]]}}
+  | G | D ⊢ v : A :: :: WtVal
+    {{ tex [[G]] \mid [[D]] \mathrel{\vdash} [[v]] \mathrel{:} [[A]] }}
+  | G | D ⊢ m : B :: :: WtCom
+    {{ tex [[G]] \mid [[D]] \mathrel{\vdash} [[m]] \mathrel{:} [[B]] }}
+  % semantics
+  | ( v , w ) ∈ A :: :: LogVal
+    {{ tex ( [[v]] \mathpunct{,} [[w]] ) \mathrel{\in} \llbracket [[A]] \rrbracket }}
+  | ( m , n ) ∈ B :: :: LogCom
+    {{ tex ( [[m]] \mathpunct{,} [[n]] ) \mathrel{\in} \llbracket [[B]] \rrbracket }}
+  | ( s , t ) ∈ G :: :: LogSubst
+    {{ tex ( [[s]] \mathpunct{,} [[t]] ) \mathrel{\in} \llbracket [[G]] \rrbracket }}
+  | ( p , q ) ∈ D :: :: LogJoin
+    {{ tex ( [[p]] \mathpunct{,} [[q]] ) \mathrel{\in} \llbracket [[D]] \rrbracket }}
+  | G | D ⊧ v ~ w : A :: :: SemVal
+    {{ tex [[G]] \mid [[D]] \mathrel{\vDash} [[v]] \mathrel{\sim} [[w]] \mathrel{:} [[A]] }}
+  | G | D ⊧ m ~ n : B :: :: SemCom
+    {{ tex [[G]] \mid [[D]] \mathrel{\vDash} [[m]] \mathrel{\sim} [[n]] \mathrel{:} [[B]] }}
+  % evaluation
+  | m ⇝ n :: :: Eval
+    {{ tex [[m]] \mathbin{\rightsquigarrow} [[n]] }}
+  | m ⇝* n :: :: Evals
+    {{ tex [[m]] \mathbin{\rightsquigarrow^\ast} [[n]] }}
+  | m ⇓ tm :: :: Norm
+    {{ tex [[m]] \mathbin{\Downarrow} [[tm]] }}
+  | ( formula ) :: S :: parentheses
+    {{ tex ([[formula]]) }}
+
+subrules
+  T <:: A
+  tm <:: m

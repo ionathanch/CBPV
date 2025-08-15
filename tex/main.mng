@@ -1,0 +1,310 @@
+\newif\ifarxiv
+\arxivfalse
+
+% acmart now uses unicode-math, and mathtools needs to be loaded before it
+\RequirePackage{mathtools}
+\documentclass[acmsmall,screen,review,anonymous,nonacm]{acmart}
+\settopmatter{printacmref=false, printccs=false, printfolios=true}
+
+\ifarxiv
+\pdfoutput=1
+\nolinenumbers
+\usepackage[T1]{fontenc}
+\usepackage[scale=0.92]{inconsolata}
+\else
+\usepackage{fontspec}
+\setmonofont[Scale=MatchLowercase]{inconsolata}
+\fi
+
+\usepackage[supertabular]{ottalt}
+\let\newlist\relax
+\let\renewlist\relax
+\usepackage{cleveref,enumitem,booktabs,xspace,doi}
+\usepackage{mathpartir,stmaryrd,colonequals}
+\usepackage[bottom,flushmargin,multiple,para]{footmisc} % para spacing is weird and ugly
+
+\newcommand{\repo}{https://github.com/ionathanch/CBPV}
+\newcommand{\lang}{A-CBPV\@\xspace}
+\newcommand{\titlebreak}{\texorpdfstring{\\}{}}
+\newcommand{\ie}{\textit{i.e.}\@\xspace}
+\newcommand{\eg}{\textit{e.g.}\@\xspace}
+\newcommand{\etal}{\textit{et al.}\@\xspace}
+\newcommand{\vs}{\textit{vs.}\@\xspace}
+\newcommand{\ala}{\textit{\`a la}\@\xspace}
+\newcommand{\apriori}{\textit{a priori}\@\xspace}
+\newcommand{\fstar}{F$^\star$\@\xspace}
+\newcommand{\welltyped}{well-\hspace{0pt}typed\@\xspace}
+\newcommand{\wellfounded}{well-\hspace{0pt}founded\@\xspace}
+\newcommand{\wellfoundedness}{well-\hspace{0pt}foundedness\@\xspace}
+\newcommand{\wellformedness}{well-\hspace{0pt}formedness\@\xspace}
+\newcommand{\welldefinedness}{well-\hspace{0pt}definedness\@\xspace}
+\newcommand{\crude}{crude-\hspace{0pt}but-\hspace{0pt}effective\@\xspace}
+
+\newcommand{\thmref}[2]{%
+  $\langle$\textnormal{\texttt{\href{\repo/tree/main/src/#1}{#1}:#2}}$\rangle$%
+}
+
+\setlength{\fboxsep}{2pt}
+\setlength{\abovecaptionskip}{0\baselineskip}
+\setlength{\textfloatsep}{\baselineskip}
+\setlength{\intextsep}{0.25\baselineskip}
+\setlength{\jot}{0\baselineskip}
+
+\urlstyle{tt}
+
+\citestyle{acmauthoryear}
+\bibliographystyle{ACM-Reference-Format}
+
+\title[]{Commuting Conversions and Join Points \titlebreak for Call-By-Push-Value}
+
+\author{Jonathan Chan}
+\orcid{0000-0003-0830-3180}
+\affiliation{University of Pennsylvania}
+\email{jcxz@seas.upenn.edu}
+
+\author{Madi Gudin}
+\affiliation{Amherst College}
+\email{mgudin27@amherst.edu}
+
+\author{Annabel Levy}
+\affiliation{University of Maryland, Baltimore County}
+\email{alevy2@umbc.edu}
+
+\author{Stephanie Weirich}
+\orcid{0000-0002-6756-9168}
+\affiliation{University of Pennsylvania}
+\email{sweirich@seas.upenn.edu}
+
+\acmJournal{PACMPL}
+\acmConference[short]{name}{date}{venue}
+\acmVolume{}
+\acmNumber{}
+\acmArticle{}
+\acmYear{}
+\acmMonth{}
+\acmISBN{}
+\acmDOI{}
+
+\begin{CCSXML}
+<ccs2012>
+   <concept>
+       <concept_id>10011007.10011006.10011008.10011009.10011012</concept_id>
+       <concept_desc>Software and its engineering~Functional languages</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10011007.10011006.10011008.10011024.10011027</concept_id>
+       <concept_desc>Software and its engineering~Control structures</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+ </ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Software and its engineering~Functional languages}
+\ccsdesc[500]{Software and its engineering~Control structures}
+
+\inputott{rules}
+
+\begin{document}
+
+\setlength{\abovedisplayskip}{0.25\baselineskip}
+\setlength{\belowdisplayskip}{0.25\baselineskip}
+
+\begin{abstract}
+
+\end{abstract}
+
+\maketitle
+
+\section{Motivation}
+
+The core ideas of this paper begin with the thesis that CBPV \citep{CBPV}
+is suitable as a compiler intermediate representation (IR)
+because it represents control flow explicitly (TODO: cite Garbuzov).
+In particular, it subsumes both call-by-name (CBN) and call-by-value (CBV) semantics of lambda calculus:
+compiling a lambda calculus term with the CBN or CBV compilation strategy yields different CBPV terms
+whose execution mirrors that of the original evaluation strategy.
+
+\begin{figure}[h]
+  \begin{align}
+    [[v]], [[w]] &\dblcolon= [[x]] \mid [[()]] \mid [[inl v]] \mid [[inr v]] \mid [[{m}]] \tag{values} \\
+    [[m]], [[n]] &\dblcolon= [[v!]] \mid [[λx. m]] \mid [[n v]] \mid [[fst n]] \mid [[snd n]] \mid [[return v]] \tag{computations} \\
+    &\mid [[let x ← n in m]] \mid [[case v of inl x ⇒ m1 ; inr y ⇒ m2]] \nonumber
+  \end{align}
+  \caption{Syntax of call-by-push-value values and computations}
+  \label{fig:syntax}
+\end{figure}
+
+CBPV syntactically distinguishes values and computations,
+using explicit thunks to turn suspended computations into values
+and explicit returns to embed values into computations,
+which the CBN and CBV translations use in different ways to enforce when computation occurs.
+For example, the lambda calculus term $[[(λx. x) ((λy. y) z)]]$
+translates to the following two CBPV terms.
+%
+\begin{align*}
+  \textbf{CBN} &\quad [[:concrete: (λx. x!) {(λy. y!) {z!}}]] \\
+  \textbf{CBV} &\quad [[:concrete: let f ← return {λx. return x} in let a ← (let g ← return {λy. return y} in g! z) in f! a]]
+\end{align*}
+
+While both terms evaluate to the same final value $[[z]]$,
+their evaluation sequences are different.
+In the CBN translation, function arguments are \{thunked\} and passed wholesale,
+then forced$!$ as they are needed.
+In the CBV translation, the function and the argument are evaluated in order
+before carrying out the function application,
+using let bindings to express the explicit sequencing.
+First $f$ is evaluated, followed by $g$, then $a$, before the final application occurs.
+
+The distinction between the strategies has implications for performance.
+Passing thunks explicitly to functions in CBN may needlessly duplicate code execution
+if those arguments are used multiple times.
+Conversely, evaluating arguments before passing them to functions in CBV
+may needlessly execute code if those arguments are not used at all.
+Choosing one evaluation strategy over another is choosing between these tradeoffs,
+and CBPV provides a uniform interface for manipulating code once the decision is made
+without introducing behaviour that violates the expected strategy.
+
+To seriously consider CBPV as an IR, we need to think about what happens after compiling to CBPV.
+At a high level, a compiler IR may undergo some optimization passes,
+then compiled to lower-level IRs.
+In this paper, we look at passes that affect control flow,
+and in particular at commuting conversions.
+
+Commuting conversions are syntactic transformations
+pushing evaluation contexts into tail positions of eliminators
+that preserve evaluation order.
+An important benefit of performing commuting conversions is that it exposes inlining opportunities ---
+that is, subexpressions that can be reduced to simplify code.
+For instance, we can commute a let-bound conditional to reveal direct bindings of returned values.
+%
+\begin{align*}
+  & [[let b ← (if v then return false else return w) in m]] \\
+  \Longrightarrow \quad & [[if v then (let b ← return false in m) else (let b ← return w in m)]]
+\end{align*}
+
+Now we may choose to inline $[[false]]$ inside of $[[m]]$ in place of $[[b]]$
+and simplify the then branch.
+We may also choose \emph{not} to inline $[[w]]$ in the else branch
+if it happens that $[[w]]$ is a particularly large value we don't want to duplicate.
+The inlining optimization wouldn't have been possible without the commutation,
+and is a well-known technique (TODO: cite Compiling w/o Cont? or who?);
+this particular commutation is part of what is called \emph{case-floating}.
+
+Here, we consider CBPV with functions, case expressions
+(as a generalization of conditional expressions),
+and computational pairs, which have $\kw{fst}$ and $\kw{snd}$ projections.
+These yield a total of eight commuting conversions,
+where four evaluation contexts commute with two tail contexts.
+They have straightfoward generalizations to more constructs:
+for instance, if we were to add value pairs, which are eliminated by pattern matching,
+we would add an additional tail context, producing four more commuting conversions.
+
+\begin{figure}[h]
+  \begin{align}
+    \tag{evaluation contexts}   [[E]] &\dblcolon= [[let x ← □ in m]] \mid [[□ v]] \mid [[fst □]] \mid [[snd □]] \\
+    \tag{tail contexts}         [[L]] &\dblcolon= [[let x ← n in □]] \mid [[case v of inl x ⇒ □ ; inr y ⇒ □]] \\
+    \tag{commuting conversions} & [[ E[ L[m] ] ]] \Longrightarrow [[ L[ E[m] ] ]]
+  \end{align}
+  \caption{Evaluation and tail contexts, commuting conversions}
+  \label{fig:commute}
+\end{figure}
+
+Another benefit of commuting conversions is that it syntactically sequentializes code,
+in the sense that code becomes less nested and more resembles assembly code.
+On the right-hand side of our let-bound conditional example,
+we can imagine further compiling the term
+into a branching instruction to two code blocks,
+each of which assign some value to a register before continuing with the code in $[[m]]$.
+This sequentialization is the result of pushing computations into tail positions
+in the commuting conversions.
+
+The sequentializing nature of commuting conversions resembles
+the A-normalization compiler pass into A-normal form (ANF)
+because commuting conversions are in fact the A-reductions that characterize ANF.
+For the lambda calculus, A-normalization does two things:
+it binds intermediate computations,
+and it sequentializes computations.
+It does the former by including evaluation contexts with holes
+in the argument position of function applications
+and in the scrutinee position of case expressions.
+CBPV doesn't require such contexts since the translation into CBPV
+has already either thunked (for CBN) or bound (for CBV) intermediate computations.
+All that's left to do is to sequentialize them via commuting conversions.%
+\footnote{This is similar to first compiling to monadic normal form,
+which only binds intermediate computations,
+then performing sequentialization afterwards (TODO: cite William).}
+
+Rather than performing commuting conversions one by one,
+we present a one-pass transformation into a normal form
+with respect to all commuting conversions (CCNF).%
+\footnote{Compiling with Continuations, Continued also calls them cc-normal form.}
+To borrow terminology from ANF,
+we call $[[E]]$s that are filled with terms free of $[[L]]$s \emph{computations},
+while we call filled $[[L]]$s \emph{configurations},
+using $[[n]]$ for such computations only and $[[m]]$ for configurations.
+Values remain the same, where thunks may contain configurations.
+%
+\begin{figure}[h]
+  \begin{align}
+    [[n]] &\dblcolon= [[v!]] \mid [[λx. m]] \mid [[n v]] \mid [[return v]] \mid [[fst n]] \mid [[snd n]] \tag{computations} \\
+    [[m]] &\dblcolon= n \mid [[let x ← n in m]] \mid [[case v of inl x ⇒ m1 ; inr y ⇒ m2]] \tag{configurations}
+  \end{align}
+  \caption{Commuting conversion normal form of computations and configurations for CBPV}
+  \label{fig:ccnf}
+\end{figure}
+
+Because the commuting conversions only introduce new computations in tail position,
+\emph{new} opportunities for inlining only occur in tail position,
+so performing those new inlinings will not violate CCNF.
+However, subsequent inlinings that involve forcing direct thunks may violate CCNF.
+Consider the following sequence of a commutation followed by an inlining that reduces a function.
+%
+\begin{align}
+  &[[(let x ← n1 in (λy'. let y ← y'! in m1)) {let z ← n2 in m2}]] \nonumber \\
+  &\Longrightarrow [[let x ← n1 in ((λy'. let y ← y'! in m1) {let z ← n2 in m2})]] \tag{commute} \\
+  &\Longrightarrow [[let x ← n1 in (let y ← {let z ← n2 in m2}! in m1)]] \tag{inline}
+\end{align}
+
+The resulting term is in CCNF, but if we force the thunk,
+we end up with a nested let expression, which is not in CCNF.
+Therefore, renormalization is required after cascading inlinings that involve forcing thunks.
+
+\subsection{Join points}
+
+\iffalse
+\begin{align}
+  [[let x ← (let y ← m1 in m2) in m3]]
+  & \Longrightarrow [[let y ← m1 in let x ← m2 in m3]]
+  \tag{let--let} \\
+  [[(let x ← n in m) v]]
+  & \Longrightarrow [[let x ← n in m v]]
+  \tag{let--app} \\
+  [[fst (let x ← n in m)]]
+  & \Longrightarrow [[let x ← n in fst m]]
+  \tag{let--fst} \\
+  [[snd (let x ← n in m)]]
+  & \Longrightarrow [[let x ← n in snd m]]
+  \tag{let--snd} \\
+  [[let x ← (case v of inl y ⇒ m1 ; inr z ⇒ m2) in m]]
+  & \Longrightarrow \nonumber \\
+  \mathclap{[[case v of inl y ⇒ let x ← m1 in m ; inr z ⇒ let x ← m2 in m]]}
+  \tag{case--let} \\
+  [[(case v of inl x ⇒ m1 ; inr y ⇒ m2) w]]
+  & \Longrightarrow \nonumber \\
+  \mathclap{[[case v of inl x ⇒ m1 w ; inr y ⇒ (# m2 w #)]]}
+  \tag{case--app} \\
+  [[fst (case v of inl x ⇒ m1 ; inr y ⇒ m2)]]
+  & \Longrightarrow \nonumber \\
+  \mathclap{[[case v of inl x ⇒ fst m1 ; inr y ⇒ fst m2]]}
+  \tag{case--fst} \\
+  [[snd (case v of inl x ⇒ m1 ; inr y ⇒ m2)]]
+  & \Longrightarrow \nonumber \\
+  \mathclap{[[case v of inl x ⇒ snd m1 ; inr y ⇒ snd m2]]}
+  \tag{case--snd}
+\end{align}
+\fi
+
+\bibliography{main}
+
+\end{document}

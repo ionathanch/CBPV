@@ -1,1 +1,3 @@
 .lake/
+tex/latex.out/
+tex/*.tex
