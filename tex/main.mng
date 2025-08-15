@@ -27,6 +27,7 @@
 \newcommand{\repo}{https://github.com/ionathanch/CBPV}
 \newcommand{\lang}{A-CBPV\@\xspace}
 \newcommand{\titlebreak}{\texorpdfstring{\\}{}}
+\newcommand{\TODO}{\textcolor{red}{\textbf{\textsf{TODO}}}\@\xspace}
 \newcommand{\ie}{\textit{i.e.}\@\xspace}
 \newcommand{\eg}{\textit{e.g.}\@\xspace}
 \newcommand{\etal}{\textit{et al.}\@\xspace}
@@ -124,7 +125,7 @@
 
 The core ideas of this paper begin with the thesis that CBPV \citep{CBPV}
 is suitable as a compiler intermediate representation (IR)
-because it represents control flow explicitly (TODO: cite Garbuzov).
+because it represents control flow explicitly (\TODO: cite Garbuzov).
 In particular, it subsumes both call-by-name (CBN) and call-by-value (CBV) semantics of lambda calculus:
 compiling a lambda calculus term with the CBN or CBV compilation strategy yields different CBPV terms
 whose execution mirrors that of the original evaluation strategy.
@@ -196,7 +197,7 @@ and simplify the then branch.
 We may also choose \emph{not} to inline $[[w]]$ in the else branch
 if it happens that $[[w]]$ is a particularly large value we don't want to duplicate.
 The inlining optimization wouldn't have been possible without the commutation,
-and is a well-known technique (TODO: cite Compiling w/o Cont? or who?);
+and is a well-known technique (\TODO: cite Compiling w/o Cont? or who?);
 this particular commutation is part of what is called \emph{case-floating}.
 
 Here, we consider CBPV with functions, case expressions
@@ -239,9 +240,9 @@ and in the scrutinee position of case expressions.
 CBPV doesn't require such contexts since the translation into CBPV
 has already either thunked (for CBN) or bound (for CBV) intermediate computations.
 All that's left to do is to sequentialize them via commuting conversions.%
-\footnote{This is similar to first compiling to monadic normal form,
+\footnote{This is similar to first compiling to monadic normal form (MNF),
 which only binds intermediate computations,
-then performing sequentialization afterwards (TODO: cite William).}
+then performing sequentialization afterwards (\TODO: cite William).}
 
 Rather than performing commuting conversions one by one,
 we present a one-pass transformation into a normal form
@@ -301,7 +302,8 @@ Similarly, in CBPV, we can bind a thunked function to be forced and applied.
 %
 \usetagform{brack}
 \begin{align}
-  \Longrightarrow \ &[[let z ← return {λx. m} in _]] \\
+  & \nonumber {\color{gray} [[let x ← (case v of inl y1 ⇒ m1 ; inr y2 ⇒ m2) in m]]} \\
+  \label{eq:let-join} \Longrightarrow \ &[[let z ← return {λx. m} in _]] \\
   & \nonumber \phantom{\kw{let} \gap}
   [[case v of inl y1 ⇒ (let x ← m1 in z! x) ; inr y2 ⇒ (let x ← m2 in z! x)]]
 \end{align}
@@ -322,16 +324,60 @@ and should be compiled to a local code block that is jumped to.
   \tag{join points, jumps}
 \end{align}
 
-Inspired by (TODO: cite Compiling Without Continuations),
+Inspired by (\TODO: cite Compiling Without Continuations),
 who tackle the same issue with commuting conversion in System F with case expressions,
 we too add explicit join point and jump constructs to CBPV,
 along with typing rules that restrict where join points may be used.
-In contrast to (TODO: author ref),
+In contrast to (\TODO: author ref),
 our jumps are configurations and may only appear in tail position,
 as commuting-conversion normalization discards contexts around jumps.
 All in all, these restrictions ensure that join points are only ever used by local tail jumps.
+We use join points in place of the bound thunk in the commuting conversion of \cref{eq:let-join}.
+% TODO: Why is this ref number incorrect?
+%
+\usetagform{brack}
+\begin{align}
+  & \nonumber {\color{gray} [[let x ← (case v of inl y1 ⇒ m1 ; inr y2 ⇒ m2) in m]]} \\
+  \Longrightarrow \ &[[join j x = m in _]] \\
+  & \nonumber \label{eq:let-join} \phantom{\kw{join} \gap}
+  [[case v of inl y1 ⇒ (let x ← m1 in jump j x) ; inr y2 ⇒ (let x ← m2 in jump j x)]]
+\end{align}
+\usetagform{default}
 
-TODO: case-in-case
+Unfortunately, even with join points,
+the case-in-case optimizations highlighted by (\TODO: above) are not performed,
+as the translation to CBPV has already obscured these opportunities.
+Case-in-case optimizations deal with case expressions in lambda calculus
+whose scrutinees are themselves case expressions,
+where a commuting conversion followed by an inlining simplifies away an inner case analysis.
+Consider the following example in lambda calculus with conditionals,
+where the left-hand side would be optimized with join points to the right-hand side.
+%
+\usetagform{brack}
+\begin{align}
+  &[[:concrete: if (if v then false else w) then m_1 else m_2]] \nonumber \\
+  \Longrightarrow \ &[[join j = m2 in (if v then jump j else (if w then m1 else jump j))]]
+\end{align}
+\usetagform{default}
+
+Translating the left-hand side for both CBN and CBV to CBPV
+binds the inner conditional in an intermediate let expression,
+making its case-in-case nature difficult to identify.%
+\footnote{(\TODO: cite William) also highlights this difficulty in the context of MNF.}
+Further sequantialization (and inlining) with join points prevents duplication of $[[m1]]$ and $[[m2]]$,
+but contains an extra conditional inside the join point,
+which is unnecessary in the branch where $[[v]]$ is $[[true]]$
+and we know the next computation to execute must be $[[m2]]$.
+%
+\usetagform{brack}
+\begin{align}
+  & {\color{gray} [[:concrete: if (if v then false else w) then m_1 else m_2]]} \nonumber \\
+  \Longrightarrow \ & [[let x ← (if v then return false else return w) in (if x then m1 else m2)]] \\
+  \Longrightarrow \ & [[join j x = (if x then m1 else m2) in (if v then jump j false else jump j w)]]
+\end{align}
+\usetagform{default}
+
+(\TODO: ``Unfortunately'' to here should probably be in a separate discussion section)
 
 \subsection{Contributions}
 

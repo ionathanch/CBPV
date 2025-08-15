@@ -80,8 +80,12 @@ m, n :: 'com_' ::= {{ com computations }}
   | join j x = m1 in m2 :: :: Join
     (+ bind x in m1 +)
     {{ tex \kw{join} \gap [[j]] \gap [[x]] \mathrel{=} [[m1]] \mathrel{ \kw{in} } [[m2]] }}
+  | join j = m1 in m2 :: M :: Join'
+    {{ tex \kw{join} \gap [[j]] \mathrel{=} [[m1]] \mathrel{ \kw{in} } [[m2]] }}
   | jump j v :: :: Jump
     {{ tex \kw{jump} \gap [[j]] \mathrel{ \kw{with} } [[v]] }}
+  | jump j :: M :: Jump'
+    {{ tex \kw{jump} \gap [[j]] }}
   | K [ n ] :: :: Plug
     {{ com plugging into a continuation }}
     {{ tex [[K]] [ [[n]] ] }}
@@ -121,10 +125,16 @@ tm {{ tex \mathit{tm} }} :: 'term_' ::= {{ com terminals }}
 lc {{ tex \mathit{lc} }} :: 'lc_' ::= {{ com lambda calculus terms }}
   | x :: :: Var
     {{ tex \mathit{[[x]]} }}
+  | true :: :: True
+    {{ tex \kw{true} }}
+  | false :: :: False
+    {{ tex \kw{false} }}
   | λ x . lc :: :: Fun
     {{ tex \lambda [[x]] \mathpunct{.} [[lc]] }}
   | lc1 lc2 :: :: App
     {{ tex [[lc1]] \gap [[lc2]] }}
+  | if lc1 then lc2 else lc3 :: :: If
+    {{ tex \kw{if} \gap [[lc1]] \mathrel{ \kw{then} } [[lc2]] \mathrel{ \kw{else} }[[lc3]] }}
   | ( lc ) :: S :: Parens
     {{ tex ([[lc]]) }}
 
