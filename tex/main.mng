@@ -31,6 +31,7 @@
 \newcommand{\ie}{\textit{i.e.}\@\xspace}
 \newcommand{\eg}{\textit{e.g.}\@\xspace}
 \newcommand{\etal}{\textit{et al.}\@\xspace}
+\newcommand{\opcit}{\textit{op. cit.}\@\xspace}
 \newcommand{\vs}{\textit{vs.}\@\xspace}
 \newcommand{\ala}{\textit{\`a la}\@\xspace}
 \newcommand{\apriori}{\textit{a priori}\@\xspace}
@@ -121,11 +122,11 @@
 
 \maketitle
 
-\section{Motivation}
+\section{Key Ideas}
 
 The core ideas of this paper begin with the thesis that CBPV \citep{CBPV}
 is suitable as a compiler intermediate representation (IR)
-because it represents control flow explicitly (\TODO: cite Garbuzov).
+because it represents control flow explicitly \citep{CFG}.
 In particular, it subsumes both call-by-name (CBN) and call-by-value (CBV) semantics of lambda calculus:
 compiling a lambda calculus term with the CBN or CBV compilation strategy yields different CBPV terms
 whose execution mirrors that of the original evaluation strategy.
@@ -133,10 +134,11 @@ whose execution mirrors that of the original evaluation strategy.
 \begin{figure}[h]
   \begin{align}
     [[v]], [[w]] &\dblcolon= [[x]] \mid [[()]] \mid [[inl v]] \mid [[inr v]] \mid [[{m}]] \tag{values} \\
-    [[m]], [[n]] &\dblcolon= [[v!]] \mid [[λx. m]] \mid [[n v]] \mid [[fst n]] \mid [[snd n]] \mid [[return v]] \tag{computations} \\
+    [[m]], [[n]] &\dblcolon= [[v!]] \mid [[λx. m]] \mid [[n v]] \mid [[⟨m, m⟩]] \mid [[fst n]] \mid [[snd n]] \mid [[return v]] \tag{computations} \\
     &\mid [[let x ← n in m]] \mid [[case v of inl x ⇒ m1 ; inr y ⇒ m2]] \nonumber
   \end{align}
   \caption{Syntax of call-by-push-value values and computations}
+  \Description[]{}
   \label{fig:syntax}
 \end{figure}
 
@@ -144,8 +146,13 @@ CBPV syntactically distinguishes values and computations,
 using explicit thunks to turn suspended computations into values
 and explicit returns to embed values into computations,
 which the CBN and CBV translations use in different ways to enforce when computation occurs.
-For example, the lambda calculus term $[[(λx. x) ((λy. y) z)]]$
-translates to the following two CBPV terms.
+\Cref{fig:syntax} lists the values and computations we work with in this paper,
+which consists of the lambda calculus with a unit value, value sums, computation pairs,
+along with the CBPV thunk and return constructs.
+
+As an example of the way CBN and CBV translations differ,
+consider the lambda calculus term $[[(λx. x) ((λy. y) z)]]$,
+which translates to the following two CBPV terms.
 %
 \begin{align*}
   \textbf{CBN} &\quad [[:concrete: (λx. x!) {(λy. y!) {z!}}]] \\
@@ -176,12 +183,15 @@ then compiled to lower-level IRs.
 In this paper, we look at passes that affect control flow,
 and in particular at commuting conversions.
 
+\subsection{Commuting conversions}
+
 Commuting conversions are syntactic transformations
 pushing evaluation contexts into tail positions of eliminators
 that preserve evaluation order.
 An important benefit of performing commuting conversions is that it exposes inlining opportunities ---
 that is, subexpressions that can be reduced to simplify code.
 For instance, we can commute a let-bound conditional to reveal direct bindings of returned values.
+(We use syntactic sugar for boolean conditionals implemented as sums.)
 %
 \usetagform{brack}
 \begin{align}
@@ -197,12 +207,12 @@ and simplify the then branch.
 We may also choose \emph{not} to inline $[[w]]$ in the else branch
 if it happens that $[[w]]$ is a particularly large value we don't want to duplicate.
 The inlining optimization wouldn't have been possible without the commutation,
-and is a well-known technique (\TODO: cite Compiling w/o Cont? or who?);
-this particular commutation is part of what is called \emph{case-floating}.
+and is a well-known technique \citep{join};
+this particular commutation is part of \emph{case-floating}.
 
-Here, we consider CBPV with functions, case expressions
-(as a generalization of conditional expressions),
-and computational pairs, which have $\kw{fst}$ and $\kw{snd}$ projections.
+Following \citet{join}, we extract out from our syntax the evaluation contexts,
+which are elimination forms with holes in place of computation scrutinees,
+and the tail contexts, which are elimination forms with holes in place of all other computations.
 These yield a total of eight commuting conversions,
 where four evaluation contexts commute with two tail contexts.
 They have straightfoward generalizations to more constructs:
@@ -215,13 +225,14 @@ we would add an additional tail context, producing four more commuting conversio
     \tag{tail contexts}         [[L]] &\dblcolon= [[let x ← n in □]] \mid [[case v of inl x ⇒ □ ; inr y ⇒ □]] \\
     \tag{commuting conversions} & [[ E[ L[m] ] ]] \Longrightarrow [[ L[ E[m] ] ]]
   \end{align}
-  \caption{Evaluation and tail contexts, commuting conversions}
+  \caption{Evaluation and tail contexts; commuting conversions}
+  \Description[]{}
   \label{fig:commute}
 \end{figure}
 
 Another benefit of commuting conversions is that it syntactically sequentializes code,
 in the sense that code becomes less nested and more resembles assembly code.
-On the right-hand side of our let-bound conditional example,
+On the right-hand side of \cref{eq:let-if},
 we can imagine further compiling the term
 into a branching instruction to two code blocks,
 each of which assign some value to a register before continuing with the code in $[[m]]$.
@@ -230,7 +241,7 @@ in the commuting conversions.
 
 The sequentializing nature of commuting conversions resembles
 the A-normalization compiler pass into A-normal form (ANF)
-because commuting conversions are in fact the A-reductions that characterize ANF.
+because commuting conversions are in fact the A-reductions that characterize ANF \citep{ANF}.
 For the lambda calculus, A-normalization does two things:
 it binds intermediate computations,
 and it sequentializes computations.
@@ -242,26 +253,28 @@ has already either thunked (for CBN) or bound (for CBV) intermediate computation
 All that's left to do is to sequentialize them via commuting conversions.%
 \footnote{This is similar to first compiling to monadic normal form (MNF),
 which only binds intermediate computations,
-then performing sequentialization afterwards (\TODO: cite William).}
-
-Rather than performing commuting conversions one by one,
-we present a one-pass transformation into a normal form
-with respect to all commuting conversions (CCNF).%
-\footnote{Compiling with Continuations, Continued also calls them cc-normal form.}
-To borrow terminology from ANF,
-we call $[[E]]$s that are filled with terms free of $[[L]]$s \emph{computations},
-while we call filled $[[L]]$s \emph{configurations},
-using $[[n]]$ for such computations only and $[[m]]$ for configurations.
-Values remain the same, where thunks may contain configurations.
+then performing sequentialization afterwards \citep{ANF-dead}.}
 %
 \begin{figure}[h]
   \begin{align}
     [[n]] &\dblcolon= [[v!]] \mid [[λx. m]] \mid [[n v]] \mid [[return v]] \mid [[fst n]] \mid [[snd n]] \tag{computations} \\
     [[m]] &\dblcolon= n \mid [[let x ← n in m]] \mid [[case v of inl x ⇒ m1 ; inr y ⇒ m2]] \tag{configurations}
   \end{align}
-  \caption{Commuting conversion normal form of computations and configurations for CBPV}
+  \caption{Commuting conversion normal form of computations and configurations}
+  \Description[]{}
   \label{fig:ccnf}
 \end{figure}
+
+Rather than performing commuting conversions one by one,
+we present a one-pass transformation into a normal form
+with respect to all commuting conversions (CCNF) in \cref{sec:ccnf}. % TODO: Is this really the best name?
+% \footnote{Compiling with Continuations, Continued also calls them cc-normal form.}
+To borrow terminology from ANF,
+we call $[[E]]$s that are filled with terms free of $[[L]]$s \emph{computations},
+while we call filled $[[L]]$s \emph{configurations},
+using $[[n]]$ for such computations only and $[[m]]$ for configurations.
+\Cref{fig:ccnf} explicitly lists the syntax obtained from these fillings;
+values remain the same, where thunks may contain configurations.
 
 Because the commuting conversions only introduce new computations in tail position,
 \emph{new} opportunities for inlining only occur in tail position,
@@ -289,6 +302,7 @@ the let body $[[m]]$ gets duplicated across the branches of the case expression.
 \begin{align}
   \nonumber
   &[[let x ← (case v of inl y1 ⇒ m1 ; inr y2 ⇒ m2) in m]] \\
+  \label{eq:duped}
   \Longrightarrow \ &[[case v of inl y1 ⇒ (let x ← m1 in m) ; inr y2 ⇒ (let x ← m1 in m)]]
 \end{align}
 \usetagform{default}
@@ -319,33 +333,41 @@ all that we do to it is force it and apply the function within.
 Its purpose is only to join up branches of a computation,
 and should be compiled to a local code block that is jumped to.
 %
-\begin{align}
-  m &\dblcolon= \dots \mid [[join j x = m in m]] \mid [[jump j v]]
-  \tag{join points, jumps}
-\end{align}
+\begin{figure}
+  \begin{align}
+    m &\dblcolon= \dots \mid [[join j x = m in m]] \mid [[jump j v]]
+    \tag{join points, jumps}
+  \end{align}
+  \caption{Extended configurations}
+  \Description[]{}
+  \label{fig:join}
+\end{figure}
 
-Inspired by (\TODO: cite Compiling Without Continuations),
+Inspired by \citet{join},
 who tackle the same issue with commuting conversion in System F with case expressions,
-we too add explicit join point and jump constructs to CBPV,
-along with typing rules that restrict where join points may be used.
-In contrast to (\TODO: author ref),
+we too add explicit join point and jump constructs to CBPV in \cref{fig:join}.
+They are accompanied by typing rules that restrict where join points may be used,
+which we cover in \cref{sec:cbpv}.
+In contrast to \opcit,
 our jumps are configurations and may only appear in tail position,
 as commuting-conversion normalization discards contexts around jumps.
 All in all, these restrictions ensure that join points are only ever used by local tail jumps.
-We use join points in place of the bound thunk in the commuting conversion of \cref{eq:let-join}.
-% TODO: Why is this ref number incorrect?
+
+Coming back to the commuting conversion of \cref{eq:let-join},
+we use join points in place of the bound thunk,
+jumping to them after binding the branches.
 %
 \usetagform{brack}
 \begin{align}
   & \nonumber {\color{gray} [[let x ← (case v of inl y1 ⇒ m1 ; inr y2 ⇒ m2) in m]]} \\
   \Longrightarrow \ &[[join j x = m in _]] \\
-  & \nonumber \label{eq:let-join} \phantom{\kw{join} \gap}
+  & \nonumber \phantom{\kw{join} \gap}
   [[case v of inl y1 ⇒ (let x ← m1 in jump j x) ; inr y2 ⇒ (let x ← m2 in jump j x)]]
 \end{align}
 \usetagform{default}
 
 Unfortunately, even with join points,
-the case-in-case optimizations highlighted by (\TODO: above) are not performed,
+the case-in-case optimizations highlighted in \opcit are not performed,
 as the translation to CBPV has already obscured these opportunities.
 Case-in-case optimizations deal with case expressions in lambda calculus
 whose scrutinees are themselves case expressions,
@@ -360,26 +382,72 @@ where the left-hand side would be optimized with join points to the right-hand s
 \end{align}
 \usetagform{default}
 
-Translating the left-hand side for both CBN and CBV to CBPV
-binds the inner conditional in an intermediate let expression,
+If we translate the left-hand side for both CBN and CBV to CBPV,
+the inner conditional is bound in an intermediate let expression,
 making its case-in-case nature difficult to identify.%
-\footnote{(\TODO: cite William) also highlights this difficulty in the context of MNF.}
-Further sequantialization (and inlining) with join points prevents duplication of $[[m1]]$ and $[[m2]]$,
+\footnote{\Citet{ANF-dead} also highlights this difficulty in the context of MNF.}
+Further sequentialization (and inlining) with join points prevents duplication of $[[m1]]$ and $[[m2]]$,
 but contains an extra conditional inside the join point,
 which is unnecessary in the branch where $[[v]]$ is $[[true]]$
 and we know the next computation to execute must be $[[m2]]$.
 %
-\usetagform{brack}
 \begin{align}
   & {\color{gray} [[:concrete: if (if v then false else w) then m_1 else m_2]]} \nonumber \\
-  \Longrightarrow \ & [[let x ← (if v then return false else return w) in (if x then m1 else m2)]] \\
-  \Longrightarrow \ & [[join j x = (if x then m1 else m2) in (if v then jump j false else jump j w)]]
+  \Longrightarrow \ & [[let x ← (if v then return false else return w) in (if x then m1 else m2)]] \tag{\textit{CBPV}} \\
+  \Longrightarrow \ & [[join j x = (if x then m1 else m2) in _]] \tag{\textit{commute, inline}} \\
+  & \phantom{\kw{join} \gap} [[(if v then jump j false else jump j w)]] \nonumber
 \end{align}
-\usetagform{default}
 
-(\TODO: ``Unfortunately'' to here should probably be in a separate discussion section)
+Even so, join points still successfully solve the problem of preventing
+duplication of $[[m1]]$ and $[[m2]]$ without creating a new thunk.
 
 \subsection{Contributions}
+
+\section{CBPV with Join Points} \label{sec:cbpv}
+
+\section{Commuting-Conversion Normalization} \label{sec:ccnf}
+
+\section{Related Work}
+
+\Citet{CBPV-Coq} mechanize in Rocq a vast amount of metatheory for call-by-push-value,
+including normalization and observational equivalence.
+Our work builds on their design of logical equivalence between terms.
+They show a number of commuting conversions as semantic equivalences,
+namely commuting let-bound let expressions (Lemma 8.4, Equation 5)
+and function application of let expressions (Lemma 8.6, Equation 1),
+but are not comprehensive in listing all possible commuting conversions systematically
+as we have done in (\TODO: eventually).
+
+Our join points and their typing judgements with a separate join point typing context
+are inspired by \citet{join}, who add join points and jumps to System F,
+and implement their system in the Haskell compiler GHC.
+We simplify the addition by only allowing jumps in tail position,
+while they permit jumps in evaluation contexts.
+They perform their optimizations equation by equation,
+which yields intermediate steps that require this permissiveness,
+such as the following.
+%
+\begin{align*}
+  [[(join j x = m in jump j v) w]] &\Longrightarrow [[join j x = m w in (jump j v) w]] \\
+                                   &\Longrightarrow [[join j x = m w in jump j v]]
+\end{align*}
+Because we present instead a single-pass algorithm,
+we never produce such intermediate steps that need to be typeable,
+so we are able to eliminate them from our syntax outright.
+Doing so also simplifies typing:
+their jumps need to be typeable with arbitrary types,
+which they implement using type polymorphism,
+while our jumps are always in tail position
+and fixed to the return type of the join point they jump to.
+
+Instead of specialized join and jump constructs,
+\citet{wowo} use control operators that bind second-class continuations,
+along with a type system that distinguishes between first- and second-class values.
+Their system allows for both direct style and continuation-passing style optimizations;
+this is not directly applicable to CBPV, which is already in direct style
+by virtue of binding intermediate computations.
+However, the corresponding dual of CBPV is stack-passing style \citep{compiling},
+and it would be interesting to see whether a similar technique could be applied using second-class stacks.
 
 \iffalse
 \begin{align}
