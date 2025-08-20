@@ -47,11 +47,16 @@
   $\langle$\textnormal{\texttt{\href{\repo/tree/main/src/#1}{#1}:#2}}$\rangle$%
 }
 
+\newtheorem{fail}{Falsehood}[section]
+
 \setlength{\fboxsep}{2pt}
 \setlength{\abovecaptionskip}{0\baselineskip}
 \setlength{\textfloatsep}{\baselineskip}
 \setlength{\intextsep}{0.25\baselineskip}
 \setlength{\jot}{0\baselineskip}
+
+\setlist[itemize]{leftmargin=2\parindent}
+\setlist[enumerate]{leftmargin=2\parindent}
 
 \mathtoolsset{showmanualtags}
 \newtagform{brack}{[}{]}
@@ -122,11 +127,14 @@
 
 \maketitle
 
+\section{Introduction}
+
 \section{Key Ideas}
 
 The core ideas of this paper begin with the thesis that CBPV \citep{CBPV}
 is suitable as a compiler intermediate representation (IR)
 because it represents control flow explicitly \citep{CFG}.
+(\TODO: why? + motivation)
 In particular, it subsumes both call-by-name (CBN) and call-by-value (CBV) semantics of lambda calculus:
 compiling a lambda calculus term with the CBN or CBV compilation strategy yields different CBPV terms
 whose execution mirrors that of the original evaluation strategy.
@@ -148,7 +156,10 @@ and explicit returns to embed values into computations,
 which the CBN and CBV translations use in different ways to enforce when computation occurs.
 \Cref{fig:syntax} lists the values and computations we work with in this paper,
 which consists of the lambda calculus with a unit value, value sums, computation pairs,
-along with the CBPV thunk and return constructs.
+along with the CBPV thunk and return constructs.%
+\footnote{For simplicity, we omit value pairs, which are present in Levy's original CBPV;
+they are interesting in our setting because the eliminator is pattern matching,
+but we already have pattern matching on value sums to consider.}
 
 As an example of the way CBN and CBV translations differ,
 consider the lambda calculus term $[[(λx. x) ((λy. y) z)]]$,
@@ -267,8 +278,9 @@ then performing sequentialization afterwards \citep{ANF-dead}.}
 
 Rather than performing commuting conversions one by one,
 we present a one-pass transformation into a normal form
-with respect to all commuting conversions (CCNF) in \cref{sec:ccnf}. % TODO: Is this really the best name?
+with respect to all commuting conversions (CCNF) in \cref{sec:ccnf} % TODO: Is this really the best name?
 % \footnote{Compiling with Continuations, Continued also calls them cc-normal form.}
+that resembles the usual one-pass transformation into ANF \citep{ANF}.
 To borrow terminology from ANF,
 we call $[[E]]$s that are filled with terms free of $[[L]]$s \emph{computations},
 while we call filled $[[L]]$s \emph{configurations},
@@ -403,9 +415,53 @@ duplication of $[[m1]]$ and $[[m2]]$ without creating a new thunk.
 
 \subsection{Contributions}
 
+The contributions of this paper are as follows:
+
+\begin{itemize}
+  \item We identify a subset of CBPV that is normal with respect to
+    all commuting conversions that syntactically sequentialize computations.
+    To this subset, we add join point and jump constructs,
+    and design a type system enforcing non-escaping join points and tail-only jumps.
+  \item We define a single-pass transformation from CBPV into our extended normal form,
+    using joins and jumps to avoid duplicating computations.
+    This transformation preserves well-typedness,
+    proven straightforwardly by induction.
+  \item We show that the transformation preserves evaluation behaviour:
+    a closed term of value type with no thunks
+    and its transformation must evaluate to the same terminal value.
+    This is proven via a logical equivalence on terms,
+    and requires showing that commuting conversions are logically equivalent.
+\end{itemize}
+
 \section{CBPV with Join Points} \label{sec:cbpv}
 
 \section{Commuting-Conversion Normalization} \label{sec:ccnf}
+
+\section{Commuting-Conversion Normalization with Join Points Preserves Evaluation}
+
+Normalizing by all commuting conversions shouldn't affect the meaning of a program.
+Formally, if a closed computation evaluates to a returned value,
+then its translation runs to the same value.
+Because we don't evaluate inside of thunks,
+we consider only computations that return \emph{ground} values,
+which are those of type $[[T]] \dblcolon= [[⊤]] \mid [[T + T]]$.
+Otherwise, a thunk and its CCNF are values that don't evaluate any further,
+but aren't necessarily syntactially equal.
+
+\begin{corollary}[Holding your ground]
+  Given $[[m]]$ such that $[[• | • ⊢ m : F T]]$,
+  if $[[m ⇓ return v]]$, then $[[⟦ m ⟧ ⇓ return v]]$.
+\end{corollary}
+
+We prove this property as a corollary of a logical equivalence between a computation and its translation.
+This machinery is required because the simpler method using a simulation argument does not work.
+In particular, the following statement unfortunately doesn't hold.
+
+\begin{fail}[Simulation]
+  If $[[m ⇝ n]]$ then $[[⟦m⟧ ⇝ ⟦n⟧]]$.
+\end{fail}
+\begin{proof}[Counterexample]
+\end{proof}
 
 \section{Related Work}
 
@@ -448,6 +504,8 @@ this is not directly applicable to CBPV, which is already in direct style
 by virtue of binding intermediate computations.
 However, the corresponding dual of CBPV is stack-passing style \citep{compiling},
 and it would be interesting to see whether a similar technique could be applied using second-class stacks.
+
+\TODO: cite these two \citet{CBPV-STAL}, \citet{compiling}.
 
 \iffalse
 \begin{align}

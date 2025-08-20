@@ -86,6 +86,7 @@ m, n :: 'com_' ::= {{ com computations }}
     {{ tex \kw{jump} \gap [[j]] \mathrel{ \kw{with} } [[v]] }}
   | jump j :: M :: Jump'
     {{ tex \kw{jump} \gap [[j]] }}
+  % plugging metafunctions
   | K [ n ] :: :: Plug
     {{ com plugging into a continuation }}
     {{ tex [[K]] [ [[n]] ] }}
@@ -95,6 +96,7 @@ m, n :: 'com_' ::= {{ com computations }}
   | L [ m ] :: :: Tail
     {{ com plugging into a tail context }}
     {{ tex [[L]] [ [[m]] ] }}
+  % substitution metafunctions
   | w { x ↦ v } :: :: SubstVal
     {{ com single substitution into values }}
     {{ tex [[w]] \lbrace [[x]] \mapsto [[v]] \rbrace }}
@@ -107,6 +109,7 @@ m, n :: 'com_' ::= {{ com computations }}
   | m { s } :: :: SubstsCom
     {{ com simultaneous substitution into computations }}
     {{ tex [[m]] \lbrace [[s]] \rbrace }}
+  % syntactic sugar for typesetting
   | _ :: :: Hole
     {{ com hole }}
     {{ tex \relax }}
@@ -116,6 +119,13 @@ m, n :: 'com_' ::= {{ com computations }}
   | (# m #) :: S :: SParens
     {{ com invisible parentheses }}
     {{ tex [[m]] }}
+  % translation
+  | ⟦ v ⟧ :: :: CCNormVal
+    {{ tex \llbracket [[v]] \rrbracket }}
+  | ⟦ m ⟧ K :: :: CCNormCom
+    {{ tex \llbracket [[m]] \rrbracket [[K]] }}
+  | ⟦ m ⟧ :: S :: CCNormComNil
+    {{ tex \llbracket [[m]] \rrbracket }}
 
 tm {{ tex \mathit{tm} }} :: 'term_' ::= {{ com terminals }}
   | return v :: :: Return
