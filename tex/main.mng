@@ -458,10 +458,24 @@ This machinery is required because the simpler method using a simulation argumen
 In particular, the following statement unfortunately doesn't hold.
 
 \begin{fail}[Simulation]
-  If $[[m ⇝ n]]$ then $[[⟦m⟧ ⇝ ⟦n⟧]]$.
+  If $[[m ⇝ n]]$ then $[[⟦m⟧ ⇝* ⟦n⟧]]$.
 \end{fail}
 \begin{proof}[Counterexample]
+  Suppose we have CCNF computations $[[n1]]$, $[[n2]]$ and configuration $[[n]]$.
+  Consider the term $[[let x ← {let y ← n1 in n2}! in m]]$,
+  which reduces to $[[let x ← (let y ← n1 in n2) in m]]$.
+  The left-hand side translates to itself, since it's already in CCNF,
+  while the right-hand side translates to $[[let y ← n1 in let x ← n2 in m]]$.
+  Therefore, we need to show that the right-hand side reduces to its own translation,
+  but there is no such reduction sequence since there is no reduction step that commutes let bindings.
 \end{proof}
+
+However, if we know that $[[n1]]$ in the counterexample reduces to some $[[return v]]$,
+then we can deduce that the right side and its translation must reduce to
+$[[let x ← n2{y ↦ v} in m]]$, which gives us an equivalence between the original term and its translation.
+If our counterexample is well typed,
+then the logical equivalence gives us precisely the required information that
+subterms must reduce to canonical terms such as returned values.
 
 \section{Related Work}
 
