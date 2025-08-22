@@ -2,6 +2,7 @@ MAIN := main
 RULES := rules
 OLD := old
 DIFF := diff
+LTEX := ltex
 
 LATEX_FLAGS := -jobname=$(MAIN) -shell-escape
 LATEXRUN := latexrun -Wall --latex-cmd lualatex --latex-args "$(LATEX_FLAGS)"
@@ -40,6 +41,9 @@ zip: $(MAIN).pdf
 	cp latex.out/$(MAIN).bbl $(MAIN).bbl
 	zip -o submit.zip $(MAIN).bbl $(LATEXDEPS) $(MOREDEPS) $(GENERATED)
 	rm $(MAIN).bbl
+
+check: $(MAIN).tex
+	ltex --client-configuration=$(LTEX).json $(MAIN).tex > latex.out/$(LTEX).log
 
 .PHONY: count
 count:

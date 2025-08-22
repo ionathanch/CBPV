@@ -1,0 +1,47 @@
+{
+  "ltex": {
+    "language": "en-CA",
+    "dictionary": {
+      "en-CA": [
+        "monadic",
+        "sequentialize",
+        "sequentializes",
+        "sequentializing",
+        "sequentialization",
+        "thunked",
+        "IRs",
+        "inlining",
+        "inlinings",
+        "subexpression",
+        "subexpressions",
+        "scrutinee",
+        "scrutinees",
+        "unnest",
+        "dedupe"
+      ]
+    },
+    "disabledRules": {
+      "en-CA": [
+        "OUTSIDE_OF",
+        "LET_IT_INFINITIVE",
+        "BE_INTEREST_IN"
+      ]
+    },
+    "latex": {
+      "commands": {
+        "\\settopmatter{}": "ignore",
+        "\\setmonofont[]{}": "ignore",
+        "\\mathtoolsset{}": "ignore",
+        "\\urlstyle{}": "ignore",
+        "\\citestyle{}": "ignore",
+        "\\author{}": "ignore",
+        "\\acmJournal{}": "ignore",
+        "\\newtagform{}": "ignore",
+        "\\usetagform{}": "ignore"
+      },
+      "environments": {
+        "CCSXML": "ignore"
+      }
+    }
+  }
+}
