@@ -24,8 +24,8 @@
 \usepackage{mathpartir,stmaryrd,colonequals}
 \usepackage[bottom,flushmargin,multiple,para]{footmisc} % para spacing is weird and ugly
 
-\newcommand{\repo}{https://github.com/ionathanch/CBPV}
-\newcommand{\lang}{A-CBPV\@\xspace}
+\newcommand{\repo}{https://github.com/ionathanch/CBPV/tree/join}
+\newcommand{\lang}{CBPV$_{\mathrm{j}}$\@\xspace}
 \newcommand{\titlebreak}{\texorpdfstring{\\}{}}
 \newcommand{\TODO}{\textcolor{red}{\textbf{\textsf{TODO}}}\@\xspace}
 \newcommand{\ie}{\textit{i.e.}\@\xspace}
@@ -56,7 +56,7 @@
 \setlength{\jot}{0\baselineskip}
 
 \setlist[itemize]{leftmargin=2\parindent}
-\setlist[enumerate]{leftmargin=2\parindent}
+\setlist[enumerate]{topsep=0pt}
 
 \mathtoolsset{showmanualtags}
 \newtagform{brack}{[}{]}
@@ -129,15 +129,63 @@
 
 \section{Introduction}
 
+\TODO: introduction
+
+Call-by-push-value (CBPV) \citep{CBPV} is a language with a strong distinction
+between \emph{values} and \emph{computations} in its syntax and types.
+The benefit of the distinction is that its constructs precisely describe
+when computations are executed and when they are suspended as values.
+With these constructs, CBPV subsumes both call-by-name (CBN) and call-by-value (CBV)
+evaluation strategies of the lambda calculus,
+in the sense that it represents lambda calculus terms with intended CBN or CBV semantics
+as terms with different evaluation behaviour.
+
+By separating out values from computations,
+CBPV is a suitable setting for reasoning about program equivalences where evaluation order matters.
+\Citet{GTT}, for instance, use $\eta$-equivalences that only hold in CBN or in CBV languages
+to reason about casts in gradual typing,
+and do so in a CBPV setting since it subsumes those equivalences.
+In turn, $\eta$-equivalences justify compiler optimizations
+such as dead branch elimination and constant subexpression elimination/constant folding,
+and \citet{equational} use CBPV to verify these kinds of optimizations.
+
+Furthermore, the syntactically explicit evaluation order of CBPV makes it low-level enough
+to be suitable as a bona fide compiler intermediate representation (IR),
+and not merely for modelling compiler optimizations.
+In particular, \citet{CFG} show an equivalence between CBPV
+and control flow graph representations (CFG) in single static assignment (SSA) form,
+and thus the viability of CBPV as an IR for imperative languages in lieu of SSA-form CFGs.
+In the functional setting, the clear boundary between computations and values
+mediated by thunked computations as values
+makes it clear where closures ought to be created during compilation,
+so \citet{closures} augment CBPV with explicit closures
+and reason about optimizations related to closure conversion.
+
+\TODO: Sentence to connect above references to why we care about looking at more CBPV compiler transformations.
+In this paper, we focus on a set of \emph{commuting conversion} compiler transformations,
+which are source-to-source transformations in CBPV
+that rearrange the syntax of programs without affecting evaluation order.
+Such transformations are often coupled with others that bind intermediate computations,
+such as the A-reductions that characterize A-normal form (ANF) \citep{ANF}.
+However, CBPV already binds intermediate computations,
+so we can isolate just the commuting conversions.
+The benefit of commuting conversions is twofold:
+as a compiler optimization, they expose opportunities for program inlining,
+and as a compiler pass, they unnest computations to more resemble the sequential nature of low-level code.
+
+\TODO: mention join points now? we have to if it's in the title
+
+\TODO: move contributions to up here but more high level
+
 \section{Key Ideas}
 
 The core ideas of this paper begin with the thesis that CBPV \citep{CBPV}
 is suitable as a compiler intermediate representation (IR)
 because it represents control flow explicitly \citep{CFG}.
-(\TODO: why? + motivation)
 In particular, it subsumes both call-by-name (CBN) and call-by-value (CBV) semantics of lambda calculus:
 compiling a lambda calculus term with the CBN or CBV compilation strategy yields different CBPV terms
 whose execution mirrors that of the original evaluation strategy.
+\TODO: dedupe this paragraph from introduction
 
 \begin{figure}[h]
   \begin{align}
@@ -226,9 +274,9 @@ which are elimination forms with holes in place of computation scrutinees,
 and the tail contexts, which are elimination forms with holes in place of all other computations.
 These yield a total of eight commuting conversions,
 where four evaluation contexts commute with two tail contexts.
-They have straightfoward generalizations to more constructs:
+They have straightforward generalizations to more constructs:
 for instance, if we were to add value pairs, which are eliminated by pattern matching,
-we would add an additional tail context, producing four more commuting conversions.
+we would add another tail context, producing four more commuting conversions.
 
 \begin{figure}[h]
   \begin{align}
@@ -345,7 +393,7 @@ all that we do to it is force it and apply the function within.
 Its purpose is only to join up branches of a computation,
 and should be compiled to a local code block that is jumped to.
 %
-\begin{figure}
+\begin{figure}[h]
   \begin{align}
     m &\dblcolon= \dots \mid [[join j x = m in m]] \mid [[jump j v]]
     \tag{join points, jumps}
@@ -433,6 +481,8 @@ The contributions of this paper are as follows:
     and requires showing that commuting conversions are logically equivalent.
 \end{itemize}
 
+All results are mechanized in Lean 4, and the proof development is available at \url{\repo}.
+
 \section{CBPV with Join Points} \label{sec:cbpv}
 
 \section{Commuting-Conversion Normalization} \label{sec:ccnf}
@@ -448,14 +498,14 @@ which are those of type $[[T]] \dblcolon= [[⊤]] \mid [[T + T]]$.
 Otherwise, a thunk and its CCNF are values that don't evaluate any further,
 but aren't necessarily syntactially equal.
 
-\begin{corollary}[Holding your ground]
+\begin{theorem} \label{thm:ground-run}
   Given $[[m]]$ such that $[[• | • ⊢ m : F T]]$,
   if $[[m ⇓ return v]]$, then $[[⟦ m ⟧ ⇓ return v]]$.
-\end{corollary}
+\end{theorem}
 
 We prove this property as a corollary of a logical equivalence between a computation and its translation.
-This machinery is required because the simpler method using a simulation argument does not work.
-In particular, the following statement unfortunately doesn't hold.
+This machinery is required because the simpler method using a simulation argument,
+such as the following statement, unfortunately doesn't work.
 
 \begin{fail}[Simulation]
   If $[[m ⇝ n]]$ then $[[⟦m⟧ ⇝* ⟦n⟧]]$.
@@ -476,6 +526,30 @@ $[[let x ← n2{y ↦ v} in m]]$, which gives us an equivalence between the orig
 If our counterexample is well typed,
 then the logical equivalence gives us precisely the required information that
 subterms must reduce to canonical terms such as returned values.
+
+The proof of \cref{thm:ground-run} proceeds by:
+\begin{enumerate}
+  \item Defining a standard logical equivalence over CBPV types;
+  \item Closing over term and join point contexts with a semantic equivalence;
+  \item Proving the fundamental theorem this equivalence,
+    namely that well-typed terms are semantically equivalent to themselves;
+  \item Showing that well-typed commuting conversions are in the semantic equivalence;
+  \item Defining semantic equivalence of continuations
+    and proving its fundamental theorem;
+  \item Showing that plugging continuations respects semantic equivalence; and finally,
+  \item Proving that given a well-typed computation and a well-typed continuation,
+    plugging the continuation with the computation
+    is equivalent to translating the computation using the continuation.
+\end{enumerate}
+The theorem then holds by instantiating with the empty continuation.
+
+\subsection{Logical equivalence and the fundamental theorem}
+
+\subsection{Semantic equivalence of commuting conversions}
+
+\subsection{Semantic equivalence of plugging continuations}
+
+\subsection{Commuting-conversion normalization is semantically equivalent to plugging}
 
 \section{Related Work}
 
@@ -519,7 +593,16 @@ by virtue of binding intermediate computations.
 However, the corresponding dual of CBPV is stack-passing style \citep{compiling},
 and it would be interesting to see whether a similar technique could be applied using second-class stacks.
 
-\TODO: cite these two \citet{CBPV-STAL}, \citet{compiling}.
+\TODO: cite these two \citet{CBPV-STAL}, \citet{compiling}; compare to \url{https://github.com/zydeco-lang/zydeco}
+
+\section{Future Work}
+
+\begin{itemize}
+  \item \TODO: stack size, cite the cost model paper (Chen, Pohjola, Rizkallah)
+  \item \TODO: actual effects
+  \item \TODO: compile to assembly
+  \item \TODO: real-life evaluation (for PLDI?)
+\end{itemize}
 
 \iffalse
 \begin{align}
