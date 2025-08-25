@@ -57,11 +57,17 @@
 
 \setlist[itemize]{leftmargin=2\parindent}
 \setlist[enumerate]{topsep=0pt}
+\setlist[enumerate,1]{label=\arabic*.,ref=\arabic*}
 
 \mathtoolsset{showmanualtags}
 \newtagform{brack}{[}{]}
-\Crefformat{equation}{#2Equation~#1#3}
 \urlstyle{tt}
+
+\crefformat{enumi}{#2step~#1#3}
+\Crefformat{enumi}{#2step~#1#3}
+\crefrangeformat{enumi}{step~#3#1#4 to #5#2#6}
+\Crefrangeformat{enumi}{step~#3#1#4 to #5#2#6}
+\Crefformat{equation}{#2Equation~#1#3}
 
 \citestyle{acmauthoryear}
 \bibliographystyle{ACM-Reference-Format}
@@ -173,19 +179,33 @@ The benefit of commuting conversions is twofold:
 as a compiler optimization, they expose opportunities for program inlining,
 and as a compiler pass, they unnest computations to more resemble the sequential nature of low-level code.
 
-\TODO: mention join points now? we have to if it's in the title
+An issue with na\"ively applying commuting conversions,
+in particular in the presence of branching computations,
+is that code may be duplicated;
+applying many commuting conversions can then cause exponential code bloat.
+To resolve this issue, we adapt the join point constructs by \citep{join}
+from the lambda calculus to CBPV and adapt the type system to accommodate them.
+Introducing specialized constructs rather than using existing ones
+allows us to restrict their usage to only where they are needed,
+which can lead to more efficient compilation later on.
 
-\TODO: move contributions to up here but more high level
+This work presents a normal form for CBPV with respect to commuting conversions,
+and a single-pass transformation into this normal form using join points.
+We prove that this transformation is type-preserving and evaluation-preserving:
+it does not change the meaning of CBPV programs.
+These proofs are mechanized in Lean 4 \citep{lean}, and the proof development is provided in the supplementary materials.
+In the next section, we give an overview of the language, the transformation, and its motivation,
+followed by the technical contributions in the sections that follow.
+We discuss related work in \cref{sec:related},
+and conclude with future work in \cref{sec:future}.
 
-\section{Key Ideas}
+\section{Overview}
 
 The core ideas of this paper begin with the thesis that CBPV \citep{CBPV}
-is suitable as a compiler intermediate representation (IR)
-because it represents control flow explicitly \citep{CFG}.
-In particular, it subsumes both call-by-name (CBN) and call-by-value (CBV) semantics of lambda calculus:
+is suitable as a compiler IR because it represents control flow explicitly.
+In particular, it subsumes both CBN and CBV semantics of the lambda calculus:
 compiling a lambda calculus term with the CBN or CBV compilation strategy yields different CBPV terms
 whose execution mirrors that of the original evaluation strategy.
-\TODO: dedupe this paragraph from introduction
 
 \begin{figure}[h]
   \begin{align}
@@ -198,13 +218,12 @@ whose execution mirrors that of the original evaluation strategy.
   \label{fig:syntax}
 \end{figure}
 
-CBPV syntactically distinguishes values and computations,
+CBPV syntactically distinguishes values and computations, listed in \cref{fig:syntax},
 using explicit thunks to turn suspended computations into values
 and explicit returns to embed values into computations,
 which the CBN and CBV translations use in different ways to enforce when computation occurs.
-\Cref{fig:syntax} lists the values and computations we work with in this paper,
-which consists of the lambda calculus with a unit value, value sums, computation pairs,
-along with the CBPV thunk and return constructs.%
+Alongside the thunk and return constructs,
+we include the unit value, value sums, functions, and computation pairs.%
 \footnote{For simplicity, we omit value pairs, which are present in Levy's original CBPV;
 they are interesting in our setting because the eliminator is pattern matching,
 but we already have pattern matching on value sums to consider.}
@@ -220,8 +239,8 @@ which translates to the following two CBPV terms.
 
 While both terms evaluate to the same final value $[[z]]$,
 their evaluation sequences are different.
-In the CBN translation, function arguments are \{thunked\} and passed wholesale,
-then forced$!$ as they are needed.
+In the CBN translation, function arguments are thunked and passed wholesale,
+then forced as they are needed.
 In the CBV translation, the function and the argument are evaluated in order
 before carrying out the function application,
 using let bindings to express the explicit sequencing.
@@ -236,7 +255,7 @@ Choosing one evaluation strategy over another is choosing between these tradeoff
 and CBPV provides a uniform interface for manipulating code once the decision is made
 without introducing behaviour that violates the expected strategy.
 
-To seriously consider CBPV as an IR, we need to think about what happens after compiling to CBPV.
+To seriously consider CBPV as an IR, we need to think about what happens \emph{after} compiling to CBPV.
 At a high level, a compiler IR may undergo some optimization passes,
 then compiled to lower-level IRs.
 In this paper, we look at passes that affect control flow,
@@ -461,33 +480,34 @@ and we know the next computation to execute must be $[[m2]]$.
 Even so, join points still successfully solve the problem of preventing
 duplication of $[[m1]]$ and $[[m2]]$ without creating a new thunk.
 
-\subsection{Contributions}
+\subsection{Technical contributions}
 
-The contributions of this paper are as follows:
+The technical contributions of this paper are as follows:
 
 \begin{itemize}
   \item We identify a subset of CBPV that is normal with respect to
     all commuting conversions that syntactically sequentialize computations.
     To this subset, we add join point and jump constructs,
     and design a type system enforcing non-escaping join points and tail-only jumps.
+    $\hookrightarrow$~\cref{sec:cbpv}
   \item We define a single-pass transformation from CBPV into our extended normal form,
     using joins and jumps to avoid duplicating computations.
     This transformation preserves well-typedness,
     proven straightforwardly by induction.
+    $\hookrightarrow$~\cref{sec:ccnf}
   \item We show that the transformation preserves evaluation behaviour:
     a closed term of value type with no thunks
     and its transformation must evaluate to the same terminal value.
     This is proven via a logical equivalence on terms,
     and requires showing that commuting conversions are logically equivalent.
+    $\hookrightarrow$~\cref{sec:proof}
 \end{itemize}
-
-All results are mechanized in Lean 4, and the proof development is available at \url{\repo}.
 
 \section{CBPV with Join Points} \label{sec:cbpv}
 
 \section{Commuting-Conversion Normalization} \label{sec:ccnf}
 
-\section{Commuting-Conversion Normalization with Join Points Preserves Evaluation}
+\section{Commuting-Conversion Normalization with Join Points Preserves Evaluation} \label{sec:proof}
 
 Normalizing by all commuting conversions shouldn't affect the meaning of a program.
 Formally, if a closed computation evaluates to a returned value,
@@ -529,29 +549,33 @@ subterms must reduce to canonical terms such as returned values.
 
 The proof of \cref{thm:ground-run} proceeds by:
 \begin{enumerate}
-  \item Defining a standard logical equivalence over CBPV types;
-  \item Closing over term and join point contexts with a semantic equivalence;
-  \item Proving the fundamental theorem this equivalence,
+  \item \label{item:logrel} Defining a standard logical equivalence over CBPV types;
+  \item \label{item:semeq} Closing over term and join point contexts with a semantic equivalence;
+  \item \label{item:fundamental} Proving the fundamental theorem this equivalence,
     namely that well-typed terms are semantically equivalent to themselves;
-  \item Showing that well-typed commuting conversions are in the semantic equivalence;
-  \item Defining semantic equivalence of continuations
+  \item \label{item:cc} Showing that well-typed commuting conversions are in the semantic equivalence;
+  \item \label{item:kont} Defining semantic equivalence of continuations
     and proving its fundamental theorem;
-  \item Showing that plugging continuations respects semantic equivalence; and finally,
-  \item Proving that given a well-typed computation and a well-typed continuation,
+  \item \label{item:plug} Showing that plugging continuations respects semantic equivalence; and finally,
+  \item \label{item:end} Proving that given a well-typed computation and a well-typed continuation,
     plugging the continuation with the computation
     is equivalent to translating the computation using the continuation.
 \end{enumerate}
 The theorem then holds by instantiating with the empty continuation.
+\Cref{sec:proof:logrel} covers \crefrange{item:logrel}{item:fundamental},
+\cref{sec:proof:cc} covers \cref{item:cc},
+\cref{sec:proof:plug} covers \crefrange{item:kont}{item:plug},
+and \cref{sec:proof:end} covers \cref{item:end}.
 
-\subsection{Logical equivalence and the fundamental theorem}
+\subsection{Logical equivalence and the fundamental theorem} \label{sec:proof:logrel}
 
-\subsection{Semantic equivalence of commuting conversions}
+\subsection{Semantic equivalence of commuting conversions} \label{sec:proof:cc}
 
-\subsection{Semantic equivalence of plugging continuations}
+\subsection{Semantic equivalence of plugging continuations} \label{sec:proof:plug}
 
-\subsection{Commuting-conversion normalization is semantically equivalent to plugging}
+\subsection{Commuting-conversion normalization is semantically equivalent to plugging} \label{sec:proof:end}
 
-\section{Related Work}
+\section{Related Work} \label{sec:related}
 
 \Citet{CBPV-Coq} mechanize in Rocq a vast amount of metatheory for call-by-push-value,
 including normalization and observational equivalence.
@@ -593,14 +617,14 @@ by virtue of binding intermediate computations.
 However, the corresponding dual of CBPV is stack-passing style \citep{compiling},
 and it would be interesting to see whether a similar technique could be applied using second-class stacks.
 
-\TODO: cite these two \citet{CBPV-STAL}, \citet{compiling}; compare to \url{https://github.com/zydeco-lang/zydeco}
+\TODO: compare to \url{https://github.com/zydeco-lang/zydeco}
 
-\section{Future Work}
+\section{Conclusion and Future Work} \label{sec:future}
 
 \begin{itemize}
-  \item \TODO: stack size, cite the cost model paper (Chen, Pohjola, Rizkallah)
+  \item \TODO: compiling to assembly \citep{CBPV-STAL} with and without CC-normalization optimizations
+  \item \TODO: measuring stack size using cost model \citep{cost}
   \item \TODO: actual effects
-  \item \TODO: compile to assembly
   \item \TODO: real-life evaluation (for PLDI?)
 \end{itemize}
 
