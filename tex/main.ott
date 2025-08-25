@@ -186,7 +186,7 @@ J, p {{ tex \varphi }}, q {{ tex \psi }} :: 'join_' ::= {{ com join points }}
   | □ :: :: Nil
     {{ tex \square }}
   | J , j x = m :: :: Cons
-    {{ tex [[J]] [ \kw{join} [[j]] \gap [[x]] \mathrel{=} [[m]] \kw{in} \square ] }}
+    {{ tex [[J]] [ \kw{join} \gap [[j]] \gap [[x]] \mathrel{=} [[m]] \mathrel{ \kw{in} } \square ] }}
 
 G {{ tex \Gamma }} :: 'ctxt_' ::= {{ com term contexts }}
   | • :: :: Nil

@@ -35,6 +35,7 @@
 \newcommand{\vs}{\textit{vs.}\@\xspace}
 \newcommand{\ala}{\textit{\`a la}\@\xspace}
 \newcommand{\apriori}{\textit{a priori}\@\xspace}
+\newcommand{\aposteriori}{\textit{a posteriori}\@\xspace}
 \newcommand{\fstar}{F$^\star$\@\xspace}
 \newcommand{\welltyped}{well-\hspace{0pt}typed\@\xspace}
 \newcommand{\wellfounded}{well-\hspace{0pt}founded\@\xspace}
@@ -49,7 +50,7 @@
 
 \newtheorem{fail}{Falsehood}[section]
 
-\setlength{\fboxsep}{2pt}
+\setlength{\fboxsep}{1.5pt}
 \setlength{\abovecaptionskip}{0\baselineskip}
 \setlength{\textfloatsep}{\baselineskip}
 \setlength{\intextsep}{0.25\baselineskip}
@@ -199,7 +200,7 @@ followed by the technical contributions in the sections that follow.
 We discuss related work in \cref{sec:related},
 and conclude with future work in \cref{sec:future}.
 
-\section{Overview}
+\section{Overview} \label{sec:overview}
 
 The core ideas of this paper begin with the thesis that CBPV \citep{CBPV}
 is suitable as a compiler IR because it represents control flow explicitly.
@@ -211,7 +212,7 @@ whose execution mirrors that of the original evaluation strategy.
   \begin{align}
     [[v]], [[w]] &\dblcolon= [[x]] \mid [[()]] \mid [[inl v]] \mid [[inr v]] \mid [[{m}]] \tag{values} \\
     [[m]], [[n]] &\dblcolon= [[v!]] \mid [[λx. m]] \mid [[n v]] \mid [[⟨m, m⟩]] \mid [[fst n]] \mid [[snd n]] \mid [[return v]] \tag{computations} \\
-    &\mid [[let x ← n in m]] \mid [[case v of inl x ⇒ m1 ; inr y ⇒ m2]] \nonumber
+    &\mid [[let x ← n in m]] \mid [[case v of inl x ⇒ m ; inr y ⇒ m]] \nonumber
   \end{align}
   \caption{Syntax of call-by-push-value values and computations}
   \Description[]{}
@@ -429,7 +430,7 @@ They are accompanied by typing rules that restrict where join points may be used
 which we cover in \cref{sec:cbpv}.
 In contrast to \opcit,
 our jumps are configurations and may only appear in tail position,
-as commuting-conversion normalization discards contexts around jumps.
+as commuting conversion normalization discards contexts around jumps.
 All in all, these restrictions ensure that join points are only ever used by local tail jumps.
 
 Coming back to the commuting conversion of \cref{eq:let-join},
@@ -505,9 +506,62 @@ The technical contributions of this paper are as follows:
 
 \section{CBPV with Join Points} \label{sec:cbpv}
 
-\section{Commuting-Conversion Normalization} \label{sec:ccnf}
+While \cref{sec:overview} presents the source (plain CBPV) and target (CCNF CBPV with join points)
+languages with distinct syntactic forms,
+in our mechanization (and thus our technical presentation here),
+we use a single unified syntax and treat CC-normalization as a source-to-source translation,
+showing \aposteriori in \cref{sec:ccnf} that the output of the translation satisfies \cref{fig:ccnf,fig:join}.
+In \cref{sec:proof}, we reason about equivalence between a CBPV term and its translation,
+which requires both sides of the equivalence to belong to the same sytnactic category
+for the equivalence to have the properties of an equivalence relation.
 
-\section{Commuting-Conversion Normalization with Join Points Preserves Evaluation} \label{sec:proof}
+\begin{figure}[h]
+  \begin{align}
+    [[A]] &\dblcolon= [[⊤]] \mid [[A + A]] \mid [[U B]] \tag{value types} \\
+    [[B]] &\dblcolon= [[A → B]] \mid [[B & B]] \mid [[F A]] \tag{computation types} \\
+    [[v]], [[w]] &\dblcolon= [[x]] \mid [[()]] \mid [[inl v]] \mid [[inr v]] \mid [[{m}]] \tag{values} \\
+    [[m]], [[n]] &\dblcolon= [[v!]] \mid [[λx. m]] \mid [[n v]] \mid [[⟨m, m⟩]] \mid [[fst n]] \mid [[snd n]] \mid [[return v]] \tag{computations} \\
+    &\mid [[let x ← n in m]] \mid [[case v of inl x ⇒ m ; inr y ⇒ m]] \nonumber \\
+    &\mid [[join j x = m in m]] \mid [[jump j v]] \nonumber
+  \end{align}
+  \caption{Syntax of value, computations, and their types}
+  \Description[]{}
+  \label{fig:syntax-full}
+\end{figure}
+
+\Cref{fig:syntax-full} lists the full syntax of values and computations,
+along with value types and computation types.
+For clarity, although the mechanization uses de Bruijn indexing and simultaneous substitutions,
+we present the syntax here in nominal form,
+with \fbox{$[[v{x ↦ w}]]$}, \fbox{$[[m{x ↦ w}]]$} denoting single (capture-avoiding) substitution
+of $[[x]]$ for $[[w]]$ in $[[v]]$ and $[[m]]$, respectively.
+
+\begin{figure}[h]
+  \begin{align}
+    [[G]] &\dblcolon= [[•]] \mid [[G, x : A]] & [[s]], [[r]] &\dblcolon= [[•]] \mid [[s, x ↦ v]] \tag{value contexts; substitution maps} \\
+    [[D]] &\dblcolon= [[•]] \mid [[D, j : A ↗ B]] & [[p]], [[q]] &\dblcolon= [[•]] \mid [[p, j x = m]] \tag{join contexts; join stacks}
+  \end{align}
+  \caption{Contexts, substitution maps, and join stacks}
+  \Description[]{}
+  \label{fig:ctxt-subst}
+\end{figure}
+
+\subsection{Evaluation semantics}
+
+\subsection{Typing rules}
+
+\section{Commuting Conversion Normalization} \label{sec:ccnf}
+
+\begin{figure}[h]
+  \begin{align*}
+    [[K]] &\dblcolon= [[□]] \mid [[let x ← □ in m]] \mid [[ K[□ v] ]] \mid [[ K[fst □] ]] \mid [[ K[snd □] ]]
+  \end{align*}
+  \caption{Commuting conversion normalization continuation}
+  \Description[]{}
+  \label{fig:kont}
+\end{figure}
+
+\section{Commuting Conversion Normalization with Join Points Preserves Evaluation} \label{sec:proof}
 
 Normalizing by all commuting conversions shouldn't affect the meaning of a program.
 Formally, if a closed computation evaluates to a returned value,
@@ -573,7 +627,7 @@ and \cref{sec:proof:end} covers \cref{item:end}.
 
 \subsection{Semantic equivalence of plugging continuations} \label{sec:proof:plug}
 
-\subsection{Commuting-conversion normalization is semantically equivalent to plugging} \label{sec:proof:end}
+\subsection{Commuting conversion normalization is semantically equivalent to plugging} \label{sec:proof:end}
 
 \section{Related Work} \label{sec:related}
 
