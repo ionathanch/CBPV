@@ -51,6 +51,16 @@ v, w :: 'val_' ::= {{ com values }}
     {{ tex \kw{false} }}
   | { m } :: :: Thunk
     {{ tex \mathopen{\lbrace} [[m]] \mathclose{\rbrace} }}
+  % syntactic sugar for typesetting
+  | v & :: S :: Align
+    {{ com align after }}
+    {{ tex [[v]] & }}
+  | ( v ) :: S :: Parens
+    {{ com parentheses }}
+    {{ tex ([[v]]) }}
+  | (# v #) :: S :: SParens
+    {{ com invisible parentheses }}
+    {{ tex [[v]] }}
 
 m, n :: 'com_' ::= {{ com computations }}
   | v ! :: :: Force
@@ -113,6 +123,9 @@ m, n :: 'com_' ::= {{ com computations }}
   | _ :: :: Hole
     {{ com hole }}
     {{ tex \relax }}
+  | m & :: S :: Align
+    {{ com align after }}
+    {{ tex [[m]] & }}
   | ( m ) :: S :: Parens
     {{ com parentheses }}
     {{ tex ([[m]]) }}
@@ -215,8 +228,8 @@ formula :: 'formula_' ::=
     {{ tex [[x]] \mathbin{:} [[A]] \mathrel{\in} [[G]] }}
   | j : A ↗ B ∈ D :: :: Jn
     {{ tex [[j]] \mathbin{:} [[A]] \mathbin{\nnearrow}\! [[B]] \mathrel{\in} [[D]]}}
-  | G | D ⊢ v : A :: :: WtVal
-    {{ tex [[G]] \mid [[D]] \mathrel{\vdash} [[v]] \mathrel{:} [[A]] }}
+  | G ⊢ v : A :: :: WtVal
+    {{ tex [[G]] \mathrel{\vdash} [[v]] \mathrel{:} [[A]] }}
   | G | D ⊢ m : B :: :: WtCom
     {{ tex [[G]] \mid [[D]] \mathrel{\vdash} [[m]] \mathrel{:} [[B]] }}
   % semantics
@@ -228,8 +241,8 @@ formula :: 'formula_' ::=
     {{ tex ( [[s]] \mathpunct{,} [[t]] ) \mathrel{\in} \llbracket [[G]] \rrbracket }}
   | ( p , q ) ∈ D :: :: LogJoin
     {{ tex ( [[p]] \mathpunct{,} [[q]] ) \mathrel{\in} \llbracket [[D]] \rrbracket }}
-  | G | D ⊧ v ~ w : A :: :: SemVal
-    {{ tex [[G]] \mid [[D]] \mathrel{\vDash} [[v]] \mathrel{\sim} [[w]] \mathrel{:} [[A]] }}
+  | G ⊧ v ~ w : A :: :: SemVal
+    {{ tex [[G]] \mathrel{\vDash} [[v]] \mathrel{\sim} [[w]] \mathrel{:} [[A]] }}
   | G | D ⊧ m ~ n : B :: :: SemCom
     {{ tex [[G]] \mid [[D]] \mathrel{\vDash} [[m]] \mathrel{\sim} [[n]] \mathrel{:} [[B]] }}
   % evaluation

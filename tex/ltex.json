@@ -17,7 +17,9 @@
         "scrutinee",
         "scrutinees",
         "unnest",
-        "dedupe"
+        "dedupe",
+        "naïve",
+        "naïvely"
       ]
     },
     "disabledRules": {
@@ -37,7 +39,11 @@
         "\\author{}": "ignore",
         "\\acmJournal{}": "ignore",
         "\\newtagform{}": "ignore",
-        "\\usetagform{}": "ignore"
+        "\\usetagform{}": "ignore",
+        "\\crefformat{}{}": "ignore",
+        "\\Crefformat{}{}": "ignore",
+        "\\crefrangeformat{}{}": "ignore",
+        "\\Crefrangeformat{}{}": "ignore"
       },
       "environments": {
         "CCSXML": "ignore"

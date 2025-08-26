@@ -51,7 +51,7 @@
 \newtheorem{fail}{Falsehood}[section]
 
 \setlength{\fboxsep}{1.5pt}
-\setlength{\abovecaptionskip}{0\baselineskip}
+\setlength{\abovecaptionskip}{0.25\baselineskip}
 \setlength{\textfloatsep}{\baselineskip}
 \setlength{\intextsep}{0.25\baselineskip}
 \setlength{\jot}{0\baselineskip}
@@ -548,7 +548,69 @@ of $[[x]]$ for $[[w]]$ in $[[v]]$ and $[[m]]$, respectively.
 
 \subsection{Evaluation semantics}
 
+\TODO: this is so boring
+
+\begin{figure}[h]
+  \begin{align}
+    [[{m}! &⇝ m]] \tag{\ottdrulename{E-force}} \\
+    [[(λx. m) v &⇝ m{x ↦ v}]] \tag{\ottdrulename{E-app}} \\
+    [[fst ⟨m1, m2⟩ &⇝ m1]] \tag{\ottdrulename{E-fst}} \\
+    [[snd ⟨m1, m2⟩ &⇝ m2]] \tag{\ottdrulename{E-snd}} \\
+    [[let x ← return v in m &⇝ m{x ↦ v}]] \tag{\ottdrulename{E-ret}} \\
+    [[case (inl v) of inl x ⇒ m1 ; inr y ⇒ m2 &⇝ m1{x ↦ v}]] \tag{\ottdrulename{E-left}} \\
+    [[case (inr v) of inl x ⇒ m1 ; inr y ⇒ m2 &⇝ m2{y ↦ v}]] \tag{\ottdrulename{E-right}} \\
+    [[join j x = m in jump j v &⇝ m{x ↦ v}]] \tag{\ottdrulename{E-jump}} \\
+    [[join j' x = m' in return v &⇝ return v]] \tag{\ottdrulename{E-drop-ret}} \\
+    [[join j' x = m' in λx. m &⇝ λx. m]] \tag{\ottdrulename{E-drop-fun}} \\
+    [[join j' x = m' in ⟨m1, m2⟩ &⇝ ⟨m1, m2⟩]] \tag{\ottdrulename{E-drop-pair}} \\
+    [[join j' x = m' in jump j v &⇝ jump j v]] \tag{\ottdrulename{E-drop-jump}}
+  \end{align}
+
+  \begin{mathpar}
+    \inferrule*[right=\ottdrulename{E-cong}]{[[m1 ⇝ m2]]}{[[ E[ m1 ] ⇝ E[ m2 ] ]]} \and
+    \inferrule*[right=\ottdrulename{E-join}]{[[m1 ⇝ m2]]}{[[ join j x = m in m1 ⇝ join j x = m in m2 ]]}
+  \end{mathpar}
+  \caption{Evaluation rules for computations}
+  \Description[]{}
+  \label{fig:eval}
+\end{figure}
+
 \subsection{Typing rules}
+
+\begin{figure}[h]
+  \begin{mathpar}
+    \fbox{$[[G ⊢ v : A]]$} \qquad \fbox{$[[G | D ⊢ m : B]]$} \hfill \\
+    \inferrule[\ottdrulename{T-var}]
+      {[[x : A ∈ G]]}
+      %-------------%
+      {[[G ⊢ x : A]]}
+    \and
+    \inferrule[\ottdrulename{T-unit}]{~}{[[G ⊢ () : ⊤]]}
+    \and
+    \inferrule[\ottdrulename{T-left}]
+      {[[G ⊢ v : A1]]}
+      %-----------------------%
+      {[[G ⊢ inl v : A1 + A2]]}
+    \and
+    \inferrule[\ottdrulename{T-right}]
+      {[[G ⊢ v : A2]]}
+      %-----------------------%
+      {[[G ⊢ inr v : A1 + A2]]}
+    \and
+    \inferrule[\ottdrulename{T-thunk}]
+      {[[G | • ⊢ m : B]]}
+      %---------------------%
+      {[[G ⊢ {m} : U B]]}
+    \and
+    \inferrule[\ottdrulename{T-ret}]
+      {[[G ⊢ v : A]]}
+      %--------------------------%
+      {[[G | • ⊢ return v : F A]]}
+  \end{mathpar}
+  \caption{Typing rules for values and computations}
+  \Description[]{}
+  \label{fig:typing}
+\end{figure}
 
 \section{Commuting Conversion Normalization} \label{sec:ccnf}
 
@@ -681,39 +743,6 @@ and it would be interesting to see whether a similar technique could be applied 
   \item \TODO: actual effects
   \item \TODO: real-life evaluation (for PLDI?)
 \end{itemize}
-
-\iffalse
-\begin{align}
-  [[let x ← (let y ← m1 in m2) in m3]]
-  & \Longrightarrow [[let y ← m1 in let x ← m2 in m3]]
-  \tag{let--let} \\
-  [[(let x ← n in m) v]]
-  & \Longrightarrow [[let x ← n in m v]]
-  \tag{let--app} \\
-  [[fst (let x ← n in m)]]
-  & \Longrightarrow [[let x ← n in fst m]]
-  \tag{let--fst} \\
-  [[snd (let x ← n in m)]]
-  & \Longrightarrow [[let x ← n in snd m]]
-  \tag{let--snd} \\
-  [[let x ← (case v of inl y ⇒ m1 ; inr z ⇒ m2) in m]]
-  & \Longrightarrow \nonumber \\
-  \mathclap{[[case v of inl y ⇒ let x ← m1 in m ; inr z ⇒ let x ← m2 in m]]}
-  \tag{case--let} \\
-  [[(case v of inl x ⇒ m1 ; inr y ⇒ m2) w]]
-  & \Longrightarrow \nonumber \\
-  \mathclap{[[case v of inl x ⇒ m1 w ; inr y ⇒ (# m2 w #)]]}
-  \tag{case--app} \\
-  [[fst (case v of inl x ⇒ m1 ; inr y ⇒ m2)]]
-  & \Longrightarrow \nonumber \\
-  \mathclap{[[case v of inl x ⇒ fst m1 ; inr y ⇒ fst m2]]}
-  \tag{case--fst} \\
-  [[snd (case v of inl x ⇒ m1 ; inr y ⇒ m2)]]
-  & \Longrightarrow \nonumber \\
-  \mathclap{[[case v of inl x ⇒ snd m1 ; inr y ⇒ snd m2]]}
-  \tag{case--snd}
-\end{align}
-\fi
 
 \bibliography{main}
 
