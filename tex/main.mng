@@ -577,6 +577,19 @@ of $[[x]]$ for $[[w]]$ in $[[v]]$ and $[[m]]$, respectively.
 
 \subsection{Typing rules}
 
+By adding join points, we now have two different forms of bindings:
+value variables $[[x]]$ bind values and have value types,
+while join variables $[[j]]$ bind join points,
+which are computations of type $[[B]]$ that take some value argument of type $[[A]]$.
+As the bindings have different types, we use two different typing contexts:
+$[[G]] \dblcolon= [[•]] \mid [[G, x : A]]$ for value contexts, and
+$[[D]] \dblcolon= [[•]] \mid [[D, j : A ↗ B]]$ for join contexts.
+The latter ``type'' $[[A]] \nearrow [[B]]$ is merely notation,
+so we could have declared join points with type $[[U (A → B)]]$,
+but by using distinct join contexts, we can retrict well-typed computations
+to those which only jump within tail contexts $[[L]]$.
+This is enforced by explicit empty join contexts in the premises of the typing rules in \cref{fig:typing}.
+
 \begin{figure}[h]
   \begin{mathpar}
     \fbox{$[[G ⊢ v : A]]$} \qquad \fbox{$[[G | D ⊢ m : B]]$} \hfill \\
@@ -602,15 +615,112 @@ of $[[x]]$ for $[[w]]$ in $[[v]]$ and $[[m]]$, respectively.
       %---------------------%
       {[[G ⊢ {m} : U B]]}
     \and
+    \inferrule[\ottdrulename{T-force}]
+      {[[G ⊢ v : U B]]}
+      %------------------%
+      {[[G | D ⊢ v! : B]]}
+    \and
+    \inferrule[\ottdrulename{T-fun}]
+      {[[G, x : A | • ⊢ m : B]]}
+      %-------------------------%
+      {[[G | D ⊢ λx. m : A → B]]}
+    \and
+    \inferrule[\ottdrulename{T-app}]
+      {[[G | • ⊢ n : A → B]] \\
+       [[G ⊢ v : A]]}
+      %-------------------%
+      {[[G | D ⊢ n v : B]]}
+    \and
     \inferrule[\ottdrulename{T-ret}]
       {[[G ⊢ v : A]]}
       %--------------------------%
-      {[[G | • ⊢ return v : F A]]}
+      {[[G | D ⊢ return v : F A]]}
+    \and
+    \inferrule[\ottdrulename{T-let}]
+      {[[G | • ⊢ n : F A]] \\
+       [[G, x : A | D ⊢ m : B]]}
+      %------------------------------%
+      {[[G | D ⊢ let x ← n in m : B]]}
+    \and
+    \inferrule[\ottdrulename{T-case}]
+      {[[G ⊢ v : A1 + A2]] \\
+       [[G, x : A1 | D ⊢ m1 : B]] \\
+       [[G, y : A2 | D ⊢ m2 : B]]}
+      %-------------------------------------------------%
+      {[[G | D ⊢ case v of inl x ⇒ m1 ; inr y ⇒ m2 : B]]}
+    \and
+    \inferrule[\ottdrulename{T-pair}]
+      {[[G | • ⊢ m1 : B1]] \\
+       [[G | • ⊢ m2 : B2]]}
+      %------------------------------%
+      {[[G | D ⊢ ⟨m1, m2⟩ : B1 & B2]]}
+    \and
+    \inferrule[\ottdrulename{T-fst}]
+      {[[G | • ⊢ n : B1 & B2]]}
+      %----------------------%
+      {[[G | D ⊢ fst n : B1]]}
+    \and
+    \inferrule[\ottdrulename{T-snd}]
+      {[[G | • ⊢ n : B1 & B2]]}
+      %----------------------%
+      {[[G | D ⊢ snd n : B2]]}
+    \and
+    \inferrule[\ottdrulename{T-join}]
+      {[[G, x : A | D ⊢ m1 : B]] \\
+       [[G | D, j : A ↗ B ⊢ m2 : B]]}
+      %-----------------------------------%
+      {[[G | D ⊢ join j x = m1 in m2 : B]]}
+    \and
+    \inferrule[\ottdrulename{T-jump}]
+      {[[j : A ↗ B ∈ D]] \\
+       [[G ⊢ v : A]]}
+      %------------------------%
+      {[[G | D ⊢ jump j v : B]]}
   \end{mathpar}
   \caption{Typing rules for values and computations}
   \Description[]{}
   \label{fig:typing}
 \end{figure}
+
+In CPBV, the only tail positions are the bodies of let expressions and the branches of case expressions,
+so the only premises which inherit the join context $[[D]]$
+are those for $[[m]], [[m1]], [[m2]]$ in \rref{T-let} and \rref{T-case}.
+With join expressions, the join point binding itself can also jump to a prior join point,
+so both premises of \rref{T-join} may refer to $[[D]]$.
+This doesn't mean that jumps can't appear within all other computations,
+only that they can only jump to join points within that scope.
+The following are examples of well-scoped and ill-scoped computations to illustrate these points.
+
+\begin{itemize}[leftmargin=5\parindent]
+  \item[\textsc{valid}:] $[[join j x = m1 in let x ← m2 in jump j x]]$
+  \item[\textsc{invalid}:] $[[join j x = m1 in let x ← (jump j ()) in m2]]$
+  \item[\textsc{invalid}:] $[[join j x = m in return {λx. jump j x}]]$
+  \item[\textsc{valid}:] $[[return {λx. join j y = m in jump j x}]]$
+  \item[\textsc{valid}:] $[[join j1 x = m in join j2 y = (jump j1 y) in jump j2 ()]]$
+\end{itemize}
+
+Join contexts aside, the rules \rref*{T-var} through \rref*{T-snd}
+are as usual for the values and computations of CBPV.
+In \rref{T-join}, we extend $[[D]]$ with a join declaration when checking the body $[[m2]]$,
+which may jump to the join point $[[m1]]$.
+Both have the same type $[[B]]$ because jumping in tail position doesn't change the type,
+and \rref{T-jump} indicates that jumping to the join point at $[[j]]$
+with a value of type $[[A]]$ indeed has the same $[[B]]$.
+We can then, for example, jump to a join point in only one branch of a case expression
+so long as the join point has the same type as the other branch,
+as in the following derivable judgement.
+%
+\begin{mathpar}
+  \mprset{fraction={{-~} {~-~} {~-}}}
+  \infer
+    {[[G ⊢ v : A1 + A2]] \\
+     [[G, x : A1 | • ⊢ m1 : B]] \\
+     [[G, y : A2 | • ⊢ m2 : B]]}
+    %------------------------------------------------------------------------%
+    {[[G | • ⊢ join j x = m1 in case v of inl x ⇒ jump j x ; inr y ⇒ m2 : B]]}
+\end{mathpar}
+
+\TODO: is there anything more to say? kind of an abrupt end
 
 \section{Commuting Conversion Normalization} \label{sec:ccnf}
 
@@ -691,7 +801,7 @@ and \cref{sec:proof:end} covers \cref{item:end}.
 
 \subsection{Commuting conversion normalization is semantically equivalent to plugging} \label{sec:proof:end}
 
-\section{Related Work} \label{sec:related}
+\section{Related Work and Discussion} \label{sec:related}
 
 \Citet{CBPV-Coq} mechanize in Rocq a vast amount of metatheory for call-by-push-value,
 including normalization and observational equivalence.
@@ -701,6 +811,34 @@ namely commuting let-bound let expressions (Lemma 8.4, Equation 5)
 and function application of let expressions (Lemma 8.6, Equation 1),
 but are not comprehensive in listing all possible commuting conversions systematically
 as we have done in (\TODO: eventually).
+
+Conversely, while we consider commuting conversions to only involve elimination forms,
+\opcit also consider equivalences involving the function introduction form
+(Lemma 8.5, Equation 3; Lemma 8.6, Equation 2),
+listed below with two more for the pair introduction form.
+%
+\begin{align*}
+  [[let x ← n in λy. m]]
+    &\Longleftrightarrow [[λy. let x ← n in m]] \\
+  [[case v of inl y ⇒ λx. m1 ; inr z ⇒ λx. m2]]
+    &\Longleftrightarrow [[λx. case v of inl y ⇒ m1 ; inr z ⇒ m2]] \\
+  [[let x ← n in ⟨m1, m2⟩]]
+    &\Longleftrightarrow [[⟨let x ← n in m1, let x ← n in m2⟩]] \\
+  [[case v of inl y ⇒ ⟨m1, m2⟩ ; inr z ⇒ ⟨m3, m4⟩]]
+    &\Longleftrightarrow \\
+    \mathclap{[[⟨case v of inl y ⇒ m1 ; inr z ⇒ m3, case v of inl y ⇒ m2 ; inr z ⇒ m4⟩]]}
+\end{align*}
+
+We don't consider these because it's unclear which direction to pick and what benefits they provide.
+Going left to right, the case equations only apply when the branches are both exactly an introduction form,
+and the pair equations must duplicate code.
+Going right to left, the pair equations only apply when the projections both eliminate exactly the same thing.
+Either way, they are sensitive to slight syntactic variation, \eg permuted let bindings.
+Furthermore, neither transformation appears to reveal any more optimization opportunities.
+% Taking the first equation as example,
+% transforming left to right exposes the same function reduction opportunity
+% as would pushing an application into the let expression,
+% while transforming right to left destroys it and creates more work for us.
 
 Our join points and their typing judgements with a separate join point typing context
 are inspired by \citet{join}, who add join points and jumps to System F,

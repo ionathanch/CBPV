@@ -22,7 +22,10 @@ A :: 'valty_' ::= {{ com value types }}
   | A1 + A2 :: :: Sum
     {{ tex [[A1]] \mathbin{+} [[A2]] }}
   | U B :: :: Thunk
-    {{ tex \kw{U} [[B]] }}
+    {{ tex \kw{U} \gap [[B]] }}
+  | ( A ) :: S :: Parens
+    {{ com parentheses }}
+    {{ tex ( [[A]] )}}
 
 B :: 'comty_' ::= {{ com computation types }}
   | A → B :: :: Fun
@@ -30,7 +33,10 @@ B :: 'comty_' ::= {{ com computation types }}
   | B1 & B2 :: :: Pair
     {{ tex [[B1]] \mathbin{\&} [[B2]] }}
   | F A :: :: Return
-    {{ tex \kw{F} [[A]] }}
+    {{ tex \kw{F} \gap [[A]] }}
+  | ( B ) :: S :: Parens
+    {{ com parentheses }}
+    {{ tex ( [[B]] )}}
 
 T :: 'termty_' ::= {{ com ground types }}
   | ⊤ :: :: Unit
