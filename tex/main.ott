@@ -176,6 +176,8 @@ E :: 'eval_' ::= {{ com evaluation contexts }}
     {{ tex \kw{fst} \gap \square }}
   | snd □ :: :: Snd
     {{ tex \kw{snd} \gap \square }}
+  | join j x = m in □ :: :: Join
+    {{ tex \kw{join} \gap [[j]] \gap [[x]] \mathrel{=} [[m]] \mathrel{ \kw{in} } \square }}
 
 L :: 'tail_' ::= {{ com tail contexts }}
   | let x ← n in □ :: :: Let

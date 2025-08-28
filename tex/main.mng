@@ -538,7 +538,10 @@ of $[[x]]$ for $[[w]]$ in $[[v]]$ and $[[m]]$, respectively.
 
 \subsection{Evaluation semantics}
 
-\TODO: this is so boring
+The purpose of join points is best explained by what they do;
+their single-step evaluation rules are listed in \cref{fig:eval},
+alongside rules for the usual CBPV constructs.
+We write \fbox{$[[m ⇝* m']]$} for their reflexive, transitive closure.
 
 \begin{figure}[h]
   \begin{align}
@@ -550,10 +553,10 @@ of $[[x]]$ for $[[w]]$ in $[[v]]$ and $[[m]]$, respectively.
     [[case (inl v) of inl x ⇒ m1 ; inr y ⇒ m2 &⇝ m1{x ↦ v}]] \tag{\ottdrulename{E-left}} \\
     [[case (inr v) of inl x ⇒ m1 ; inr y ⇒ m2 &⇝ m2{y ↦ v}]] \tag{\ottdrulename{E-right}} \\
     [[join j x = m in jump j v &⇝ m{x ↦ v}]] \tag{\ottdrulename{E-jump}} \\
-    [[join j' x = m' in return v &⇝ return v]] \tag{\ottdrulename{E-drop-ret}} \\
+    [[join j' x = m' in jump j v &⇝ jump j v]] \tag{\ottdrulename{E-drop-jump}} \\
     [[join j' x = m' in λx. m &⇝ λx. m]] \tag{\ottdrulename{E-drop-fun}} \\
-    [[join j' x = m' in ⟨m1, m2⟩ &⇝ ⟨m1, m2⟩]] \tag{\ottdrulename{E-drop-pair}} \\
-    [[join j' x = m' in jump j v &⇝ jump j v]] \tag{\ottdrulename{E-drop-jump}}
+    [[join j' x = m' in return v &⇝ return v]] \tag{\ottdrulename{E-drop-ret}} \\
+    [[join j' x = m' in ⟨m1, m2⟩ &⇝ ⟨m1, m2⟩]] \tag{\ottdrulename{E-drop-pair}}
   \end{align}
 
   \begin{mathpar}
@@ -564,6 +567,73 @@ of $[[x]]$ for $[[w]]$ in $[[v]]$ and $[[m]]$, respectively.
   \Description[]{}
   \label{fig:eval}
 \end{figure}
+
+The usual rules \rref*{E-force} through \rref*{E-right} say that
+thunks get forced to their inner computations,
+applied functions substitute in their arguments,
+the first and second components of a computational pair can be projected out,
+and case analysis on the left or right injections
+reduce to the left or right branches, respectively.
+\Rref{E-cong} states that evaluation may occur under evaluation contexts.
+
+Join expressions evaluate similarly to let expressions,
+where $[[join j x = m in □]]$ behaves as an evaluation context
+under which evaluation occurs in \rref{E-join}.
+The inner evaluation is done when it reaches a terminal computation,
+defined by $[[tm]] \dblcolon= [[λx. m]] \mid [[return v]] \mid [[⟨m, m⟩]]$
+(\ie computation introduction forms),
+or when it reaches a jump.
+If the body of the join expression is a jump to the bound join point,
+then the value jumped with is substituted into the join point in \rref{E-jump}.
+If it jumps to a join point further outward,
+then this inner join point binding is discarded in \rref{E-drop-jump}.
+The join point binding is also discarded when a terminal is reached in
+\rref{E-drop-fun,E-drop-ret,E-drop-pair}.
+
+To illustrate, consider the following reduction sequence for three join points.
+Intuitively, we jump to $[[j3]]$ which jumps to $[[j1]]$ which is $[[m1]]$,
+so we ought to end up at $[[m{x ↦ v}]]$;
+the reductions that apply to get there are first to jump, then to drop, then to jump.
+%
+\begin{align*}
+  &[[join j1 x = m1 in join j2 x = m2 in join j3 x = jump j1 x in jump j3 v]] \nonumber \\
+  &[[_ ⇝ join j1 x = m1 in join j2 x = m2 in jump j1 v]] \tag{\rref*{E-jump}} \\
+  &[[_ ⇝ join j1 x = m1 in jump j1 v]] \tag{\rref*{E-drop-jump}} \\
+  &[[_ ⇝ m1{x ↦ v}]] \tag{\rref*{E-jump}}
+\end{align*}
+
+This is in fact the \emph{only} sequence of reductions,
+because evaluation is deterministic.
+As corollaries, multi-step evaluation is confluent,
+and defining normalization as evaluation to a terminal,
+normalization is deterministic as well.
+
+\begin{lemma}[Determinism of evaluation]
+  If $[[m ⇝ m1]]$ and $[[m ⇝ m2]]$,
+  then $[[m1]] = [[m2]]$.
+\end{lemma}
+
+\begin{corollary}[Confluence]
+  If $[[m ⇝* m1]]$ and $[[m ⇝* m2]]$,
+  then there exists some $[[m']]$
+  such that $[[m1 ⇝* m']]$ and $[[m2 ⇝* m']]$.
+\end{corollary}
+
+\begin{definition}[Normalization]
+  $[[m]]$ normalizes%
+  \footnote{This is weak normalization, not strong normalization,
+  since subterms are not normalized,
+  but we won't consider strong normalization,
+  so we simply call it normalization.}
+  to $[[tm]]$,
+  written as $[[m ⇓ tm]]$,
+  if $[[m ⇝* tm]]$.
+  \end{definition}
+
+\begin{corollary}[Determinism of normalization]
+  If $[[m ⇓ tm1]]$ and $[[m ⇓ tm2]]$,
+  then $[[tm1]] = [[tm2]]$.
+\end{corollary}
 
 \subsection{Typing rules}
 
@@ -710,7 +780,7 @@ as in the following derivable judgement.
     {[[G | • ⊢ join j x = m1 in case v of inl x ⇒ jump j x ; inr y ⇒ m2 : B]]}
 \end{mathpar}
 
-\TODO: is there anything more to say? kind of an abrupt end
+\TODO: write out the weakening lemmas
 
 \section{Commuting Conversion Normalization} \label{sec:ccnf}
 
