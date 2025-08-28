@@ -536,16 +536,6 @@ we present the syntax here in nominal form,
 with \fbox{$[[v{x ↦ w}]]$}, \fbox{$[[m{x ↦ w}]]$} denoting single (capture-avoiding) substitution
 of $[[x]]$ for $[[w]]$ in $[[v]]$ and $[[m]]$, respectively.
 
-\begin{figure}[h]
-  \begin{align}
-    [[G]] &\dblcolon= [[•]] \mid [[G, x : A]] & [[s]], [[r]] &\dblcolon= [[•]] \mid [[s, x ↦ v]] \tag{value contexts; substitution maps} \\
-    [[D]] &\dblcolon= [[•]] \mid [[D, j : A ↗ B]] & [[p]], [[q]] &\dblcolon= [[•]] \mid [[p, j x = m]] \tag{join contexts; join stacks}
-  \end{align}
-  \caption{Contexts, substitution maps, and join stacks}
-  \Description[]{}
-  \label{fig:ctxt-subst}
-\end{figure}
-
 \subsection{Evaluation semantics}
 
 \TODO: this is so boring
@@ -794,6 +784,16 @@ The theorem then holds by instantiating with the empty continuation.
 and \cref{sec:proof:end} covers \cref{item:end}.
 
 \subsection{Logical equivalence and the fundamental theorem} \label{sec:proof:logrel}
+
+\begin{figure}[h]
+  \begin{align}
+    [[s]], [[r]] &\dblcolon= [[•]] \mid [[s, x ↦ v]] \tag{substitution maps} \\
+    [[p]], [[q]] &\dblcolon= [[•]] \mid [[p, j x = m]] \tag{join stacks}
+  \end{align}
+  \caption{Substitution maps and join stacks}
+  \Description[]{}
+  \label{fig:ctxt-subst}
+\end{figure}
 
 \subsection{Semantic equivalence of commuting conversions} \label{sec:proof:cc}
 
