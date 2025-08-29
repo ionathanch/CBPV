@@ -1,7 +1,7 @@
 import CBPV.RTC
 import CBPV.Syntax
 
-open Val Com
+open Nat Val Com
 
 /-*-----------------------
   Single-step evaluation
@@ -50,7 +50,7 @@ end
 infix:40 "⇒" => Eval
 
 -- Single-step evaluation is deterministic
-theorem evalDet {m n₁ n₂} (r₁ : m ⇒ n₁) (r₂ : m ⇒ n₂) : n₁ = n₂ := by
+theorem Eval.det {m n₁ n₂} (r₁ : m ⇒ n₁) (r₂ : m ⇒ n₂) : n₁ = n₂ := by
   induction r₁ generalizing n₂
   all_goals cases r₂; try rfl
   case fst.fst ih _ r | snd.snd ih _ r => rw [ih r]
@@ -109,6 +109,12 @@ theorem prod_inv {m₁ m₂ n} (r : prod m₁ m₂ ⇒⋆ n) : prod m₁ m₂ = 
   case refl => rfl
   case trans r => cases r
 
+theorem jump_inv {j v n} (r : jump j v ⇒⋆ n) : jump j v = n := by
+  generalize e : jump j v = m at r
+  induction r generalizing j v <;> subst e
+  case refl => rfl
+  case trans r => cases r
+
 end Evals
 
 -- Multi-step reduction is confluent trivially by determinism
@@ -118,7 +124,7 @@ theorem confluence {m n₁ n₂} (r₁ : m ⇒⋆ n₁) (r₂ : m ⇒⋆ n₂) :
   case trans r₁ rs₁ ih =>
     cases r₂
     case refl => exact ⟨_, .refl, .trans r₁ rs₁⟩
-    case trans r₂ rs₂ => rw [evalDet r₁ r₂] at *; exact ih rs₂
+    case trans r₂ rs₂ => rw [Eval.det r₁ r₂] at *; exact ih rs₂
 
 /-*----------------------------
   Normal forms and evaluation
@@ -158,6 +164,50 @@ theorem dropJoin {n n'} : n ⇓ₙ n' → ∀ m, .join m n ⇓ₙ n'
     cases n' <;> simp at nfn
     all_goals refine ⟨.trans' (Evals.join rn) (.once ?_), nfn⟩; constructor
 
+theorem join_inv' {m₁ m₂ n} (r : .join m₁ m₂ ⇓ₙ n) :
+  ∃ n', m₂ ⇒⋆ n' ∧ (nf n' ∨ ∃ j v, n' = jump j v) := by
+  let ⟨r, nfn⟩ := r
+  generalize e : Com.join m₁ m₂ = m₁' at r
+  induction r generalizing m₁ m₂ <;> subst e
+  case refl => cases nfn
+  case trans ih r =>
+    cases r
+    case ret | lam | prod => exact ⟨_, .refl, .inl ⟨⟩⟩
+    case γ | join't => exact ⟨_, .refl, .inr ⟨_, _, rfl⟩⟩
+    case join r rs =>
+      have ⟨_, rs, h⟩ := ih ⟨rs, nfn⟩ nfn rfl
+      exact ⟨_, .trans r rs, h⟩
+
+theorem join_inv {m₁ m₂ n} (r : .join m₁ m₂ ⇓ₙ n) :
+  m₂ ⇒⋆ n ∨ (∃ v, m₂ ⇒⋆ jump 0 v ∧ m₁⦃v⦄ ⇒⋆ n) ∨
+  (∃ j v, m₂ ⇒⋆ jump (j + 1) v ∧ renameJCom succ n = jump (j + 1) v) := by
+  let ⟨rn, nfn⟩ := r
+  match join_inv' r with
+  | ⟨n', rm₂, .inl nfn⟩ =>
+    have rm₂' := Evals.join (m := m₁) rm₂
+    cases n' <;> cases nfn
+    all_goals
+      have rn' := RTC.trans' rm₂' (.once (by constructor))
+      let ⟨_, r₁, r₂⟩ := confluence rn rn'
+      rw [← nfn.steps r₁] at r₂
+    case ret => rw [r₂.ret_inv] at rm₂; exact .inl rm₂
+    case lam => rw [r₂.lam_inv] at rm₂; exact .inl rm₂
+    case prod => rw [r₂.prod_inv] at rm₂; exact .inl rm₂
+  | ⟨_, rm₂, .inr ⟨_, _, e⟩⟩ =>
+    subst e
+    have rn' := Evals.join (m := m₁) rm₂
+    let ⟨_, r₁, r₂⟩ := confluence rn rn'
+    rw [← nfn.steps r₁] at r₂
+    cases r₂
+    case refl => cases nfn
+    case trans rj rn =>
+      cases rj
+      case join r => cases r
+      case γ => exact .inr (.inl ⟨_, rm₂, rn⟩)
+      case join't =>
+        rw [← Evals.jump_inv rn]
+        exact .inr (.inr ⟨_, _, rm₂, rfl⟩)
+
 end Norm
 
 /-*---------------------
@@ -173,4 +223,4 @@ theorem SN.nf {m} (nfm : nf m) : SN m := by
 theorem Evals.sn {m n} (r : m ⇒⋆ n) (nfn : nf n) : SN m := by
   induction r
   case refl => exact .nf nfn
-  case trans r _ ih => constructor; intro _ r'; rw [← evalDet r r']; exact ih nfn
+  case trans r _ ih => constructor; intro _ r'; rw [← Eval.det r r']; exact ih nfn
