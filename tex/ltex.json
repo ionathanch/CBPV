@@ -21,14 +21,37 @@
         "unnest",
         "dedupe",
         "naïve",
-        "naïvely"
+        "naïvely",
+        "Bruijn",
+        "well-typedness",
+        "multi-step",
+        "PLDI",
+        "Rocq",
+        "tick",
+        "tock",
+        "judgement",
+        "judgements",
+        "metatheory",
+        "metatheoretic"
       ]
     },
     "disabledRules": {
       "en-CA": [
-        "OUTSIDE_OF",
-        "LET_IT_INFINITIVE",
-        "BE_INTEREST_IN"
+        "UNLIKELY_OPENING_PUNCTUATION",
+        "COMMA_PARENTHESIS_WHITESPACE",
+        "UPPERCASE_SENTENCE_START",
+        "CONSECUTIVE_SPACES",
+        "WHITESPACE_RULE",
+        "OUTSIDE_OF"
+      ]
+    },
+    "hiddenFalsePositives": {
+      "en-CA": [
+        {"rule": "EN_COMPOUNDS_MULTI_STEP", "sentence": "multi-step"},
+        {"rule": "POSSESSIVE_APOSTROPHE",   "sentence": "optimizations"},
+        {"rule": "LET_IT_INFINITIVE",       "sentence": "to express"},
+        {"rule": "COMMA_COMPOUND_SENTENCE", "sentence": "and we know"},
+        {"rule": "BE_INTEREST_IN",          "sentence": "interesting in our setting"}
       ]
     },
     "latex": {
@@ -38,14 +61,35 @@
         "\\mathtoolsset{}": "ignore",
         "\\urlstyle{}": "ignore",
         "\\citestyle{}": "ignore",
+        "\\citet{}": "ignore",
+        "\\Citet{}": "ignore",
+        "\\citep{}": "ignore",
+        "\\Citep{}": "ignore",
         "\\author{}": "ignore",
         "\\acmJournal{}": "ignore",
         "\\newtagform{}": "ignore",
         "\\usetagform{}": "ignore",
+        "\\cref{}": "ignore",
+        "\\Cref{}": "ignore",
+        "\\crefrange{}{}": "ignore",
+        "\\Creferange{}{}": "ignore",
         "\\crefformat{}{}": "ignore",
         "\\Crefformat{}{}": "ignore",
         "\\crefrangeformat{}{}": "ignore",
-        "\\Crefrangeformat{}{}": "ignore"
+        "\\Crefrangeformat{}{}": "ignore",
+        "\\ottdrulename{}": "ignore",
+        "\\rref{}": "ignore",
+        "\\rref*{}": "ignore",
+        "\\Rref{}": "ignore",
+        "\\Rref*{}": "ignore",
+        "\\inferrule[]{}{}": "ignore",
+        "\\inferrule*[]{}{}": "ignore",
+        "\\infer[]{}{}": "ignore",
+        "\\infer*[]{}{}": "ignore",
+        "\\mprset{}": "ignore",
+
+        "\\TODO": "ignore",
+        "\\kw{}": "ignore"
       },
       "environments": {
         "CCSXML": "ignore"

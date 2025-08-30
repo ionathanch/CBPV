@@ -142,6 +142,7 @@ Call-by-push-value (CBPV) \citep{CBPV} is a language with a strong distinction
 between \emph{values} and \emph{computations} in its syntax and types.
 The benefit of the distinction is that its constructs precisely describe
 when computations are executed and when they are suspended as values.
+% isolating purity, advantages other than just CBN + CBV
 With these constructs, CBPV subsumes both call-by-name (CBN) and call-by-value (CBV)
 evaluation strategies of the lambda calculus,
 in the sense that it represents lambda calculus terms with intended CBN or CBV semantics
@@ -247,14 +248,14 @@ before carrying out the function application,
 using let bindings to express the explicit sequencing.
 First $f$ is evaluated, followed by $g$, then $a$, before the final application occurs.
 
-The distinction between the strategies has implications for performance.
-Passing thunks explicitly to functions in CBN may needlessly duplicate code execution
-if those arguments are used multiple times.
-Conversely, evaluating arguments before passing them to functions in CBV
-may needlessly execute code if those arguments are not used at all.
-Choosing one evaluation strategy over another is choosing between these tradeoffs,
-and CBPV provides a uniform interface for manipulating code once the decision is made
-without introducing behaviour that violates the expected strategy.
+% The distinction between the strategies has implications for performance.
+% Passing thunks explicitly to functions in CBN may needlessly duplicate code execution
+% if those arguments are used multiple times.
+% Conversely, evaluating arguments before passing them to functions in CBV
+% may needlessly execute code if those arguments are not used at all.
+% Choosing one evaluation strategy over another is choosing between these tradeoffs,
+% and CBPV provides a uniform interface for manipulating code once the decision is made
+% without introducing behaviour that violates the expected strategy.
 
 To seriously consider CBPV as an IR, we need to think about what happens \emph{after} compiling to CBPV.
 At a high level, a compiler IR may undergo some optimization passes,
@@ -512,7 +513,7 @@ in our mechanization (and thus our technical presentation here),
 we use a single unified syntax and treat CC-normalization as a source-to-source translation,
 showing \aposteriori in \cref{sec:ccnf} that the output of the translation satisfies \cref{fig:ccnf,fig:join}.
 In \cref{sec:proof}, we reason about equivalence between a CBPV term and its translation,
-which requires both sides of the equivalence to belong to the same sytnactic category
+which requires both sides of the equivalence to belong to the same syntactic category
 for the equivalence to have the properties of an equivalence relation.
 
 \begin{figure}[h]
@@ -646,7 +647,7 @@ $[[G]] \dblcolon= [[•]] \mid [[G, x : A]]$ for value contexts, and
 $[[D]] \dblcolon= [[•]] \mid [[D, j : A ↗ B]]$ for join contexts.
 The latter ``type'' $[[A]] \nearrow [[B]]$ is merely notation,
 so we could have declared join points with type $[[U (A → B)]]$,
-but by using distinct join contexts, we can retrict well-typed computations
+but by using distinct join contexts, we can restrict well-typed computations
 to those which only jump within tail contexts $[[L]]$.
 This is enforced by explicit empty join contexts in the premises of the typing rules in \cref{fig:typing}.
 
@@ -802,7 +803,7 @@ Because we don't evaluate inside of thunks,
 we consider only computations that return \emph{ground} values,
 which are those of type $[[T]] \dblcolon= [[⊤]] \mid [[T + T]]$.
 Otherwise, a thunk and its CCNF are values that don't evaluate any further,
-but aren't necessarily syntactially equal.
+but aren't necessarily syntactically equal.
 
 \begin{theorem} \label{thm:ground-run}
   Given $[[m]]$ such that $[[• | • ⊢ m : F T]]$,
@@ -948,7 +949,7 @@ and it would be interesting to see whether a similar technique could be applied 
 \begin{itemize}
   \item \TODO: compiling to assembly \citep{CBPV-STAL} with and without CC-normalization optimizations
   \item \TODO: measuring stack size using cost model \citep{cost}
-  \item \TODO: actual effects
+  \item \TODO: actual effects --- effects produced from evaluation are preserved and not reordered, tick + tock
   \item \TODO: real-life evaluation (for PLDI?)
 \end{itemize}
 
