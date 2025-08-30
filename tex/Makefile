@@ -47,7 +47,8 @@ zip: $(MAIN).pdf
 # 2. Copy output files in `ltex-ls-plus/target/ltex-ls-plus-<VERSION>.tar.gz/ltex-ls-plus-<VERSION>` to `~/.local/share/ltex`
 # 3. Create simlink with `ln -sf ~/.local/share/ltex/bin/ltex-cli-plus ~/.local/bin/ltex`
 check: $(MAIN).tex
-	ltex --client-configuration=$(LTEX).json $(MAIN).tex > latex.out/$(LTEX).log
+	ltex --client-configuration=$(LTEX).json $(MAIN).tex > latex.out/$(LTEX).log && \
+	echo "No LTeX errors found." || echo "LTeX errors written to latex.out/$(LTEX).log."
 
 .PHONY: count
 count:
