@@ -37,11 +37,6 @@
     },
     "disabledRules": {
       "en-CA": [
-        "UNLIKELY_OPENING_PUNCTUATION",
-        "COMMA_PARENTHESIS_WHITESPACE",
-        "UPPERCASE_SENTENCE_START",
-        "CONSECUTIVE_SPACES",
-        "WHITESPACE_RULE",
         "OUTSIDE_OF"
       ]
     },
@@ -61,38 +56,40 @@
         "\\mathtoolsset{}": "ignore",
         "\\urlstyle{}": "ignore",
         "\\citestyle{}": "ignore",
-        "\\citet{}": "ignore",
-        "\\Citet{}": "ignore",
-        "\\citep{}": "ignore",
-        "\\Citep{}": "ignore",
+        "\\citet{}": "dummy",
+        "\\Citet{}": "dummy",
+        "\\citep{}": "dummy",
+        "\\Citep{}": "dummy",
         "\\author{}": "ignore",
         "\\acmJournal{}": "ignore",
         "\\newtagform{}": "ignore",
         "\\usetagform{}": "ignore",
-        "\\cref{}": "ignore",
-        "\\Cref{}": "ignore",
-        "\\crefrange{}{}": "ignore",
-        "\\Creferange{}{}": "ignore",
+        "\\cref{}": "dummy",
+        "\\Cref{}": "dummy",
+        "\\crefrange{}{}": "dummy",
+        "\\Crefrange{}{}": "dummy",
         "\\crefformat{}{}": "ignore",
         "\\Crefformat{}{}": "ignore",
         "\\crefrangeformat{}{}": "ignore",
         "\\Crefrangeformat{}{}": "ignore",
         "\\ottdrulename{}": "ignore",
-        "\\rref{}": "ignore",
-        "\\rref*{}": "ignore",
-        "\\Rref{}": "ignore",
-        "\\Rref*{}": "ignore",
+        "\\rref{}": "dummy",
+        "\\rref*{}": "dummy",
+        "\\Rref{}": "dummy",
+        "\\Rref*{}": "dummy",
         "\\inferrule[]{}{}": "ignore",
         "\\inferrule*[]{}{}": "ignore",
         "\\infer[]{}{}": "ignore",
         "\\infer*[]{}{}": "ignore",
         "\\mprset{}": "ignore",
 
-        "\\TODO": "ignore",
-        "\\kw{}": "ignore"
+        "\\TODO": "dummy",
+        "\\kw{}": "ignore",
+        "\\opcit": "dummy"
       },
       "environments": {
-        "CCSXML": "ignore"
+        "CCSXML": "ignore",
+        "mathpar": "ignore"
       }
     }
   }
