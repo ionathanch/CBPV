@@ -540,8 +540,8 @@ of $[[x]]$ for $[[w]]$ in $[[v]]$ and $[[m]]$, respectively.
 \subsection{Evaluation semantics}
 
 The purpose of join points is best explained by what they do;
-their single-step evaluation rules are listed in \cref{fig:eval},
-alongside rules for the usual CBPV constructs.
+their single-step evaluation rules, written \fbox{$[[m ⇝ m']]$},
+are listed in \cref{fig:eval}, alongside rules for the usual CBPV constructs.
 We write \fbox{$[[m ⇝* m']]$} for their reflexive, transitive closure.
 
 \begin{figure}[h]
@@ -593,7 +593,7 @@ The join point binding is also discarded when a terminal is reached in
 
 To illustrate, consider the following reduction sequence for three join points.
 Intuitively, we jump to $[[j3]]$ which jumps to $[[j1]]$ which is $[[m1]]$,
-so we ought to end up at $[[m{x ↦ v}]]$;
+so we ought to end up at $[[m1{x ↦ v}]]$;
 the reductions that apply to get there are first to jump, then to drop, then to jump.
 %
 \begin{align*}
@@ -627,7 +627,7 @@ normalization is deterministic as well.
   but we won't consider strong normalization,
   so we simply call it normalization.}
   to $[[tm]]$,
-  written as $[[m ⇓ tm]]$,
+  written as \fbox{$[[m ⇓ tm]]$},
   if $[[m ⇝* tm]]$.
   \end{definition}
 
@@ -818,7 +818,7 @@ such as the following statement, unfortunately doesn't work.
   If $[[m ⇝ n]]$ then $[[⟦m⟧ ⇝* ⟦n⟧]]$.
 \end{fail}
 \begin{proof}[Counterexample]
-  Suppose we have CCNF computations $[[n1]]$, $[[n2]]$ and configuration $[[n]]$.
+  Suppose we have CCNF computations $[[n1]]$, $[[n2]]$ and configuration $[[m]]$.
   Consider the term $[[let x ← {let y ← n1 in n2}! in m]]$,
   which reduces to $[[let x ← (let y ← n1 in n2) in m]]$.
   The left-hand side translates to itself, since it's already in CCNF,
