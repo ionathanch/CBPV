@@ -288,7 +288,8 @@ theorem caseOfCase {Γ Δ v m₁ m₂ m₃ m₄ B} {A₁ A₂ A₃ A₄ : ValTyp
   (hm₂ : Γ ∷ A₂ ∣ Δ ⊢ m₂ ∶ B)
   (hm₃ : Γ ∷ A₃ ∣ ⬝ ⊢ m₃ ∶ F (Sum A₁ A₂))
   (hm₄ : Γ ∷ A₄ ∣ ⬝ ⊢ m₄ ∶ F (Sum A₁ A₂)) :
-  Γ ∣ Δ ⊨ join (case (var 0) m₁ m₂) (case v (letin m₃ (jump 0 (var 0))) (letin m₄ (jump 0 (var 0))))
+  Γ ∣ Δ ⊨ join (case (var 0) (renameCom (lift succ) m₁) (renameCom (lift succ) m₂))
+            (case v (letin m₃ (jump 0 (var 0))) (letin m₄ (jump 0 (var 0))))
         ~ join m₁ (join (renameJCom succ m₂)
             (case v (letin m₃ (case (var 0) (jump 1 (var 0)) (jump 0 (var 0))))
                     (letin m₄ (case (var 0) (jump 1 (var 0)) (jump 0 (var 0)))))) ∶ B := by
@@ -298,29 +299,50 @@ theorem caseOfCase {Γ Δ v m₁ m₂ m₃ m₄ B} {A₁ A₂ A₃ A₄ : ValTyp
   | .inl ⟨v₁, v₂, hA₃, e₁, e₂⟩ =>
     simp only [substCom]; rw [e₁, e₂]
     refine ℰ.bwd (.rejoin (.join .ιl)) (.rejoin (.join (.join .ιl))) ?_
-    have ⟨w₁, w₂, r₁, r₂, hA₁₂⟩ := (soundCom hm₃ (semCtxt.cons hA₃ hστ) .nil).ret_inv
     simp only [substCom]; rw [substUnion, substUnion]
+    have ⟨w₁, w₂, r₁, r₂, hA₁₂⟩ := (soundCom hm₃ (semCtxt.cons hA₃ hστ) .nil).ret_inv
     refine ℰ.bwds
       (.rejoin (.join (.trans' (Evals.letin r₁) (.once .ζ))))
       (.rejoin (.join (.join (.trans' (Evals.letin r₂) (.once .ζ))))) ?_
-    have e₂ σ v : ((var 0)⦃⇑⇑ σ⦄⦃⇑ (v +: var)⦄) = var 0 := by simp [lift, up]
-    have e₃ τ v : ((var 0)⦃⇑⇑⇑ τ⦄⦃⇑⇑ (v +: var)⦄) = var 0 := by simp [lift, up]
-    have e σ : (⇑ σ) 0 = var 0 := rfl
-    rw [e₂ σ v₁, e₂ τ v₂, e₃ τ v₂]; simp [substCom]; rw [e σ, e (w₂ +: var)]
     unfold 𝒱 at hA₁₂
     match hA₁₂ with
     | .inl ⟨w₁', w₂', hA₁, e₁, e₂⟩ =>
       subst e₁ e₂
-      refine ℰ.bwd (.rejoin .γ) (.rejoin (.join (.join .ιl))) ?_; simp
-      refine ℰ.bwds (.rejoin (.once .ιl)) (.rejoin (.trans (.join .join't) (.once .γ))) ?_
-      rw [substUnion, substUnion, substUnion₂]
-      have hB := soundCom hm₁ (semCtxt.cons hA₁ hστ) hjs
-      sorry
+      refine ℰ.bwds
+        (.rejoin (.trans .γ (.once .ιl)))
+        (.rejoin (.trans' (Evals.join (.trans (.join .ιl) (.once .join't))) (.once .γ))) ?_
+      rw [substUnion, substUnion, substUnion₂, substDrop₂]; simp [up]
+      exact soundCom hm₁ (semCtxt.cons hA₁ hστ) hjs
     | .inr ⟨w₁', w₂', hA₂, e₁, e₂⟩ =>
       subst e₁ e₂
-      refine ℰ.bwd (.rejoin .γ) (.rejoin (.join (.join .ιr))) ?_; simp
-      refine ℰ.bwds (.rejoin (.once .ιr)) (.rejoin (.join (.once .γ))) ?_
-      rw [substUnion, substUnion, substUnion₂]
+      refine ℰ.bwds
+        (.rejoin (.trans .γ (.once .ιr)))
+        (.rejoin (.join (.trans (.join .ιr) (.once .γ)))) ?_
+      rw [substUnion, substUnion, substUnion₂, substDrop₂]; simp [up]
       have hB := soundCom hm₂ (semCtxt.cons hA₂ hστ) hjs
       sorry
-  | .inr ⟨_, _, _, e₁, e₂⟩ => sorry
+  | .inr ⟨v₁, v₂, hA₄, e₁, e₂⟩ =>
+    simp only [substCom]; rw [e₁, e₂]
+    refine ℰ.bwd (.rejoin (.join .ιr)) (.rejoin (.join (.join .ιr))) ?_
+    simp only [substCom]; rw [substUnion, substUnion]
+    have ⟨w₁, w₂, r₁, r₂, hA₁₂⟩ := (soundCom hm₄ (semCtxt.cons hA₄ hστ) .nil).ret_inv
+    refine ℰ.bwds
+      (.rejoin (.join (.trans' (Evals.letin r₁) (.once .ζ))))
+      (.rejoin (.join (.join (.trans' (Evals.letin r₂) (.once .ζ))))) ?_
+    unfold 𝒱 at hA₁₂
+    match hA₁₂ with
+    | .inl ⟨w₁', w₂', hA₁, e₁, e₂⟩ =>
+      subst e₁ e₂
+      refine ℰ.bwds
+        (.rejoin (.trans .γ (.once .ιl)))
+        (.rejoin (.trans' (Evals.join (.trans (.join .ιl) (.once .join't))) (.once .γ))) ?_
+      rw [substUnion, substUnion, substUnion₂, substDrop₂]; simp [up]
+      exact soundCom hm₁ (semCtxt.cons hA₁ hστ) hjs
+    | .inr ⟨w₁', w₂', hA₂, e₁, e₂⟩ =>
+      subst e₁ e₂
+      refine ℰ.bwds
+        (.rejoin (.trans .γ (.once .ιr)))
+        (.rejoin (.join (.trans (.join .ιr) (.once .γ)))) ?_
+      rw [substUnion, substUnion, substUnion₂, substDrop₂]; simp [up]
+      have hB := soundCom hm₂ (semCtxt.cons hA₂ hστ) hjs
+      sorry
