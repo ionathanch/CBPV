@@ -361,13 +361,30 @@ theorem substDrop₂ σ v₁ v₂ m : substCom (v₁ +: v₂ +: σ) (renameCom (
     _ = substCom ((v₁ +: v₂ +: σ) ∘ lift succ) m   := by rw [substRenameCom]
     _ = substCom (v₁ +: σ) m                       := by rw [substComExt]; intro n; cases n <;> rfl
 
-theorem substUnion σ a m : substCom (a +: var) (substCom (⇑ σ) m) = substCom (a +: σ) m := by
-  calc substCom (a +: var) (substCom (⇑ σ) m)
-    _ = (substCom (a +: var) ∘ substCom (⇑ σ)) m := rfl
-    _ = substCom (substVal (a +: var) ∘ (var 0 +: (renameVal succ ∘ σ))) m :=
+theorem substUnion σ v m : substCom (v +: var) (substCom (⇑ σ) m) = substCom (v +: σ) m := by
+  calc substCom (v +: var) (substCom (⇑ σ) m)
+    _ = (substCom (v +: var) ∘ substCom (⇑ σ)) m := rfl
+    _ = substCom (substVal (v +: var) ∘ (var 0 +: (renameVal succ ∘ σ))) m :=
       by rw [substComComp]; rfl
-    _ = substCom (a +: σ) m :=
+    _ = substCom (v +: σ) m :=
       by apply substComExt; intro n; cases n <;> simp; rw [substDropVal]
+
+-- Helper for substUnion
+private theorem substUnion₂' σ v₁ v₂ m : substCom (substVal (v₁ +: v₂ +: var) ∘ (⇑ ⇑ σ)) m = substCom (v₁ +: v₂ +: σ) m := by
+  apply substComExt
+  intro n; cases n; simp [up]
+  case succ n =>
+    cases n; simp [up]
+    case succ n =>
+      simp [up]; rw [substRenameVal, substRenameVal]
+      have e x : (((v₁+:v₂+:var) ∘ succ) ∘ succ) x = var x := by rfl
+      rw [substValExt _ _ e, substValId]
+
+theorem substUnion₂ σ v₁ v₂ m : substCom (v₁ +: v₂ +: var) (substCom (⇑ ⇑ σ) m) = substCom (v₁ +: v₂ +: σ) m := by
+  calc substCom (v₁ +: v₂ +: var) (substCom (⇑ ⇑ σ) m)
+    _ = (substCom (v₁ +: v₂ +: var) ∘ substCom (⇑ ⇑ σ)) m := rfl
+    _ = substCom (substVal (v₁ +: v₂ +: var) ∘ (⇑ ⇑ σ)) m := by rw [substComComp]
+    _ = substCom (v₁ +: v₂ +: σ) m := by rw [substUnion₂']
 
 /-* Pushing in lifts and ups through renamings *-/
 
