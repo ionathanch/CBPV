@@ -162,7 +162,7 @@ def renameValComp ξ ζ v : renameVal ξ (renameVal ζ v) = renameVal (ξ ∘ ζ
 def renameComComp ξ ζ m : renameCom ξ (renameCom ζ m) = renameCom (ξ ∘ ζ) m :=
   (renameComp ξ ζ (ξ ∘ ζ) (λ _ ↦ rfl)).right m
 
--- Join point renamings
+-- Jump renamings
 @[simp]
 def renameJCom (ξ : Nat → Nat) : Com → Com
   | letin m n => letin m (renameJCom ξ n)
@@ -450,10 +450,20 @@ inductive Ctxt : Type where
 notation:50 "⬝" => Ctxt.nil
 infixl:50 "∷" => Ctxt.cons
 
-inductive In : Nat → ValType → Ctxt → Prop where
+inductive Ctxt.In : Nat → ValType → Ctxt → Prop where
   | here {Γ A} : In 0 A (Γ ∷ A)
   | there {Γ x A B} : In x A Γ → In (succ x) A (Γ ∷ B)
-notation:40 Γ:41 "∋" x:41 "∶" A:41 => In x A Γ
+notation:40 Γ:41 "∋" x:41 "∶" A:41 => Ctxt.In x A Γ
+
+@[simp]
+def Ctxt.length : Ctxt → Nat
+  | .nil => 0
+  | .cons Γ _ => Γ.length + 1
+
+theorem Ctxt.inLength {Γ x A} (h : Γ ∋ x ∶ A) : x < Γ.length := by
+  induction h
+  case here => simp
+  case there ih => simp [ih]
 
 inductive Dtxt : Type where
   | nil : Dtxt
@@ -461,10 +471,20 @@ inductive Dtxt : Type where
 notation:50 "⬝" => Dtxt.nil
 notation:50 Δ:51 "∷" A:51 "↗" B:51 => Dtxt.cons Δ A B
 
-inductive Jn : Nat → ValType → ComType → Dtxt → Prop where
-  | here {Δ A B} : Jn 0 A B (Δ ∷ A ↗ B)
-  | there {Δ j A A' B B'} : Jn j A B Δ → Jn (succ j) A B (Δ ∷ A' ↗ B')
-notation:40 Δ:41 "∋" j:41 "∶" A:41 "↗" B:41 => Jn j A B Δ
+inductive Dtxt.In : Nat → ValType → ComType → Dtxt → Prop where
+  | here {Δ A B} : In 0 A B (Δ ∷ A ↗ B)
+  | there {Δ j A A' B B'} : In j A B Δ → In (succ j) A B (Δ ∷ A' ↗ B')
+notation:40 Δ:41 "∋" j:41 "∶" A:41 "↗" B:41 => Dtxt.In j A B Δ
+
+@[simp]
+def Dtxt.length : Dtxt → Nat
+  | .nil => 0
+  | .cons Δ _ _ => Δ.length + 1
+
+theorem Dtxt.inLength {Δ j A B} (h : Δ ∋ j ∶ A ↗ B) : j < Δ.length := by
+  induction h
+  case here => simp
+  case there ih => simp [ih]
 
 /-*----------------------
   Well-scoped renamings
@@ -481,5 +501,5 @@ theorem wRenameLift {ξ : Nat → Nat} {Γ Δ A}
   Δ ∷ A ⊢ lift ξ ∶ Γ ∷ A := by
   intro x B mem
   cases mem with
-  | here => exact In.here
-  | there => apply_rules [In.there]
+  | here => exact Ctxt.In.here
+  | there => apply_rules [Ctxt.In.there]
