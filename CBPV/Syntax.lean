@@ -340,6 +340,12 @@ theorem renameToSubst ξ :
 def renameToSubstVal ξ := (renameToSubst ξ).left
 def renameToSubstCom ξ := (renameToSubst ξ).right
 
+-- Join point renamings commute with substitution
+theorem renameJSubst ξ σ m : substCom σ (renameJCom ξ m) = renameJCom ξ (substCom σ m) := by
+  mutual_induction m generalizing ξ σ
+  all_goals simp; try repeat' constructor
+  all_goals apply_rules
+
 /-*-----------------------------------------------------
   Handy dandy derived renaming and substitution lemmas
 -----------------------------------------------------*-/
