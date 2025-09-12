@@ -1,4 +1,5 @@
 import CBPV.Evaluation
+import CBPV.Rejoin
 import CBPV.Typing
 
 open Nat Val Com
@@ -71,13 +72,13 @@ theorem liftsId {ξ δ j} (ltδ : j < δ) : lifts ξ δ j = j := by
     cases j <;> simp [lift]
     exact ih (Nat.lt_of_add_lt_add_right ltδ)
 
-theorem renameScopeJ {ξ δ m} (h : ScopeComJ δ m) : renameJCom (lifts ξ δ) m = m := by
+theorem ScopeComJ.renameScopeJ {ξ δ m} (h : ScopeComJ δ m) : renameJCom (lifts ξ δ) m = m := by
   mutual_induction h generalizing ξ <;> simp
   case letin ih => exact ih
   case case ih₁ ih₂ => exact ⟨ih₁, ih₂⟩
   case jump ltδ _ => exact liftsId ltδ
   case join ih₁ ih₂ => exact ⟨ih₁, ih₂⟩
-theorem renameScopeJ0 {ξ m} : ScopeComJ 0 m → renameJCom ξ m = m := renameScopeJ
+theorem ScopeComJ.renameScopeJ0 {ξ m} : ScopeComJ 0 m → renameJCom ξ m = m := renameScopeJ
 
 /-* Renaming and substitution preserve jump scoping *-/
 
@@ -170,6 +171,32 @@ theorem Eval.scopeJ {δ m n} (r : m ⇒ n) (h : ScopeComJ δ m) : ScopeComJ δ n
     cases h with | join h₁ h₂ =>
     refine .join h₁ (ih h₂)
 
+/-* Evaluation respects jump renaming *-/
+
+theorem Eval.renameJ {ξ δ m n} (h : ScopeComJ δ m) (r : m ⇒ n) : renameJCom ξ m ⇒ renameJCom ξ n := by
+  induction r generalizing ξ δ
+  all_goals simp; try rw [← renameJSubst]
+  case π =>
+    cases h with | force h =>
+    cases h with | thunk h =>
+    rw [h.renameScopeJ0]; constructor
+  case β =>
+    cases h with | app hlam hv =>
+    cases hlam with | lam h =>
+    rw [h.renameScopeJ0]; constructor
+  case π1 =>
+    cases h with | fst h =>
+    cases h with | prod h₁ h₂ =>
+    rw [h₁.renameScopeJ0]; constructor
+  case π2 =>
+    cases h with | snd h =>
+    cases h with | prod h₁ h₂ =>
+    rw [h₂.renameScopeJ0]; constructor
+  case join ih =>
+    cases h with | join _ h =>
+    exact .join (ih h)
+  all_goals constructor <;> assumption
+
 /-*-----------------------------------------------------------
   Antirenaming: If a jump-renamed m reduces to n,
   then n must be some renamed computation that m reduces to;
@@ -187,7 +214,7 @@ theorem antirenameJ {ξ δ m n'} (h : ScopeComJ δ m) (r : renameJCom ξ m ⇒ n
       cases m <;> injection e
       cases h with | thunk h =>
       case thunk e =>
-        subst e; exact ⟨_, (renameScopeJ0 h).symm, .π⟩
+        subst e; exact ⟨_, h.renameScopeJ0.symm, .π⟩
   case β =>
     cases m <;> injection e
     cases h with | app h =>
@@ -196,7 +223,7 @@ theorem antirenameJ {ξ δ m n'} (h : ScopeComJ δ m) (r : renameJCom ξ m ⇒ n
       cases h with | lam h =>
       case lam em =>
         subst em ev; refine ⟨_, ?_, .β⟩
-        rw [← renameJSubst, renameScopeJ0 h]
+        rw [← renameJSubst, h.renameScopeJ0]
   case ζ =>
     cases m <;> injection e
     case letin m₁ m₂ em₁ em₂ =>
@@ -225,7 +252,7 @@ theorem antirenameJ {ξ δ m n'} (h : ScopeComJ δ m) (r : renameJCom ξ m ⇒ n
       cases m <;> injection e
       cases h with | prod h₁ h₂ =>
       case prod em₁ em₂ =>
-        subst em₁ em₂; exact ⟨_, (renameScopeJ0 h₁).symm, .π1⟩
+        subst em₁ em₂; exact ⟨_, h₁.renameScopeJ0.symm, .π1⟩
   case π2 =>
     cases m <;> injection e
     cases h with | snd h =>
@@ -233,7 +260,7 @@ theorem antirenameJ {ξ δ m n'} (h : ScopeComJ δ m) (r : renameJCom ξ m ⇒ n
       cases m <;> injection e
       cases h with | prod h₁ h₂ =>
       case prod em₁ em₂ =>
-        subst em₁ em₂; exact ⟨_, (renameScopeJ0 h₂).symm, .π2⟩
+        subst em₁ em₂; exact ⟨_, h₂.renameScopeJ0.symm, .π2⟩
   case γ =>
     cases m <;> injection e
     case join m₁ m₂ em₁ em₂ =>
@@ -273,37 +300,37 @@ theorem antirenameJ {ξ δ m n'} (h : ScopeComJ δ m) (r : renameJCom ξ m ⇒ n
     cases h with | app h =>
     case app ih m v em ev _ =>
       subst em ev
-      have e : renameJCom ξ m = m := renameScopeJ0 h
+      have e : renameJCom ξ m = m := h.renameScopeJ0
       let ⟨n, en, r⟩ := ih h e; subst en
       refine ⟨_, ?_, .app r⟩; simp
-      exact renameScopeJ0 (r.scopeJ h)
+      exact (r.scopeJ h).renameScopeJ0
   case letin =>
     cases m <;> injection e
     cases h with | letin h₁ h₂ =>
     case letin ih m₁ m₂ em₁ em₂ =>
       subst em₁ em₂
-      have e : renameJCom ξ m₁ = m₁ := renameScopeJ0 h₁
+      have e : renameJCom ξ m₁ = m₁ := h₁.renameScopeJ0
       let ⟨n, en, r⟩ := ih h₁ e; subst en
       refine ⟨_, ?_, .letin r⟩; simp
-      exact renameScopeJ0 (r.scopeJ h₁)
+      exact (r.scopeJ h₁).renameScopeJ0
   case fst =>
     cases m <;> injection e
     case fst ih m e =>
       subst e
       cases h with | fst h =>
-      have e : renameJCom ξ m = m := renameScopeJ0 h
+      have e : renameJCom ξ m = m := h.renameScopeJ0
       let ⟨n, en, r⟩ := ih h e; subst en
       refine ⟨_, ?_, .fst r⟩; simp
-      exact renameScopeJ0 (r.scopeJ h)
+      exact (r.scopeJ h).renameScopeJ0
   case snd =>
     cases m <;> injection e
     case snd ih m e =>
       subst e
       cases h with | snd h =>
-      have e : renameJCom ξ m = m := renameScopeJ0 h
+      have e : renameJCom ξ m = m := h.renameScopeJ0
       let ⟨n, en, r⟩ := ih h e; subst en
       refine ⟨_, ?_, .snd r⟩; simp
-      exact renameScopeJ0 (r.scopeJ h)
+      exact (r.scopeJ h).renameScopeJ0
   case join =>
     cases m <;> injection e
     case join ih m₁ m₂ em₁ em₂ =>
@@ -311,3 +338,39 @@ theorem antirenameJ {ξ δ m n'} (h : ScopeComJ δ m) (r : renameJCom ξ m ⇒ n
       cases h with | join _ h =>
       let ⟨m₂', em₂, r⟩ := ih h rfl; subst em₂
       exact ⟨_, rfl, .join r⟩
+
+/-* Corollary: A jump-weakened join body can drop the join point *-/
+
+theorem Eval.wkJoin {δ js m₁ m₂ m} (h : ScopeComJ δ m₂) (r : .rejoin (.join m₁ (renameJCom succ m₂)) js ⇒ m) :
+  (m = .rejoin m₂ js) ∨ (∃ m₂', m₂ ⇒ m₂' ∧ m = .rejoin (.join m₁ (renameJCom succ m₂')) js) := by
+  let ⟨_, r, e⟩ := r.rejoin_inv
+  generalize erename : renameJCom succ m₂ = m₂' at r
+  cases r
+  case join r =>
+    subst erename
+    let ⟨n, en, rn⟩ := antirenameJ h r
+    subst en; exact .inr ⟨_, rn, e⟩
+  all_goals cases m₂ <;> injection erename
+  case γ ej _ => cases ej
+  case ret e' | lam e' => subst e'; exact .inl e
+  case prod e₁ e₂ => subst e₁ e₂; exact .inl e
+  case join't ej ev => injection ej with ej; subst ej ev; exact .inl e
+
+theorem Norm.wkJoin {δ js m₁ m₂ n} (h : ScopeComJ δ m₂) (r : rejoin (.join m₁ (renameJCom succ m₂)) js ⇓ₙ n) :
+  ∃ m₂', m₂ ⇒⋆ m₂' ∧ rejoin (.join m₁ (renameJCom succ m₂)) js ⇒⋆ rejoin m₂' js ∧ rejoin m₂' js ⇒⋆ n := by
+  cases r with | _ rn nfn =>
+  generalize e : rejoin (.join m₁ (renameJCom succ m₂)) js = m at rn
+  induction rn generalizing m₂
+  case refl => subst e; cases nfn.rejoin't (by simp)
+  case trans r rs ih =>
+    subst e
+    match r.wkJoin h with
+    | .inl e =>
+      subst e
+      let ⟨_, r, e⟩ := r.rejoin_inv
+      refine ⟨_, .refl, ?_, rs⟩; rw [e]
+      exact .rejoin (.once r)
+    | .inr ⟨n, rn, en⟩ =>
+      subst en
+      have ⟨_, rn', rjoin, rs⟩ := ih (rn.scopeJ h) nfn rfl
+      refine ⟨_, .trans rn rn', .trans (.rejoin (.join (rn.renameJ h))) rjoin, rs⟩

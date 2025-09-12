@@ -35,7 +35,7 @@ open Nat Val Com
 @[reducible] def J := List Com
 
 @[simp]
-def rejoin (m : Com) : J → Com
+def Com.rejoin (m : Com) : J → Com
   | .nil => m
   | .cons n js => rejoin (join n m) js
 
@@ -43,6 +43,14 @@ theorem Eval.rejoin {m n js} (r : m ⇒ n) : rejoin m js ⇒ rejoin n js := by
   induction js generalizing m n
   case nil => exact r
   case cons ih => simp; exact ih (.join r)
+
+theorem Eval.rejoin_inv {js m₁ m₂ m} (r : .rejoin (.join m₁ m₂) js ⇒ m) :
+  ∃ m', .join m₁ m₂ ⇒ m' ∧ m = .rejoin m' js := by
+  induction js generalizing m₁ m₂
+  case nil => simpa
+  case cons ih =>
+    let ⟨_, r, e⟩ := ih r
+    cases r with | join r => exact ⟨_, r, e⟩
 
 theorem Evals.rejoin {m n js} (r : m ⇒⋆ n) : rejoin m js ⇒⋆ rejoin n js := by
   induction r
@@ -56,6 +64,11 @@ theorem nf.rejoinDrop {m js} : nf m → rejoin m js ⇒⋆ m := by
     induction js <;> simp [RTC.refl]
     case cons ih =>
       refine .trans' (Evals.rejoin (.once ?_)) ih; constructor
+
+theorem nf.rejoin't {js m} (nfmn't : ¬ nf m) : ¬ nf (rejoin m js) := by
+  induction js generalizing m
+  case nil => exact nfmn't
+  case cons ih => apply ih; simp
 
 theorem Norm.bwdsRejoin {m n n' js} (r : m ⇒⋆ n) : n ⇓ₙ n' → rejoin m js ⇓ₙ n'
   | ⟨r', nfn⟩ => ⟨.trans' (Evals.rejoin (.trans' r r')) nfn.rejoinDrop, nfn⟩
