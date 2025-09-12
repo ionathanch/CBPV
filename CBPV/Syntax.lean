@@ -444,6 +444,8 @@ theorem renameDropSubst σ m v : ((renameCom (lift succ) m)⦃⇑⇑ σ⦄⦃⇑
   Contexts and membership
 ------------------------*-/
 
+/-* Term contexts *-/
+
 inductive Ctxt : Type where
   | nil : Ctxt
   | cons : Ctxt → ValType → Ctxt
@@ -464,6 +466,8 @@ theorem Ctxt.inLength {Γ x A} (h : Γ ∋ x ∶ A) : x < Γ.length := by
   induction h
   case here => simp
   case there ih => simp [ih]
+
+/-* Jump contexts *-/
 
 inductive Dtxt : Type where
   | nil : Dtxt
@@ -490,6 +494,8 @@ theorem Dtxt.inLength {Δ j A B} (h : Δ ∋ j ∶ A ↗ B) : j < Δ.length := b
   Well-scoped renamings
 ----------------------*-/
 
+/-* Term renamings *-/
+
 def wRename (ξ : Nat → Nat) (Γ Δ : Ctxt) := ∀ x A, Γ ∋ x ∶ A → Δ ∋ ξ x ∶ A
 notation:40 Δ:41 "⊢" ξ:41 "∶" Γ:41 => wRename ξ Γ Δ
 
@@ -503,3 +509,19 @@ theorem wRenameLift {ξ : Nat → Nat} {Γ Δ A}
   cases mem with
   | here => exact Ctxt.In.here
   | there => apply_rules [Ctxt.In.there]
+
+/-* Jump renamings *-/
+
+def wRenameJ (ξ : Nat → Nat) (Δ Φ : Dtxt) := ∀ j A B, Δ ∋ j ∶ A ↗ B → Φ ∋ ξ j ∶ A ↗ B
+notation:40 Φ "⊢" ξ:41 "∶" Δ:41 => wRenameJ ξ Δ Φ
+
+theorem wRenameJSucc {Δ A B} : Δ ∷ A ↗ B ⊢ succ ∶ Δ := by
+  intro j A' B' mem; constructor; assumption
+
+theorem wRenameJLift {ξ : Nat → Nat} {Δ Φ : Dtxt} {A B}
+  (h : Φ ⊢ ξ ∶ Δ) :
+  Φ ∷ A ↗ B ⊢ lift ξ ∶ Δ ∷ A ↗ B := by
+  intro x A' B' mem
+  cases mem with
+  | here => exact Dtxt.In.here
+  | there => apply_rules [Dtxt.In.there]

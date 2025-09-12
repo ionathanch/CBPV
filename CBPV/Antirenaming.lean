@@ -93,13 +93,16 @@ theorem ScopeSubstJ.lift {σ} (hσ : ScopeSubstJ σ) : ScopeSubstJ (⇑ σ) := b
   intro n; cases n <;> simp [up]; constructor
   case succ n => exact renameScope.left (hσ n)
 
-theorem substScope {σ : Nat → Val} (hσ : ScopeSubstJ σ) :
+theorem substScope {σ} (hσ : ScopeSubstJ σ) :
   (∀ {v}, ScopeValJ v → ScopeValJ (v⦃σ⦄)) ∧
   (∀ {δ m}, ScopeComJ δ m → ScopeComJ δ (m⦃σ⦄)) := by
   refine ⟨λ hv ↦ ?val, λ hm ↦ ?com⟩
   mutual_induction hv, hm generalizing σ
   case var x => exact hσ x
   all_goals constructor <;> try apply_rules [ScopeSubstJ.lift]
+
+theorem ScopeComJ.subst {δ σ m} (hσ : ScopeSubstJ σ) : ScopeComJ δ m → ScopeComJ δ (m⦃σ⦄) :=
+  (substScope hσ).right
 
 theorem ScopeComJ.subst1 {δ m v} (hv : ScopeValJ v) (hm : ScopeComJ δ m) : ScopeComJ δ (m⦃v⦄) := by
   refine (substScope ?_).right hm
