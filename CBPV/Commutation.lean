@@ -1,4 +1,5 @@
 import CBPV.Equivalence
+import CBPV.Antirenaming
 
 open Nat ValType ComType Val Com
 
@@ -281,6 +282,40 @@ theorem sndCase {Γ Δ v m₁ m₂ B₁ B₂}
       _ ⇒⋆ snd (prod _ n₂)   := r₂'.snd
       _ ⇒ n₂                 := .π2
     exact ℰ.bwdsRejoin r₁' r₂' hB₁
+
+theorem joinJoin {Γ Δ n₁ n₂ m A B} (hn₁ : Γ ∷ A ∣ Δ ⊢ n₁ ∶ B) (hn₂ : Γ ∷ A ∣ Δ ∷ A ↗ B ⊢ n₂ ∶ B) (hm : Γ ∣ Δ ∷ A ↗ B ⊢ m ∶ B) :
+  Γ ∣ Δ ⊨ join (join (renameCom (lift succ) n₁) n₂) m ~ join n₁ (join n₂ (renameJCom (lift succ) m)) ∶ B := by
+  intro σ τ hστ js₁ js₂ hjs
+  have hn := ComWt.join (wtWeakenCom₂ hn₁) hn₂
+  refine ℰ.bwdsRejoin .refl .refl ?_
+  have hjsn₁' := semDtxt.cons hjs (λ hvw ↦
+    have hn := soundCom hn₁ (semCtxt.cons hvw hστ) hjs
+    by rw [← substUnion σ, ← substUnion τ] at hn; exact hn)
+  have hjsn₁ := semDtxt.cons hjs (λ hvw ↦
+    have hn := soundCom hn (semCtxt.cons hvw hστ) hjs
+    by rw [substUnion σ, substUnion τ]; exact hn)
+  have what := soundCom hm hστ hjsn₁; simp only [rejoin] at what
+  sorry
+
+theorem dropJoin {Γ Δ m₁ m₂ A B} (h₁ : Γ ∷ A ∣ Δ ⊢ m₁ ∶ B) (h₂ : Γ ∣ Δ ⊢ m₂ ∶ B) :
+  ∀ σ τ, Γ ⊨ σ ~ τ → ∀ js₁ js₂, Δ ⊨ js₁ ~ js₂ → ScopeSubstJ τ →
+  (rejoin (m₂⦃σ⦄) js₁, rejoin ((join m₁ (renameJCom succ m₂))⦃τ⦄) js₂) ∈ ⟦B⟧ᵉ := by
+  intro σ τ hστ js₁ js₂ hjs hτ
+  -- get rid of join m₁
+  have hm₂ := soundCom (.join h₁ (wtWeakenJ h₂)) hστ hjs
+  unfold ℰ at hm₂
+  let ⟨_, n₂, _, rn₂, _⟩ := hm₂
+  have nfn₂ := rn₂.2
+  simp [renameJSubst] at rn₂; simp [renameJSubst]
+  let ⟨_, rm₂, rjoin, rn₂⟩ := rn₂.wkJoin (h₂.scopeJ.subst hτ)
+  refine ℰ.bwds .refl (.trans' rjoin rn₂) ?_
+  -- merge reductions via confluence
+  have hm₂ := soundCom h₂ hστ hjs
+  unfold ℰ at hm₂
+  let ⟨_, n₂', rn₁, ⟨rn₂', nfn₂'⟩, hB'⟩ := hm₂
+  let ⟨n, rn, rn'⟩ := confluence (RTC.trans' rm₂.rejoin rn₂) rn₂'
+  rw [nfn₂'.steps rn'] at hB' nfn₂'
+  unfold ℰ; exact ⟨_, _, rn₁, ⟨rn, nfn₂'⟩, hB'⟩
 
 theorem caseOfCase {Γ Δ v m₁ m₂ m₃ m₄ B} {A₁ A₂ A₃ A₄ : ValType}
   (hv : Γ ⊢ v ∶ Sum A₃ A₄)
