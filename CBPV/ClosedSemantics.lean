@@ -14,13 +14,13 @@ def 𝒱 (A : ValType) (v : Val) : Prop :=
   | .Sum A₁ A₂ => (∃ w, 𝒱 A₁ w ∧ v = inl w) ∨ (∃ w, 𝒱 A₂ w ∧ v = inr w)
   | U B => ∃ m, ℰ B m ∧ v = thunk m
 
-def 𝒞 (B : ComType) (m : Com) : Prop :=
+def 𝒞 {δ} (B : ComType) (m : Com δ) : Prop :=
   match B with
   | F A => ∃ v, 𝒱 A v ∧ m = ret v
   | Arr A B => ∃ n, (∀ v, 𝒱 A v → ℰ B (n⦃v⦄)) ∧ m = lam n
   | .Prod B₁ B₂ => ∃ n₁ n₂, ℰ B₁ n₁ ∧ ℰ B₂ n₂ ∧ m = prod n₁ n₂
 
-def ℰ (B : ComType) (m : Com) := ∃ n, m ⇓ₙ n ∧ 𝒞 B n
+def ℰ {δ} (B : ComType) (m : Com δ) := ∃ n, m ⇓ₙ n ∧ 𝒞 B n
 end
 notation:40 v:41 "∈" "⟦" A:41 "⟧ᵛ" => 𝒱 A v
 notation:40 m:41 "∈" "⟦" B:41 "⟧ᶜ" => 𝒞 B m
@@ -28,14 +28,14 @@ notation:40 m:41 "∈" "⟦" B:41 "⟧ᵉ" => ℰ B m
 
 /-* Semantic computations are normal and embed into semantic evaluations *-/
 
-theorem 𝒞.nf {B m} (h : m ∈ ⟦ B ⟧ᶜ) : nf m :=
+theorem 𝒞.nf {δ B m} (h : m ∈ ⟦ B ⟧ᶜ) : @nf δ m :=
   match (generalizing := true) B with
   | F _ | Arr _ _ =>
     by unfold 𝒞 at h; let ⟨_, _, e⟩ := h; subst e; exact ⟨⟩
   | .Prod _ _ =>
     by unfold 𝒞 at h; let ⟨_, _, _, _, e⟩ := h; subst e; exact ⟨⟩
 
-theorem 𝒞ℰ {B m} (h : m ∈ ⟦ B ⟧ᶜ) : m ∈ ⟦ B ⟧ᵉ :=
+theorem 𝒞ℰ {δ B} {m : Com δ} (h : m ∈ ⟦ B ⟧ᶜ) : m ∈ ⟦ B ⟧ᵉ :=
   by unfold ℰ; exact ⟨m, ⟨.refl, 𝒞.nf h⟩, h⟩
 
 /-* Convenient constructors for the logical relation *-/
@@ -44,24 +44,28 @@ theorem 𝒱.unit : 𝒱 Unit unit := by simp [𝒱]
 theorem 𝒱.inl {v A₁ A₂} (h : v ∈ ⟦A₁⟧ᵛ) : inl v ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [𝒱, h]
 theorem 𝒱.inr {v A₁ A₂} (h : v ∈ ⟦A₂⟧ᵛ) : inr v ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [𝒱, h]
 theorem 𝒱.thunk {m B} (h : m ∈ ⟦B⟧ᵉ) : thunk m ∈ ⟦U B⟧ᵛ := by simp [𝒱, h]
-theorem ℰ.ret {v A} (h : v ∈ ⟦A⟧ᵛ) : ret v ∈ ⟦F A⟧ᵉ := by apply 𝒞ℰ; simp [𝒞, h]
-theorem ℰ.lam {n A B} (h : ∀ v, v ∈ ⟦A⟧ᵛ → n⦃v⦄ ∈ ⟦B⟧ᵉ) : lam n ∈ ⟦Arr A B⟧ᵉ := by apply 𝒞ℰ; simp [𝒞]; exact h
-theorem ℰ.prod {m n B₁ B₂} (hm : m ∈ ⟦B₁⟧ᵉ) (hn : n ∈ ⟦B₂⟧ᵉ) : prod m n ∈ ⟦Prod B₁ B₂⟧ᵉ := by apply 𝒞ℰ; simp [𝒞]; exact ⟨hm, hn⟩
+theorem ℰ.ret {δ v A} (h : v ∈ ⟦A⟧ᵛ) : @ret δ v ∈ ⟦F A⟧ᵉ := by apply 𝒞ℰ; simp [𝒞, h]
+theorem ℰ.lam {δ n A B} (h : ∀ v, v ∈ ⟦A⟧ᵛ → n⦃v⦄ ∈ ⟦B⟧ᵉ) : @lam δ n ∈ ⟦Arr A B⟧ᵉ := by apply 𝒞ℰ; simp [𝒞]; exact h
+theorem ℰ.prod {δ m n B₁ B₂} (hm : m ∈ ⟦B₁⟧ᵉ) (hn : n ∈ ⟦B₂⟧ᵉ) : @prod δ m n ∈ ⟦Prod B₁ B₂⟧ᵉ := by apply 𝒞ℰ; simp [𝒞]; exact ⟨hm, hn⟩
 
 /-* Semantic evaluations are backward closed under reduction *-/
 
-theorem ℰ.bwds {B m n} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᵉ) : m ∈ ⟦ B ⟧ᵉ := by
+theorem ℰ.bwds {δ B} {m n : Com δ} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᵉ) : m ∈ ⟦ B ⟧ᵉ := by
   unfold ℰ at *
   let ⟨n', nn', h⟩ := h
   exact ⟨n', nn'.bwds r, h⟩
 
-theorem ℰ.bwdsRejoin {B m n js} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᵉ) : rejoin m js ∈ ⟦ B ⟧ᵉ := by
+theorem ℰ.bwdsRejoin {δ B js} {m n : Com 0} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᵉ) : rejoin (weakenJCom δ m) js ∈ ⟦ B ⟧ᵉ := by
   unfold ℰ at *
   let ⟨n', nn', h⟩ := h
   exact ⟨n', nn'.bwdsRejoin r, h⟩
 
-theorem ℰ.bwd {B m n} (r : m ⇒ n) : n ∈ ⟦ B ⟧ᵉ → m ∈ ⟦ B ⟧ᵉ := ℰ.bwds (.once r)
-theorem ℰ.bwdRejoin {B m n js} (r : m ⇒ n) : n ∈ ⟦ B ⟧ᵉ → rejoin m js ∈ ⟦ B ⟧ᵉ := ℰ.bwdsRejoin (.once r)
+theorem ℰ.bwdsRejoin0 {δ B js} {m n : Com 0} (r : m ⇒⋆ weakenJCom 0 n) (h : n ∈ ⟦ B ⟧ᵉ) : rejoin (weakenJCom δ m) js ∈ ⟦ B ⟧ᵉ := by
+  rw [weakenJCom0] at r; exact h.bwdsRejoin r
+
+theorem ℰ.bwd {δ B} {m n : Com δ} (r : m ⇒ n) : n ∈ ⟦ B ⟧ᵉ → m ∈ ⟦ B ⟧ᵉ := ℰ.bwds (.once r)
+theorem ℰ.bwdRejoin {δ B js} {m n : Com 0} (r : m ⇒ n) : n ∈ ⟦ B ⟧ᵉ → rejoin (weakenJCom δ m) js ∈ ⟦ B ⟧ᵉ := ℰ.bwdsRejoin (.once r)
+theorem ℰ.bwdRejoin0 {δ B js} {m n : Com 0} (r : m ⇒ weakenJCom 0 n) : n ∈ ⟦ B ⟧ᵉ → rejoin (weakenJCom δ m) js ∈ ⟦ B ⟧ᵉ := ℰ.bwdsRejoin0 (.once r)
 
 /-*----------------
   Semantic typing
@@ -82,9 +86,9 @@ theorem semCtxt.cons {Γ σ v A} (h : v ∈ ⟦ A ⟧ᵛ) (hσ : Γ ⊨ σ) : Γ
 section
 set_option hygiene false
 local notation:40 Δ:41 "⊨" js:41 => semDtxt Δ js
-inductive semDtxt : Dtxt → J → Prop where
+inductive semDtxt : ∀ {δ}, Dtxt δ → J δ → Prop where
   | nil : ⬝ ⊨ .nil
-  | cons {Δ : Dtxt} {js m A B} : Δ ⊨ js →
+  | cons {δ} {Δ : Dtxt δ} {js m A B} : Δ ⊨ js →
     (∀ {v}, v ∈ ⟦ A ⟧ᵛ → (rejoin (m⦃v⦄) js) ∈ ⟦ B ⟧ᵉ) →
     Δ ∷ A ↗ B ⊨ .cons m js
 end
@@ -93,7 +97,7 @@ notation:40 Δ:41 "⊨" js:41 => semDtxt Δ js
 /-* Semantic typing of values and computations *-/
 
 @[simp] def semVal (Γ : Ctxt) v A := ∀ σ, Γ ⊨ σ → v⦃σ⦄ ∈ ⟦ A ⟧ᵛ
-@[simp] def semCom (Γ : Ctxt) (Δ : Dtxt) m B := ∀ σ, Γ ⊨ σ → ∀ js, Δ ⊨ js → rejoin (m⦃σ⦄) js ∈ ⟦ B ⟧ᵉ
+@[simp] def semCom (Γ : Ctxt) {δ} (Δ : Dtxt δ) m B := ∀ σ, Γ ⊨ σ → ∀ js, Δ ⊨ js → rejoin (m⦃σ⦄) js ∈ ⟦ B ⟧ᵉ
 notation:40 Γ:41 "⊨" v:41 "∶" A:41 => semVal Γ v A
 notation:40 Γ:41 "∣" Δ:41 "⊨" m:41 "∶" B:41 => semCom Γ Δ m B
 
@@ -102,9 +106,9 @@ notation:40 Γ:41 "∣" Δ:41 "⊨" m:41 "∶" B:41 => semCom Γ Δ m B
   of syntactic typing wrt semantic typing
 ----------------------------------------*-/
 
-theorem rejoinJump {Γ : Ctxt} {Δ : Dtxt} {js j A B} (mem : Δ ∋ j ∶ A ↗ B) (h : Δ ⊨ js) :
+theorem rejoinJump {Γ : Ctxt} {δ} {Δ : Dtxt δ} {js j A B} (mem : Δ ∋ j ∶ A ↗ B) (h : Δ ⊨ js) :
   ∀ {σ v}, Γ ⊨ σ → v ∈ ⟦ A ⟧ᵛ → (rejoin (jump j v) js) ∈ ⟦ B ⟧ᵉ := by
-  induction h generalizing j A B
+  induction h generalizing A B
   case nil => cases mem
   case cons h _ =>
     cases mem
@@ -117,7 +121,7 @@ theorem rejoinJump {Γ : Ctxt} {Δ : Dtxt} {js j A B} (mem : Δ ∋ j ∶ A ↗ 
 
 theorem soundness {Γ} :
   (∀ (v : Val) A, Γ ⊢ v ∶ A → Γ ⊨ v ∶ A) ∧
-  (∀ {Δ} (m : Com) B, Γ ∣ Δ ⊢ m ∶ B → Γ ∣ Δ ⊨ m ∶ B) := by
+  (∀ {δ Δ} (m : Com δ) B, Γ ∣ Δ ⊢ m ∶ B → Γ ∣ Δ ⊨ m ∶ B) := by
   refine ⟨λ v A h ↦ ?val, λ m B h ↦ ?com⟩
   mutual_induction h, h
   all_goals intro σ hσ
@@ -130,17 +134,16 @@ theorem soundness {Γ} :
   case force ih =>
     simp [𝒱] at ih
     let ⟨m, h, e⟩ := ih σ hσ
-    simp; rw [e]
-    exact ℰ.bwdRejoin .π h
-  case lam ih =>
-    refine ℰ.bwdsRejoin .refl (ℰ.lam (λ v hv ↦ ?_))
+    simp [e]; exact ℰ.bwdRejoin0 .π h
+  case lam m _ _ _ ih =>
+    refine ℰ.bwdsRejoin0 (n := (lam m)⦃σ⦄) .refl (ℰ.lam (λ v hv ↦ ?hB))
     rw [substUnion]
     exact ih (v +: σ) (semCtxt.cons hv hσ) .nil .nil
-  case app ihm ihv =>
+  case app v _ _ _ _ ihm ihv =>
     simp [ℰ] at ihm; simp [𝒞] at ihm
     let ⟨_, ⟨rlam, _⟩, n, h, e⟩ := ihm σ hσ .nil .nil; subst e
-    exact ℰ.bwdsRejoin (.trans' (Evals.app rlam) (.once .β)) (h _ (ihv σ hσ))
-  case ret ih => exact ℰ.bwdsRejoin .refl (ℰ.ret (ih σ hσ))
+    exact ℰ.bwdsRejoin0 (js := js) (.trans' (Evals.app rlam) (.once .β)) (h _ (ihv σ hσ))
+  case ret ih => exact ℰ.bwdsRejoin0 .refl (ℰ.ret (ih σ hσ))
   case letin ihret ih =>
     simp [ℰ, 𝒞] at ihret
     let ⟨_, ⟨rret, _⟩, v, hv, e⟩ := ihret σ hσ .nil .nil; subst e
@@ -159,15 +162,15 @@ theorem soundness {Γ} :
       simp [e]; rw [← substUnion] at hn
       exact ℰ.bwd (.rejoin .ιr) hn
   case prod ihm ihn =>
-    exact ℰ.bwdsRejoin .refl (ℰ.prod (ihm σ hσ .nil .nil) (ihn σ hσ .nil .nil))
+    exact ℰ.bwdsRejoin0 .refl (ℰ.prod (ihm σ hσ .nil .nil) (ihn σ hσ .nil .nil))
   case fst ih =>
     simp [ℰ] at ih; unfold 𝒞 at ih
     let ⟨_, ⟨rprod, _⟩, n₁, n₂, hm, _, e⟩ := ih σ hσ .nil .nil; subst e
-    exact ℰ.bwdsRejoin (.trans' (Evals.fst rprod) (.once .π1)) hm
+    exact ℰ.bwdsRejoin0 (.trans' (Evals.fst rprod) (.once .π1)) hm
   case snd ih =>
     simp [ℰ] at ih; unfold 𝒞 at ih
     let ⟨_, ⟨rprod, nfprod⟩, n₁, n₂, _, hn, e⟩ := ih σ hσ .nil .nil; subst e
-    exact ℰ.bwdsRejoin (.trans' (Evals.snd rprod) (.once .π2)) hn
+    exact ℰ.bwdsRejoin0 (.trans' (Evals.snd rprod) (.once .π2)) hn
   case join m _ _ _ _ _ ihm ihn =>
     let hn := ihn σ hσ (.cons (m⦃⇑ σ⦄) js) (.cons hjs (λ {v} hv ↦ ?hm))
     case hm =>
@@ -186,7 +189,7 @@ theorem normal {m B} (nr : ∀ {n}, ¬ m ⇒ n) (h : ⬝ ∣ ⬝ ⊢ m ∶ B) : 
   cases r with | refl => exact nfm | trans r _ => cases nr r
 
 -- Computations are strongly normalizing
-theorem normalization {m : Com} {B : ComType} (h : ⬝ ∣ ⬝ ⊢ m ∶ B) : SN m := by
+theorem normalization {m : Com 0} {B : ComType} (h : ⬝ ∣ ⬝ ⊢ m ∶ B) : SN m := by
   let ⟨_, soundCom⟩ := soundness (Γ := ⬝)
   let mB := soundCom m B h
   simp [ℰ] at mB

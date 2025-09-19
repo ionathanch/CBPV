@@ -231,7 +231,7 @@ def transValue : CBV.Value → Val
   | .pair v w => .thunk (.prod (.ret (⟦ v ⟧ᵛ)) (.ret (⟦ w ⟧ᵛ)))
 
 @[simp]
-def transTerm : CBV.Term → Com
+def transTerm : CBV.Term → Com 0
   | .val v => .ret (⟦ v ⟧ᵛ)
   | .app t u =>
     .letin (⟦ t ⟧ᵗ)
@@ -259,16 +259,16 @@ section
 set_option hygiene false
 local notation:40 "⟦" k:41 "⟧ᴷ" => transK k
 @[simp]
-def transK : CBV.K → K
-  | [] => []
+def transK : CBV.K → K 0
+  | [] => .nil
   | .app₁ u :: k   => .letin (.letin (renameCom succ (⟦ u ⟧ᵗ))
-                        (.app (.force (.var 1)) (.var 0))) :: (⟦ k ⟧ᴷ)
-  | .app₂ v :: k   => .letin (.app (.force (renameVal succ (⟦ v ⟧ᵛ))) (.var 0)) :: (⟦ k ⟧ᴷ)
+                        (.app (.force (.var 1)) (.var 0))) (⟦ k ⟧ᴷ)
+  | .app₂ v :: k   => .letin (.app (.force (renameVal succ (⟦ v ⟧ᵛ))) (.var 0)) (⟦ k ⟧ᴷ)
   | .case t u :: k => .letin (.case (.var 0)
                         (renameCom (lift succ) (⟦ t ⟧ᵗ))
-                        (renameCom (lift succ) (⟦ u ⟧ᵗ))) :: (⟦ k ⟧ᴷ)
-  | .fst :: k      => .letin (.fst (.force (.var 0))) :: (⟦ k ⟧ᴷ)
-  | .snd :: k      => .letin (.snd (.force (.var 0))) :: (⟦ k ⟧ᴷ)
+                        (renameCom (lift succ) (⟦ u ⟧ᵗ))) (⟦ k ⟧ᴷ)
+  | .fst :: k      => .letin (.fst (.force (.var 0))) (⟦ k ⟧ᴷ)
+  | .snd :: k      => .letin (.snd (.force (.var 0))) (⟦ k ⟧ᴷ)
 end
 notation:40 "⟦" k:41 "⟧ᴷ" => transK k
 
@@ -320,7 +320,7 @@ theorem transRename {ξ} :
 def transRenameVal {ξ v} := (transRename (ξ := ξ)).left (v := v)
 def transRenameCom {ξ t} := (transRename (ξ := ξ)).right (t := t)
 
-theorem transUp {σ m} : substCom (⇑ (⟦ σ ⟧ˢ)) m = substCom (⟦ ⇑ σ ⟧ˢ) m := by
+theorem transUp {δ σ} {m : Com δ} : substCom (⇑ (⟦ σ ⟧ˢ)) m = substCom (⟦ ⇑ σ ⟧ˢ) m := by
   apply substComExt; intro n; cases n <;> simp [up, transRenameVal] <;> rfl
 
 theorem transSubst {σ} :
@@ -343,7 +343,7 @@ def transSubstCom {σ t} := (transSubst (σ := σ)).right (t := t)
 
 /-* Translation preserves machine semantics *-/
 
-theorem simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨⟦ t ⟧ᵗ, ⟦ k ⟧ᴷ⟩ ⤳⋆ ⟨⟦ u ⟧ᵗ, ⟦ k' ⟧ᴷ⟩ := by
+theorem simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨0, ⟦ t ⟧ᵗ, ⟦ k ⟧ᴷ⟩ ⤳⋆ ⟨0, ⟦ u ⟧ᵗ, ⟦ k' ⟧ᴷ⟩ := by
   generalize et : (t, k)  = ck  at r
   generalize eu : (u, k') = ck' at r
   induction r
@@ -356,7 +356,7 @@ theorem simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨⟦ t ⟧
       _ ⤳ _ := Step.π
       _ ⤳ _ := Step.β
       _ = _ := by
-        rw [substUnion, substDrop₂, ← transSubstCom, substComExt]
+        rw [weakenJCom0, substUnion, substDrop₂, ← transSubstCom, substComExt]
         intro n; cases n <;> rfl
   case ιl =>
     calc

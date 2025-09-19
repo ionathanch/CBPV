@@ -32,43 +32,46 @@ open Nat Val Com
   or evaluation rules of the language.
 ---------------------------------------------------------------*-/
 
-@[reducible] def J := List Com
+inductive J : Nat → Type where
+  | nil : J 0
+  | cons {δ} : Com δ → J δ → J (δ + 1)
 
 @[simp]
-def Com.rejoin (m : Com) : J → Com
+def Com.rejoin {δ} (m : Com δ) : J δ → Com 0
   | .nil => m
   | .cons n js => rejoin (join n m) js
 
-theorem Eval.rejoin {m n js} (r : m ⇒ n) : rejoin m js ⇒ rejoin n js := by
-  induction js generalizing m n
+theorem Eval.rejoin {δ m n js} (r : m ⇒ n) : @rejoin δ m js ⇒ @rejoin δ n js := by
+  induction js
   case nil => exact r
   case cons ih => simp; exact ih (.join r)
 
-theorem Eval.rejoin_inv {js m₁ m₂ m} (r : .rejoin (.join m₁ m₂) js ⇒ m) :
+theorem Eval.rejoin_inv {δ js m₁ m₂ m} (r : .rejoin (@Com.join δ m₁ m₂) js ⇒ m) :
   ∃ m', .join m₁ m₂ ⇒ m' ∧ m = .rejoin m' js := by
-  induction js generalizing m₁ m₂
+  induction js
   case nil => simpa
   case cons ih =>
     let ⟨_, r, e⟩ := ih r
     cases r with | join r => exact ⟨_, r, e⟩
 
-theorem Evals.rejoin {m n js} (r : m ⇒⋆ n) : rejoin m js ⇒⋆ rejoin n js := by
+theorem Evals.rejoin {δ m n js} (r : m ⇒⋆ n) : @rejoin δ m js ⇒⋆ @rejoin δ n js := by
   induction r
   case refl => rfl
   case trans r _ rs => exact .trans (r.rejoin) rs
 
-theorem nf.rejoinDrop {m js} : nf m → rejoin m js ⇒⋆ m := by
-  intro nfm; mutual_induction m generalizing nfm js
+theorem nf.rejoinDrop {δ m js} : nf m → rejoin (weakenJCom δ m) js ⇒⋆ m := by
+  intro nfm; cases m
   all_goals simp at nfm
   case lam | ret | prod =>
-    induction js <;> simp [RTC.refl]
-    case cons ih =>
+    induction δ <;> cases js <;> simp [weakenJCom, RTC.refl]
+    case succ ih _ _ =>
       refine .trans' (Evals.rejoin (.once ?_)) ih; constructor
 
-theorem nf.rejoin't {js m} (nfmn't : ¬ nf m) : ¬ nf (rejoin m js) := by
-  induction js generalizing m
+theorem nf.rejoin't {δ m js} (nfmn't : ¬ @nf δ m) : ¬ nf (rejoin m js) := by
+  induction js
   case nil => exact nfmn't
   case cons ih => apply ih; simp
 
-theorem Norm.bwdsRejoin {m n n' js} (r : m ⇒⋆ n) : n ⇓ₙ n' → rejoin m js ⇓ₙ n'
-  | ⟨r', nfn⟩ => ⟨.trans' (Evals.rejoin (.trans' r r')) nfn.rejoinDrop, nfn⟩
+theorem Norm.bwdsRejoin {δ m n n' js} (r : m ⇒⋆ n) : n ⇓ₙ n' → rejoin (weakenJCom δ m) js ⇓ₙ n'
+  | ⟨r', nfn⟩ =>
+    ⟨.trans' (Evals.rejoin (Evals.weakenJ (.trans' r r'))) nfn.rejoinDrop, nfn⟩
