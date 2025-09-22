@@ -299,9 +299,40 @@ theorem sndCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ B₁ B₂}
     exact ℰ.bwdsRejoin r₁' r₂' hB₁
 
 theorem joinJoin {Γ δ} {Δ : Dtxt δ} {n₁ n₂ m A B} (hn₁ : Γ ∷ A ∣ Δ ⊢ n₁ ∶ B) (hn₂ : Γ ∷ A ∣ Δ ∷ A ↗ B ⊢ n₂ ∶ B) (hm : Γ ∣ Δ ∷ A ↗ B ⊢ m ∶ B) :
-  Γ ∣ Δ ⊨ join (join (renameCom (lift succ) n₁) n₂) m ~ join n₁ (join n₂ (renameJCom (liftJ Fin.succ) m)) ∶ B := by
+  Γ ∣ Δ ⊨ join (join (renameCom (lift succ) n₁) n₂) m ~ join n₁ (join n₂ (renameJCom (liftJ .succ) m)) ∶ B := by
   intro σ τ hστ js₁ js₂ hjs
-  sorry
+  have hright := soundCom (.join hn₁ (.join hn₂ (wtRenameJ (wRenameJLift wRenameJSucc) hm))) hστ hjs
+  unfold ℰ at hright
+  let ⟨_, m₂, _, rm₂, _⟩ := hright
+  have nfm₂ := rm₂.2
+  simp [renameJSubst] at rm₂; simp [renameJSubst]
+  match rm₂.wkJoin₂ with
+  | .inl ⟨v, rm, rjoin, rm₂⟩ =>
+    have hleft := soundCom (.join (.join (wtRenameCom (wRenameLift wRenameSucc) hn₁) hn₂) hm) hστ hjs
+    unfold ℰ at hleft
+    let ⟨_, _, rm₁, ⟨rm₂', nfm₂'⟩, hB⟩ := hleft
+    have r := by
+      calc rejoin (join ((join (renameCom (lift succ) n₁) n₂)⦃⇑ τ⦄) (m⦃τ⦄)) js₂
+      _ ⇒⋆ rejoin (join ((join (renameCom (lift succ) n₁) n₂)⦃⇑ τ⦄) (jump 0 v)) js₂ := .rejoin (.join rm)
+      _ ⇒ rejoin ((join (renameCom (lift succ) n₁) n₂)⦃⇑ τ⦄⦃v⦄) js₂ := .rejoin .γ
+      _ = rejoin (join (n₁⦃⇑ τ⦄) (n₂⦃v +: τ⦄)) js₂ := by rw [substUnion]; simp; rw [renameUpSubstCons]
+      _ ⇒⋆ m₂ := by rw [substUnion] at rm₂; exact rm₂
+    let ⟨n, rn, rn'⟩ := confluence r rm₂'
+    rw [nfm₂'.steps rn'] at hB nfm₂'
+    rw [nfm₂.steps rn] at rm₂
+    refine ℰ.bwds .refl (.trans' rjoin rm₂) ?_
+    unfold ℰ; exact ⟨_, _, rm₁, ⟨.refl, nfm₂'⟩, hB⟩
+  | .inr ⟨m', rm, rjoin, rm₂⟩ =>
+    have hleft := soundCom (.join (.join (wtRenameCom (wRenameLift wRenameSucc) hn₁) hn₂) hm) hστ hjs
+    unfold ℰ at hleft
+    let ⟨_, _, rm₁, ⟨rm₂', nfm₂'⟩, hB⟩ := hleft
+    let ⟨n, rn, rn'⟩ := confluence (.rejoin (.join rm)) rm₂'
+    rw [nfm₂'.steps rn'] at hB nfm₂'
+    let ⟨_, rm', _, rn⟩ := Norm.wkJoin ⟨rn, nfm₂'⟩
+    let ⟨_, rn ,rm₂'⟩ := confluence (.trans' (Evals.rejoin rm') rn) rm₂
+    rw [← nfm₂'.steps rn] at rm₂'
+    refine ℰ.bwds .refl (.trans' rjoin (.trans' rm₂ rm₂')) ?_
+    unfold ℰ; exact ⟨_, _, rm₁, ⟨.refl, nfm₂'⟩, hB⟩
 
 theorem dropJoin {Γ δ} {Δ : Dtxt δ} {m₁ m₂ A B} (h₁ : Γ ∷ A ∣ Δ ⊢ m₁ ∶ B) (h₂ : Γ ∣ Δ ⊢ m₂ ∶ B) :
   Γ ∣ Δ ⊨ m₂ ~ (join m₁ (renameJCom Fin.succ m₂)) ∶ B := by
@@ -317,10 +348,10 @@ theorem dropJoin {Γ δ} {Δ : Dtxt δ} {m₁ m₂ A B} (h₁ : Γ ∷ A ∣ Δ 
   -- merge reductions via confluence
   have hm₂ := soundCom h₂ hστ hjs
   unfold ℰ at hm₂
-  let ⟨_, n₂', rn₁, ⟨rn₂', nfn₂'⟩, hB'⟩ := hm₂
+  let ⟨_, n₂', rn₁, ⟨rn₂', nfn₂'⟩, hB⟩ := hm₂
   let ⟨n, rn, rn'⟩ := confluence (RTC.trans' rm₂.rejoin rn₂) rn₂'
-  rw [nfn₂'.steps rn'] at hB' nfn₂'
-  unfold ℰ; exact ⟨_, _, rn₁, ⟨rn, nfn₂'⟩, hB'⟩
+  rw [nfn₂'.steps rn'] at hB nfn₂'
+  unfold ℰ; exact ⟨_, _, rn₁, ⟨rn, nfn₂'⟩, hB⟩
 
 theorem caseOfCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ m₃ m₄ B} {A₁ A₂ A₃ A₄ : ValType}
   (hv : Γ ⊢ v ∶ Sum A₃ A₄)
