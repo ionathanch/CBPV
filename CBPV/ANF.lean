@@ -606,89 +606,97 @@ theorem semJumpA {Γ δ δ'} {Δ : Dtxt δ} {Δ' : Dtxt δ'} {k k' m m' B₁ B�
 
 theorem soundA {Γ} :
   (∀ {v} {A : ValType}, v.joinless → Γ ⊢ v ∶ A → Γ ⊨ v ~ ⟦v⟧ᵥ ∶ A) ∧
-  (∀ {δ} {Δ : Dtxt δ} {m k₁ k₂} {B₁ B₂ : ComType}, m.joinless →
-    Γ ∣ ⬝ ⊢ m ∶ B₁ → Γ ∣ Δ ⊢ k₁ ∶ B₁ ⇒ B₂ → Γ ∣ Δ ⊢ k₂ ∶ B₁ ⇒ B₂ →
-    Γ ∣ Δ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₂ → Γ ∣ Δ ⊨ (k₁[m]) ~ ⟦m⟧ₘ k₂ # zero_le δ ∶ B₂) := by
-  refine ⟨λ vj h ↦ ?val, λ mj h wtk₁ wtk₂ hk ↦ ?com⟩
-  case' com => generalize e : Dtxt.nil = Δ' at h
+  (∀ {δ δ'} {Δ : Dtxt δ} {Δ' : Dtxt δ'} {m k₁ k₂} {B₁ B₂ : ComType} (eq : δ' = 0), m.joinless →
+    Γ ∣ Δ' ⊢ m ∶ B₁ → Γ ∣ Δ ⊢ k₁ ∶ B₁ ⇒ B₂ → Γ ∣ Δ ⊢ k₂ ∶ B₁ ⇒ B₂ →
+    Γ ∣ Δ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₂ → Γ ∣ Δ ⊨ (k₁[cast (congrArg Com eq) m]) ~ ⟦m⟧ₘ k₂ # cast (congrArg (· ≤ δ) eq.symm) (zero_le δ) ∶ B₂) := by
+  refine ⟨λ vj h ↦ ?val, λ {δ δ' Δ Δ' m k₁ k₂ B₁ B₂} eq mj h wtk₁ wtk₂ hk ↦ ?com⟩
   mutual_induction h, h
-  all_goals intro σ τ; try subst e
-  case force ih _ _ _ _ =>
-    refine hk.plug (λ hστ _ _ _ ↦ ?_)
+  all_goals intro σ τ; try subst eq
+  case force ih _ =>
+    refine hk.plug (λ hστ js₁ js₂ _ ↦ ?_)
+    cases js₁; cases js₂
     unfold semVal 𝒱 at ih
-    let ⟨_, _, h, em, en⟩ := ih mj hστ
-    simp [em, en]; exact ℰ.bwdRejoin .π .π h
-  case lam ih _ _ _ _ =>
-    refine hk.plug (λ hστ _ _ _ ↦ ℰ.bwdsRejoin .refl .refl (ℰ.lam (λ v w hA ↦ ?_)))
+    let ⟨m, n, h, em, en⟩ := ih mj hστ; simp [em, en]
+    refine ℰ.bwd .π .π ?_; simp [weakenJCom0, h]
+  case lam ih _ =>
+    refine hk.plug (λ hστ js₁ js₂ _ ↦ ?_)
+    cases js₁; cases js₂
+    refine ℰ.lam (λ v w hA ↦ ?_)
     rw [substUnion, substUnion]
-    exact ih mj .nil .nil (soundK .nil) rfl (semCtxt.cons hA hστ) .nil
-  case app hv ihm ihv _ k₁ k₂ _ =>
+    have goal := ih rfl mj .nil .nil (soundK .nil) (semCtxt.cons hA hστ) .nil
+    simp [weakenJCom0] at goal; exact goal
+  case app hv ihm ihv _ =>
     let ⟨mj, vj⟩ := mj
-    exact ihm mj (.app hv wtk₁) (.app (.preservation vj hv) wtk₂) (semK.app (ihv vj) hk) rfl
-  case ret ih _ _ _ _ =>
-    refine hk.plug (λ hστ _ _ _ ↦  ?_)
-    exact ℰ.bwdsRejoin .refl .refl (ℰ.ret (ih mj hστ))
-  case letin hn ihn _ _ _ _ hm ihm =>
-    let ⟨nj, mj⟩ := mj
+    exact ihm rfl mj (.app hv wtk₁) (.app (.preservation vj hv) wtk₂) (semK.app (ihv vj) hk)
+  case ret ih _ =>
+    refine hk.plug (λ hστ js₁ js₂ _ ↦  ?_)
+    cases js₁; cases js₂
+    exact ℰ.ret (ih mj hστ)
+  case letin hn ihn Δ' _ hm ihm =>
+    cases Δ'; let ⟨nj, mj⟩ := mj
     refine semCom.trans (semKletin wtk₁ (.letin hn hm)) ?_
-    exact ihn nj
+    exact ihn rfl nj
       (.letin (wtk₁.weaken.plug hm))
-      (.letin (.preservation mj wtk₂.weaken hm))
-      (semK.letin (ihm mj wtk₁.weaken wtk₂.weaken hk.weaken rfl)) rfl
-  case case Γ v m n A₁ A₂ B₁ hv ihv Δ k₁ k₂ B₂ hm₁ hm₂ ihm₁ ihm₂ =>
-    let ⟨vj, mj₁, mj₂⟩ := mj
+      (.letin (.preservation (zero_le δ) mj wtk₂.weaken hm))
+      (semK.letin (ihm rfl mj wtk₁.weaken wtk₂.weaken hk.weaken))
+  case case Γ v A₁ A₂ B₁ hv ihv Δ' m n hm₁ hm₂ ihm₁ ihm₂ =>
+    cases Δ'; let ⟨vj, mj₁, mj₂⟩ := mj
     refine semCom.trans (semKcase wtk₁ (.case hv hm₁ hm₂)) (λ hστ js₁ js₂ hjs ↦ ?_)
     unfold semVal 𝒱 at ihv
     match ihv vj hστ with
     | .inl ⟨v, w, hA₁, ev, ew⟩ =>
-      have hB₂ := ihm₁ mj₁ wtk₁.weaken wtk₂.weaken hk.weaken rfl (semCtxt.cons hA₁ hστ) hjs
+      have hB₂ := ihm₁ rfl mj₁ wtk₁.weaken wtk₂.weaken hk.weaken (semCtxt.cons hA₁ hστ) hjs
       simp; split <;> simp [ev, ew]
       . refine ℰ.bwd (.rejoin .ιl) (.rejoin .ιl) ?_
         rw [substUnion, substUnion]; exact hB₂
-      . rename K => k'; rename Com => m'; rename _ = _ => e
+      . rename K _ => k'; rename Com _ => m'; rename _ = _ => e
         rw [← rejoin.eq_2]
         refine ℰ.bwd (.rejoin .ιl) (.rejoin .ιl) ?_
         rw [substUnion, substUnion]
         refine ℰ.trans hB₂ ?_
         have goal :=
-          semJumpA mj₁ wtk₂.weaken hm₁ (Jump.rename e)
+          semJumpA (zero_le δ) mj₁ wtk₂.weaken hm₁ (Jump.rename e)
             (semCtxt.trans (semCtxt.sym (semCtxt.cons hA₁ hστ)) (semCtxt.cons hA₁ hστ))
             (semDtxt.trans (semDtxt.sym hjs) hjs)
         simp [renameUpSubstCons] at goal; exact goal
     | .inr ⟨v, w, hA₂, ev, ew⟩ =>
-      have hB₂ := ihm₂ mj₂ wtk₁.weaken wtk₂.weaken hk.weaken rfl (semCtxt.cons hA₂ hστ) hjs
+      have hB₂ := ihm₂ rfl mj₂ wtk₁.weaken wtk₂.weaken hk.weaken (semCtxt.cons hA₂ hστ) hjs
       simp; split <;> simp [ev, ew]
       . refine ℰ.bwd (.rejoin .ιr) (.rejoin .ιr) ?_
         rw [substUnion, substUnion]; exact hB₂
-      . rename K => k'; rename Com => m'; rename _ = _ => e
+      . rename K _ => k'; rename Com _ => m'; rename _ = _ => e
         rw [← rejoin.eq_2]
         refine ℰ.bwd (.rejoin .ιr) (.rejoin .ιr) ?_
         rw [substUnion, substUnion]
         refine ℰ.trans hB₂ ?_
         have goal :=
-          semJumpA mj₂ wtk₂.weaken hm₂ (Jump.rename e)
+          semJumpA (zero_le δ) mj₂ wtk₂.weaken hm₂ (Jump.rename e)
             (semCtxt.trans (semCtxt.sym (semCtxt.cons hA₂ hστ)) (semCtxt.cons hA₂ hστ))
             (semDtxt.trans (semDtxt.sym hjs) hjs)
         simp [renameUpSubstCons] at goal; exact goal
-  case prod ihn₁ ihn₂ _ _ _ _ =>
+  case prod ihn₁ ihn₂ _ =>
     let ⟨nj₁, nj₂⟩ := mj
-    refine hk.plug (λ hστ _ _ _ ↦ ?_)
-    exact ℰ.bwdsRejoin .refl .refl
-      (ℰ.prod (ihn₁ nj₁ .nil .nil (soundK .nil) rfl hστ .nil)
-              (ihn₂ nj₂ .nil .nil (soundK .nil) rfl hστ .nil))
-  case fst ih _ _ _ _ => exact ih mj (.fst wtk₁) (.fst wtk₂) (semK.fst hk) rfl
-  case snd ih _ _ _ _ => exact ih mj (.snd wtk₁) (.snd wtk₂) (semK.snd hk) rfl
+    refine hk.plug (λ hστ js₁ js₂ _ ↦ ?_)
+    cases js₁; cases js₂; simp
+    have hB₁ := ihn₁ rfl nj₁ .nil .nil (soundK .nil) hστ .nil
+    have hB₂ := ihn₂ rfl nj₂ .nil .nil (soundK .nil) hστ .nil
+    simp [weakenJCom0] at hB₁; simp [weakenJCom0] at hB₂
+    exact ℰ.prod hB₁ hB₂
+  case fst ih _ => exact ih rfl mj (.fst wtk₁) (.fst wtk₂) (semK.fst hk)
+  case snd ih _ => exact ih rfl mj (.snd wtk₁) (.snd wtk₂) (semK.snd hk)
   case join | jump => cases mj
   all_goals intro hστ
   case var mem => exact hστ mem
   case unit => exact 𝒱.unit
   case inl ih => exact 𝒱.inl (ih vj hστ)
   case inr ih => exact 𝒱.inr (ih vj hστ)
-  case thunk ih => exact 𝒱.thunk (ih vj .nil .nil (soundK .nil) rfl hστ .nil)
+  case thunk ih =>
+    have goal := ih rfl vj .nil .nil (soundK .nil) hστ .nil
+    simp [weakenJCom0] at goal; exact 𝒱.thunk goal
 
 theorem soundAnil {Γ m B} (mj : m.joinless) (h : Γ ∣ ⬝ ⊢ m ∶ B) : Γ ∣ ⬝ ⊨ m ~ ⟦m⟧ₘ ∶ B := by
   intro σ τ hστ js₁ js₂ hjs
-  have goal := soundA.right mj h .nil .nil semK.nil hστ hjs
+  have goal := soundA.right rfl mj h .nil .nil semK.nil hστ hjs
   simp at goal; rw [weakenJCom0] at goal; exact goal
 
 /-*------------------------------------------------------------
