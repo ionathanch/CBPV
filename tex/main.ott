@@ -115,16 +115,16 @@ m, n :: 'com_' ::= {{ com computations }}
   % substitution metafunctions
   | w { x ↦ v } :: :: SubstVal
     {{ com single substitution into values }}
-    {{ tex [[w]] \lbrace [[x]] \mapsto [[v]] \rbrace }}
+    {{ tex [[w]] [ [[x]] \mapsto [[v]] ] }}
   | m { x ↦ v } :: :: SubstCom
     {{ com single substitution into computations }}
-    {{ tex [[m]] \lbrace [[x]] \mapsto [[v]] \rbrace }}
+    {{ tex [[m]] [ [[x]] \mapsto [[v]] ] }}
   | v { s } :: :: SubstsVal
     {{ com simultaneous substitution into values }}
-    {{ tex [[v]] \lbrace [[s]] \rbrace }}
+    {{ tex [[v]] [ [[s]] ] }}
   | m { s } :: :: SubstsCom
     {{ com simultaneous substitution into computations }}
-    {{ tex [[m]] \lbrace [[s]] \rbrace }}
+    {{ tex [[m]] [ [[s]] ] }}
   % syntactic sugar for typesetting
   | _ :: :: Hole
     {{ com hole }}
@@ -146,7 +146,7 @@ m, n :: 'com_' ::= {{ com computations }}
   | ⟦ m ⟧ :: S :: CCNormComNil
     {{ tex \llbracket [[m]] \rrbracket }}
 
-tm {{ tex \mathit{tm} }} :: 'term_' ::= {{ com terminals }}
+tm {{ tex \textit{tm} }} :: 'term_' ::= {{ com terminals }}
   | return v :: :: Return
   | λ x . m :: :: Fun
   | ⟨ m1 , m2 ⟩ :: :: Pair
