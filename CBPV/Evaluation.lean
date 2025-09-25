@@ -143,15 +143,6 @@ theorem weakenJ {δ δ' m n} (r : m ⇒⋆ n) : @weakenJCom δ δ' m ⇒⋆ @wea
 
 end Evals
 
--- Multi-step reduction is confluent trivially by determinism
-theorem confluence {δ} {m n₁ n₂ : Com δ} (r₁ : m ⇒⋆ n₁) (r₂ : m ⇒⋆ n₂) : ∃ m', n₁ ⇒⋆ m' ∧ n₂ ⇒⋆ m' := by
-  induction r₁ generalizing n₂
-  case refl => exact ⟨n₂, r₂, .refl⟩
-  case trans r₁ rs₁ ih =>
-    cases r₂
-    case refl => exact ⟨_, .refl, .trans r₁ rs₁⟩
-    case trans r₂ rs₂ => rw [Eval.det r₁ r₂] at *; exact ih rs₂
-
 /-*----------------------------
   Normal forms and evaluation
 ----------------------------*-/
@@ -173,6 +164,15 @@ theorem nf.steps {δ} {m n : Com δ} (nfm : nf m) (r : m ⇒⋆ n) : m = n := by
 def Norm {δ} (m n : Com δ) := m ⇒⋆ n ∧ nf n
 infix:40 "⇓ₙ" => Norm
 
+theorem Evals.merge {δ} {m₁ m₂ n : Com δ} (rm : m₁ ⇒⋆ m₂) : m₁ ⇓ₙ n → m₂ ⇒⋆ n
+  | ⟨rn, nfn⟩ => by
+    induction rm generalizing n
+    case refl => assumption
+    case trans r _ ih =>
+      cases rn
+      case refl => cases nfn.stepn't r
+      case trans r' rn => rw [Eval.det r r'] at ih; exact ih rn nfn
+
 namespace Norm
 
 @[refl] theorem refl {δ} {m : Com δ} (nfm : nf m) : m ⇓ₙ m := by exists .refl
@@ -181,9 +181,7 @@ theorem bwds {δ} {m m' n : Com δ} (r : m ⇒⋆ m') : m' ⇓ₙ n → m ⇓ₙ
   | ⟨rn, nfn⟩ => ⟨.trans' r rn, nfn⟩
 
 theorem join {δ} {m n₁ n₂ : Com δ} : m ⇓ₙ n₁ → m ⇓ₙ n₂ → n₁ = n₂
-  | ⟨rn₁, nfn₁⟩, ⟨rn₂, nfn₂⟩ =>
-    let ⟨n', rn₁', rn₂'⟩ := confluence rn₁ rn₂
-    by rw [nfn₁.steps rn₁', nfn₂.steps rn₂']
+  | ⟨rn₁, nfn₁⟩, rn₂ => nfn₁.steps (rn₁.merge rn₂)
 
 end Norm
 

@@ -16,15 +16,13 @@ theorem letLet {Γ δ} {Δ : Dtxt δ} {A n m m'} {B : ComType}
   have rlet : letin (n⦃τ⦄) (m⦃⇑ τ⦄) ⇒⋆ m⦃w₂ +: τ⦄ := calc
     _ ⇒⋆ letin (ret w₂) (m⦃⇑ τ⦄) := rw₂.letin
     _ ⇒  m⦃w₂ +: τ⦄ := by rw [← substUnion]; exact .ζ
-  let ⟨_, rlet₁, rlet₂⟩ := confluence rv₂ rlet
-  rw [← rlet₁.ret_inv] at rlet₂
   have r₂' : (letin n (letin m (renameCom (lift succ) m')))⦃τ⦄ ⇒⋆ m'⦃v₂ +: τ⦄ := calc
     _ ⇒⋆ letin (ret w₂) (letin (m⦃⇑ τ⦄) ((renameCom (lift succ) m')⦃⇑⇑ τ⦄))
       := by simp only [substCom]; exact rw₂.letin
     _ ⇒ (letin (m⦃⇑ τ⦄) ((renameCom (lift succ) m')⦃⇑⇑ τ⦄))⦃w₂⦄ := .ζ
     _ = letin (m⦃w₂ +: τ⦄) (m'⦃⇑τ⦄)
       := by simp only [substCom]; rw [substUnion, renameDropSubst]
-    _ ⇒⋆ letin (ret v₂) (m'⦃⇑τ⦄) := rlet₂.letin
+    _ ⇒⋆ letin (ret v₂) (m'⦃⇑τ⦄) := .letin (rlet.merge ⟨rv₂, ⟨⟩⟩)
     _ ⇒ m'⦃v₂ +: τ⦄ := by rw [← substUnion]; exact .ζ
   have goal := soundCom hm' (semCtxt.cons hA hστ) hjs
   refine ℰ.bwds (.rejoin r₁') (.rejoin r₂') goal
@@ -45,9 +43,7 @@ theorem appLet {Γ δ} {Δ : Dtxt δ} {n m v A B}
     _ ⇒⋆ letin (ret w₂) (m⦃⇑ τ⦄) := rw₂.letin
     _ ⇒  m⦃w₂ +: τ⦄ := by rw [← substUnion]; exact .ζ
     _ ⇒⋆ lam m₂ := rm₂
-  let ⟨_, rlam₁, rlam₂⟩ := confluence r₂ rlet
-  rw [← rlam₂.lam_inv] at rlam₁; injection rlam₁.lam_inv with _ e; subst e
-  clear rlet rlam₁ rlam₂
+  injection (r₂.merge ⟨rlet, ⟨⟩⟩).lam_inv with _ e; subst e
   have r₂' : letin (n⦃τ⦄) (app (m⦃⇑ τ⦄) (renameVal succ v⦃⇑ τ⦄))
       ⇒⋆ n₂⦃v⦃τ⦄⦄ := calc
     _ ⇒⋆ letin (ret w₂) (app (m⦃⇑ τ⦄) (renameVal succ v⦃⇑ τ⦄)) := rw₂.letin
@@ -74,9 +70,7 @@ theorem fstLet {Γ δ} {Δ : Dtxt δ} {n m B₁ B₂}
     _ ⇒⋆ letin (ret w₂) (m⦃⇑ τ⦄) := rw₂.letin
     _ ⇒  m⦃w₂ +: τ⦄              := by rw [← substUnion]; exact .ζ
     _ ⇒⋆ prod m₂ _               := r₂'
-  let ⟨_, rprod₁, rprod₂⟩ := confluence r₂ rlet
-  rw [← rprod₂.prod_inv] at rprod₁; injection rprod₁.prod_inv with _ e₁ e₂; subst e₁ e₂
-  clear rlet rprod₁ rprod₂
+  injection (r₂.merge ⟨rlet, ⟨⟩⟩).prod_inv with _ e₂ e₂; subst e₂ e₂
   have r₂' : letin (n⦃τ⦄) (fst (m⦃⇑ τ⦄)) ⇒⋆ n₂ := calc
     _ ⇒⋆ letin (ret w₂) (fst (m⦃⇑ τ⦄)) := rw₂.letin
     _ ⇒  fst (m⦃⇑ τ⦄⦃w₂⦄)              := .ζ
@@ -101,9 +95,7 @@ theorem sndLet {Γ δ} {Δ : Dtxt δ} {n m B₁ B₂}
     _ ⇒⋆ letin (ret w₂) (m⦃⇑ τ⦄) := rw₂.letin
     _ ⇒  m⦃w₂ +: τ⦄              := by rw [← substUnion]; exact .ζ
     _ ⇒⋆ prod m₂ _               := r₂'
-  let ⟨_, rprod₁, rprod₂⟩ := confluence r₂ rlet
-  rw [← rprod₂.prod_inv] at rprod₁; injection rprod₁.prod_inv with _ e₁ e₂; subst e₁ e₂
-  clear rlet rprod₁ rprod₂
+  injection (r₂.merge ⟨rlet, ⟨⟩⟩).prod_inv with _ e₂ e₂; subst e₂ e₂
   have r₂' : letin (n⦃τ⦄) (snd (m⦃⇑ τ⦄)) ⇒⋆ n₂ := calc
     _ ⇒⋆ letin (ret w₂) (snd (m⦃⇑ τ⦄)) := rw₂.letin
     _ ⇒  snd (m⦃⇑ τ⦄⦃w₂⦄)              := .ζ
@@ -128,13 +120,11 @@ theorem letCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ n A} {B : ComType}
   match hv with
   | .inl ⟨w₁, w₂, hA₁, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at rv₂
-    let ⟨n₁, n₂, rn₁, rn₂, _⟩ := (soundCom hm₁ (semCtxt.cons hA₁ hστ) .nil).ret_inv
-    let rcase : case (inl w₂) (m₁⦃⇑ τ⦄) (m₂⦃⇑ τ⦄) ⇒⋆ ret n₂ := calc
+    let ⟨u₁, u₂, ru₁, ru₂, _⟩ := (soundCom hm₁ (semCtxt.cons hA₁ hστ) .nil).ret_inv
+    let rcase : case (inl w₂) (m₁⦃⇑ τ⦄) (m₂⦃⇑ τ⦄) ⇒⋆ ret u₂ := calc
       _ ⇒ m₁⦃w₂ +: τ⦄ := by rw [← substUnion]; exact .ιl
-      _ ⇒⋆ ret n₂     := rn₂
-    let ⟨_, rret₁, rret₂⟩ := confluence rv₂ rcase
-    rw [← rret₂.ret_inv] at rret₁; injection rret₁.ret_inv with _ e; subst e
-    clear rcase rret₁ rret₂
+      _ ⇒⋆ ret u₂     := ru₂
+    injection (rv₂.merge ⟨rcase, ⟨⟩⟩).ret_inv with _ e; subst e
     have r₂' : case (inl w₂)
                     (letin (m₁⦃⇑τ⦄) (renameCom (lift succ) n⦃⇑⇑τ⦄))
                     (letin (m₂⦃⇑τ⦄) (renameCom (lift succ) n⦃⇑⇑τ⦄))
@@ -142,19 +132,17 @@ theorem letCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ n A} {B : ComType}
         _ ⇒ (letin (m₁⦃⇑τ⦄) (renameCom (lift succ) n⦃⇑⇑τ⦄))⦃w₂⦄ := .ιl
         _ ⇒⋆ letin (m₁⦃w₂ +: τ⦄) (n⦃⇑τ⦄)
           := by simp only [substCom]; rw [substUnion, renameDropSubst]
-        _ ⇒⋆ letin (ret v₂) (n⦃⇑ τ⦄) := rn₂.letin
+        _ ⇒⋆ letin (ret v₂) (n⦃⇑ τ⦄) := ru₂.letin
         _ ⇒ n⦃v₂ +: τ⦄ := by rw [← substUnion]; exact .ζ
     have goal := soundCom hn (semCtxt.cons hA hστ) hjs
     exact ℰ.bwds (.rejoin r₁') (.rejoin r₂') goal
   | .inr ⟨w₁, w₂, hA₂, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at rv₂
-    let ⟨n₁, n₂, rn₁, rn₂, _⟩ := (soundCom hm₂ (semCtxt.cons hA₂ hστ) .nil).ret_inv
-    let rcase : case (inr w₂) (m₁⦃⇑ τ⦄) (m₂⦃⇑ τ⦄) ⇒⋆ ret n₂ := calc
+    let ⟨u₁, u₂, ru₁, ru₂, _⟩ := (soundCom hm₂ (semCtxt.cons hA₂ hστ) .nil).ret_inv
+    let rcase : case (inr w₂) (m₁⦃⇑ τ⦄) (m₂⦃⇑ τ⦄) ⇒⋆ ret u₂ := calc
       _ ⇒ m₂⦃w₂ +: τ⦄ := by rw [← substUnion]; exact .ιr
-      _ ⇒⋆ ret n₂     := rn₂
-    let ⟨_, rret₁, rret₂⟩ := confluence rv₂ rcase
-    rw [← rret₂.ret_inv] at rret₁; injection rret₁.ret_inv with _ e; subst e
-    clear rcase rret₁ rret₂
+      _ ⇒⋆ ret u₂     := ru₂
+    injection (rv₂.merge ⟨rcase, ⟨⟩⟩).ret_inv with _ e; subst e
     have r₂' : case (inr w₂)
                     (letin (m₁⦃⇑τ⦄) (renameCom (lift succ) n⦃⇑⇑τ⦄))
                     (letin (m₂⦃⇑τ⦄) (renameCom (lift succ) n⦃⇑⇑τ⦄))
@@ -162,7 +150,7 @@ theorem letCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ n A} {B : ComType}
         _ ⇒ (letin (m₂⦃⇑τ⦄) (renameCom (lift succ) n⦃⇑⇑τ⦄))⦃w₂⦄ := .ιr
         _ ⇒⋆ letin (m₂⦃w₂ +: τ⦄) (n⦃⇑τ⦄)
           := by simp only [substCom]; rw [substUnion, renameDropSubst]
-        _ ⇒⋆ letin (ret v₂) (n⦃⇑ τ⦄) := rn₂.letin
+        _ ⇒⋆ letin (ret v₂) (n⦃⇑ τ⦄) := ru₂.letin
         _ ⇒ n⦃v₂ +: τ⦄ := by rw [← substUnion]; exact .ζ
     have goal := soundCom hn (semCtxt.cons hA hστ) hjs
     exact ℰ.bwds (.rejoin r₁') (.rejoin r₂') goal
@@ -182,10 +170,9 @@ theorem appCase {Γ δ} {Δ : Dtxt δ} {v w m₁ m₂ A B}
   | .inl ⟨v₁, v₂, hA₁, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at r₂
     let ⟨_, _, _, r₂', _⟩ := (soundCom hm₁ (semCtxt.cons hA₁ hστ) .nil).lam_inv
-    let ⟨_, rlam₁, r'⟩ := confluence r₂ (.once .ιl); rw [substUnion] at r'
-    let ⟨_, rlam₂, r'⟩ := confluence r₂' r'; rw [← rlam₂.lam_inv] at r'
-    injection Evals.lam_inv (.trans' rlam₁ r') with _ en₂; subst en₂
-    clear rlam₁ rlam₂ r' r₁; clear r'
+    have r' := Evals.merge (RTC.once .ιl) ⟨r₂, ⟨⟩⟩; rw [substUnion] at r'
+    have r' := Evals.merge r' ⟨r₂', ⟨⟩⟩
+    injection r'.lam_inv with _ en₂; subst en₂
     have r₂' :
       case (.inl v₂) (app (m₁⦃⇑ τ⦄) (renameVal succ w⦃⇑ τ⦄)) (app (m₂⦃⇑ τ⦄) (renameVal succ w⦃⇑ τ⦄))
         ⇒⋆ n₂⦃w⦃τ⦄⦄ := calc
@@ -199,10 +186,9 @@ theorem appCase {Γ δ} {Δ : Dtxt δ} {v w m₁ m₂ A B}
   | .inr ⟨v₁, v₂, hA₂, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at r₂
     let ⟨_, _, _, r₂', _⟩ := (soundCom hm₂ (semCtxt.cons hA₂ hστ) .nil).lam_inv
-    let ⟨_, rlam₁, r'⟩ := confluence r₂ (.once .ιr); rw [substUnion] at r'
-    let ⟨_, rlam₂, r'⟩ := confluence r₂' r'; rw [← rlam₂.lam_inv] at r'
-    injection Evals.lam_inv (.trans' rlam₁ r') with _ en₂; subst en₂
-    clear rlam₁ rlam₂ r' r₁; clear r'
+    have r' := Evals.merge (RTC.once .ιr) ⟨r₂, ⟨⟩⟩; rw [substUnion] at r'
+    have r' := Evals.merge r' ⟨r₂', ⟨⟩⟩
+    injection r'.lam_inv with _ en₂; subst en₂
     have r₂' :
       case (.inr v₂) (app (m₁⦃⇑ τ⦄) (renameVal succ w⦃⇑ τ⦄)) (app (m₂⦃⇑ τ⦄) (renameVal succ w⦃⇑ τ⦄))
         ⇒⋆ n₂⦃w⦃τ⦄⦄ := calc
@@ -228,10 +214,9 @@ theorem fstCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ B₁ B₂}
   | .inl ⟨v₁, v₂, hA₁, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at r₂
     let ⟨_, _, _, _, _, r₂', _⟩ := (soundCom hm₁ (semCtxt.cons hA₁ hστ) .nil).fst
-    let ⟨_, rprod₁, r'⟩ := confluence r₂ (.once .ιl); rw [substUnion] at r'
-    let ⟨_, rprod₂, r'⟩ := confluence r₂' r'; rw [← rprod₂.prod_inv] at r'
-    injection Evals.prod_inv (.trans' rprod₁ r') with _ en₁ en₂; subst en₁ en₂
-    clear rprod₁ rprod₂ r' r₁; clear r'
+    have r' := Evals.merge (RTC.once .ιl) ⟨r₂, ⟨⟩⟩; rw [substUnion] at r'
+    have r' := Evals.merge r' ⟨r₂', ⟨⟩⟩
+    injection r'.prod_inv with _ en₁ en₂; subst en₁ en₂
     have r₂' :
       case (inl v₂) (fst (m₁⦃⇑ τ⦄)) (fst (m₂⦃⇑ τ⦄)) ⇒⋆ n₂ := calc
       _ ⇒  fst (m₁⦃⇑ τ⦄)⦃v₂⦄ := .ιl
@@ -243,10 +228,9 @@ theorem fstCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ B₁ B₂}
   | .inr ⟨v₁, v₂, hA₂, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at r₂
     let ⟨_, _, _, _, _, r₂', _⟩ := (soundCom hm₂ (semCtxt.cons hA₂ hστ) .nil).fst
-    let ⟨_, rprod₁, r'⟩ := confluence r₂ (.once .ιr); rw [substUnion] at r'
-    let ⟨_, rprod₂, r'⟩ := confluence r₂' r'; rw [← rprod₂.prod_inv] at r'
-    injection Evals.prod_inv (.trans' rprod₁ r') with _ en₁ en₂; subst en₁ en₂
-    clear rprod₁ rprod₂ r' r₁; clear r'
+    have r' := Evals.merge (RTC.once .ιr) ⟨r₂, ⟨⟩⟩; rw [substUnion] at r'
+    have r' := Evals.merge r' ⟨r₂', ⟨⟩⟩
+    injection r'.prod_inv with _ en₁ en₂; subst en₁ en₂
     have r₂' :
       case (inr v₂) (fst (m₁⦃⇑ τ⦄)) (fst (m₂⦃⇑ τ⦄)) ⇒⋆ n₂ := calc
       _ ⇒  fst (m₂⦃⇑ τ⦄)⦃v₂⦄ := .ιr
@@ -270,10 +254,9 @@ theorem sndCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ B₁ B₂}
   | .inl ⟨v₁, v₂, hA₁, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at r₂
     let ⟨_, _, _, _, _, r₂', _⟩ := (soundCom hm₁ (semCtxt.cons hA₁ hστ) .nil).snd
-    let ⟨_, rprod₁, r'⟩ := confluence r₂ (.once .ιl); rw [substUnion] at r'
-    let ⟨_, rprod₂, r'⟩ := confluence r₂' r'; rw [← rprod₂.prod_inv] at r'
-    injection Evals.prod_inv (.trans' rprod₁ r') with _ en₁ en₂; subst en₁ en₂
-    clear rprod₁ rprod₂ r' r₁; clear r'
+    have r' := Evals.merge (RTC.once .ιl) ⟨r₂, ⟨⟩⟩; rw [substUnion] at r'
+    have r' := Evals.merge r' ⟨r₂', ⟨⟩⟩
+    injection r'.prod_inv with _ en₁ en₂; subst en₁ en₂
     have r₂' :
       case (inl v₂) (snd (m₁⦃⇑ τ⦄)) (snd (m₂⦃⇑ τ⦄)) ⇒⋆ n₂ := calc
       _ ⇒  snd (m₁⦃⇑ τ⦄)⦃v₂⦄ := .ιl
@@ -285,10 +268,9 @@ theorem sndCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ B₁ B₂}
   | .inr ⟨v₁, v₂, hA₂, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at r₂
     let ⟨_, _, _, _, _, r₂', _⟩ := (soundCom hm₂ (semCtxt.cons hA₂ hστ) .nil).snd
-    let ⟨_, rprod₁, r'⟩ := confluence r₂ (.once .ιr); rw [substUnion] at r'
-    let ⟨_, rprod₂, r'⟩ := confluence r₂' r'; rw [← rprod₂.prod_inv] at r'
-    injection Evals.prod_inv (.trans' rprod₁ r') with _ en₁ en₂; subst en₁ en₂
-    clear rprod₁ rprod₂ r' r₁; clear r'
+    have r' := Evals.merge (RTC.once .ιr) ⟨r₂, ⟨⟩⟩; rw [substUnion] at r'
+    have r' := Evals.merge r' ⟨r₂', ⟨⟩⟩
+    injection r'.prod_inv with _ en₁ en₂; subst en₁ en₂
     have r₂' :
       case (inr v₂) (snd (m₁⦃⇑ τ⦄)) (snd (m₂⦃⇑ τ⦄)) ⇒⋆ n₂ := calc
       _ ⇒  snd (m₂⦃⇑ τ⦄)⦃v₂⦄ := .ιr
@@ -310,29 +292,23 @@ theorem joinJoin {Γ δ} {Δ : Dtxt δ} {n₁ n₂ m A B} (hn₁ : Γ ∷ A ∣ 
   | .inl ⟨v, rm, rjoin, rm₂⟩ =>
     have hleft := soundCom (.join (.join (wtRenameCom (wRenameLift wRenameSucc) hn₁) hn₂) hm) hστ hjs
     unfold ℰ at hleft
-    let ⟨_, _, rm₁, ⟨rm₂', nfm₂'⟩, hB⟩ := hleft
-    have r := by
+    let ⟨_, _, rm₁, rm₂', hB⟩ := hleft
+    let r : _ ⇒⋆ m₂ := by
       calc rejoin (join ((join (renameCom (lift succ) n₁) n₂)⦃⇑ τ⦄) (m⦃τ⦄)) js₂
       _ ⇒⋆ rejoin (join ((join (renameCom (lift succ) n₁) n₂)⦃⇑ τ⦄) (jump 0 v)) js₂ := .rejoin (.join rm)
       _ ⇒ rejoin ((join (renameCom (lift succ) n₁) n₂)⦃⇑ τ⦄⦃v⦄) js₂ := .rejoin .γ
       _ = rejoin (join (n₁⦃⇑ τ⦄) (n₂⦃v +: τ⦄)) js₂ := by rw [substUnion]; simp; rw [renameUpSubstCons]
       _ ⇒⋆ m₂ := by rw [substUnion] at rm₂; exact rm₂
-    let ⟨n, rn, rn'⟩ := confluence r rm₂'
-    rw [nfm₂'.steps rn'] at hB nfm₂'
-    rw [nfm₂.steps rn] at rm₂
-    refine ℰ.bwds .refl (.trans' rjoin rm₂) ?_
-    unfold ℰ; exact ⟨_, _, rm₁, ⟨.refl, nfm₂'⟩, hB⟩
+    have rn := r.merge rm₂'
+    unfold ℰ; exact ⟨_, _, rm₁, ⟨.trans' rjoin (.trans' rm₂ rn), rm₂'.2⟩, hB⟩
   | .inr ⟨m', rm, rjoin, rm₂⟩ =>
     have hleft := soundCom (.join (.join (wtRenameCom (wRenameLift wRenameSucc) hn₁) hn₂) hm) hστ hjs
     unfold ℰ at hleft
-    let ⟨_, _, rm₁, ⟨rm₂', nfm₂'⟩, hB⟩ := hleft
-    let ⟨n, rn, rn'⟩ := confluence (.rejoin (.join rm)) rm₂'
-    rw [nfm₂'.steps rn'] at hB nfm₂'
-    let ⟨_, rm', _, rn⟩ := Norm.wkJoin ⟨rn, nfm₂'⟩
-    let ⟨_, rn ,rm₂'⟩ := confluence (.trans' (Evals.rejoin rm') rn) rm₂
-    rw [← nfm₂'.steps rn] at rm₂'
-    refine ℰ.bwds .refl (.trans' rjoin (.trans' rm₂ rm₂')) ?_
-    unfold ℰ; exact ⟨_, _, rm₁, ⟨.refl, nfm₂'⟩, hB⟩
+    let ⟨_, _, rm₁, rm₂', hB⟩ := hleft
+    have rn := Evals.merge (.rejoin (.join rm)) rm₂'
+    let ⟨_, rm', _, rn⟩ := Norm.wkJoin ⟨rn, rm₂'.2⟩
+    have rn := Evals.merge rm₂ ⟨.trans' (Evals.rejoin rm') rn, rm₂'.2⟩
+    unfold ℰ; exact ⟨_, _, rm₁, ⟨.trans' rjoin (.trans' rm₂ rn), rm₂'.2⟩, hB⟩
 
 theorem dropJoin {Γ δ} {Δ : Dtxt δ} {m₁ m₂ A B} (h₁ : Γ ∷ A ∣ Δ ⊢ m₁ ∶ B) (h₂ : Γ ∣ Δ ⊢ m₂ ∶ B) :
   Γ ∣ Δ ⊨ m₂ ~ (join m₁ (renameJCom Fin.succ m₂)) ∶ B := by
@@ -345,13 +321,12 @@ theorem dropJoin {Γ δ} {Δ : Dtxt δ} {m₁ m₂ A B} (h₁ : Γ ∷ A ∣ Δ 
   simp [renameJSubst] at rn₂; simp [renameJSubst]
   let ⟨_, rm₂, rjoin, rn₂⟩ := rn₂.wkJoin
   refine ℰ.bwds .refl (.trans' rjoin rn₂) ?_
-  -- merge reductions via confluence
+  -- merge reductions
   have hm₂ := soundCom h₂ hστ hjs
   unfold ℰ at hm₂
-  let ⟨_, n₂', rn₁, ⟨rn₂', nfn₂'⟩, hB⟩ := hm₂
-  let ⟨n, rn, rn'⟩ := confluence (RTC.trans' rm₂.rejoin rn₂) rn₂'
-  rw [nfn₂'.steps rn'] at hB nfn₂'
-  unfold ℰ; exact ⟨_, _, rn₁, ⟨rn, nfn₂'⟩, hB⟩
+  let ⟨_, n₂', rn₁, rn₂', hB⟩ := hm₂
+  have rn := Evals.merge (RTC.trans' rm₂.rejoin rn₂) rn₂'
+  unfold ℰ; exact ⟨_, _, rn₁, ⟨rn, rn₂'.2⟩, hB⟩
 
 theorem caseOfCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ m₃ m₄ B} {A₁ A₂ A₃ A₄ : ValType}
   (hv : Γ ⊢ v ∶ Sum A₃ A₄)

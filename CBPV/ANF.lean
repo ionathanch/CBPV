@@ -727,9 +727,7 @@ theorem retGroundA {m n A} (mj : m.joinless) (h : ⬝ ∣ ⬝ ⊢ m ∶ F A) (g 
   let ⟨_, _, ⟨r', _⟩, ⟨ra', _⟩, ⟨v₁, v₂, hA, eret₁, eret₂⟩⟩ := hm
   subst eret₁ eret₂; simp at r' ra'
   rw [← hA.ground g] at ra'
-  let ⟨_, rn, rret⟩ := confluence r r'
-  rw [← rret.ret_inv] at rn
-  simp [nfm.steps rn, ra']
+  rwa [← (r'.merge nm).ret_inv]
 
 theorem retGroundACK {m n A} (mj : m.joinless) (h : ⬝ ∣ ⬝ ⊢ m ∶ F A) (g : isGround A) (nm : nf n) :
   ⟨0, m, .nil⟩ ⤳⋆ ⟨0, n, .nil⟩ → ⟨0, ⟦m⟧ₘ, .nil⟩ ⤳⋆ ⟨0, n, .nil⟩ :=
