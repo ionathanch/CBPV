@@ -20,7 +20,7 @@
 \let\newlist\relax
 \let\renewlist\relax
 \usepackage[capitalize,nameinlink,noabbrev]{cleveref}
-\usepackage{enumitem,booktabs,xspace,doi}
+\usepackage{enumitem,booktabs,subcaption,xspace,doi}
 \usepackage{mathpartir,stmaryrd,colonequals}
 \usepackage[bottom,flushmargin,multiple,para]{footmisc} % para spacing is weird and ugly
 
@@ -572,11 +572,11 @@ The names of the rules involving join points and jumps not found in plain CBPV a
     \inferrule*[right=\highlight{\ottdrulename{E-join}}]{[[m1 ⇝ m2]]}{[[ join j x = m in m1 ⇝ join j x = m in m2 ]]}
   \end{mathpar}
 
-  \begin{align*}
+  \begin{align}
     \textit{where} \quad
-    [[E]]  &\dblcolon= [[let x ← □ in m]] \mid [[□ v]] \mid [[fst □]] \mid [[snd □]] \\
-    [[tm]] &\dblcolon= [[λx. m]] \mid [[return v]] \mid [[⟨m, m⟩]]
-  \end{align*}
+    \tag{evaluation contexts}   [[E]]  &\dblcolon= [[let x ← □ in m]] \mid [[□ v]] \mid [[fst □]] \mid [[snd □]] \\
+    \tag{terminal computations} [[tm]] &\dblcolon= [[λx. m]] \mid [[return v]] \mid [[⟨m, m⟩]]
+  \end{align}
   \caption{Evaluation rules for computations}
   \Description[]{}
   \label{fig:eval}
@@ -608,12 +608,12 @@ Intuitively, we jump to $[[j3]]$ which jumps to $[[j1]]$ which is $[[m1]]$,
 so we ought to end up at $[[m1{x ↦ v}]]$;
 the reductions that apply to get there are first to jump, then to skip, then to jump.
 %
-\begin{align*}
+\begin{align}
   &[[join j1 x = m1 in join j2 x = m2 in join j3 x = jump j1 x in jump j3 v]] \nonumber \\
   &[[_ ⇝ join j1 x = m1 in join j2 x = m2 in jump j1 v]] \tag{\rref*{E-jump}} \\
   &[[_ ⇝ join j1 x = m1 in jump j1 v]] \tag{\rref*{E-skip}} \\
   &[[_ ⇝ m1{x ↦ v}]] \tag{\rref*{E-jump}}
-\end{align*}
+\end{align}
 
 This is in fact the \emph{only} sequence of reductions,
 because evaluation is deterministic.
@@ -815,24 +815,131 @@ for now, we ignore issues of renaming de Bruijn indices, as they are standard.
 
 \section{Commuting Conversion Normalization} \label{sec:ccnf}
 
+In \cref{sec:overview}, we listed four examples of commuting conversions as \crefrange{eq:let-if}{eq:app-if}.
+The general formulation commutes evaluation contexts with \emph{tail contexts},
+listed in \cref{fig:tail}, which are elimination forms with holes where computations continue,
+which in our case are the bodies of let expressions and the branches of case expressions.
+We can think of computations with a tail as those that have a ``next step''.
+As with evaluation contexts, we exclude join point expressions from tail contexts
+because our source language is plain CBPV with no join points or jumps.
+
 \begin{figure}[h]
   \begin{align}
-    \tag{evaluation contexts}   [[E]] &\dblcolon= [[let x ← □ in m]] \mid [[□ v]] \mid [[fst □]] \mid [[snd □]] \\
-    \tag{tail contexts}         [[L]] &\dblcolon= [[let x ← n in □]] \mid [[case v of inl x ⇒ □ ; inr y ⇒ □]] \\
-    \tag{commuting conversions} & [[ E[ L[m] ] ]] \Longrightarrow [[ L[ E[m] ] ]]
+    \tag{tail contexts} [[L]] &\dblcolon= [[let x ← n in □]] \mid [[case v of inl x ⇒ □ ; inr y ⇒ □]]
   \end{align}
-  \caption{Evaluation and tail contexts; commuting conversions}
+  \caption{Tail contexts}
   \Description[]{}
-  \label{fig:commute}
+  \label{fig:tail}
 \end{figure}
+
+The commuting conversions we consider can then be stated as $[[ E[ L[m] ] ]] \Rightarrow [[ L[ E[ m] ] ]]$.
+Informally, they unnest code because they move evaluation contexts into the ``next step'',
+and they expose inlining opportunities because these evaluation contexts are no longer
+blocked by tail contexts that still have a ``first step'' to compute.
+The shape of commuting conversions inform the shape of its normal form of computations,
+reproduced in \cref{fig:ccnf-join}, where \Acom{}s $[[n]]$ are computations that don't contain tail contexts,
+and CC-normal computations $[[m]]$ are all computations that don't contain tail contexts in scrutinee positions,
+\ie where holes appear in evaluation contexts.
+By inspection, CCNF is indeed normal with respect to commuting conversions because no $[[m]]$s appear in $[[n]]$s,
+and therefore there must be no more commuting conversions to do.
+
+\begin{figure}[h]
+  \begin{align}
+    [[v]] &\dblcolon= [[x]] \mid [[()]] \mid [[inl v]] \mid [[inr v]] \mid [[{m}]] \tag{values} \\
+    [[n]] &\dblcolon= [[v!]] \mid [[λx. m]] \mid [[n v]] \mid [[return v]] \mid [[⟨m, m⟩]] \mid [[fst n]] \mid [[snd n]] \tag{\Acom} \\
+    [[m]] &\dblcolon= n \mid [[let x ← n in m]] \mid [[case v of inl x ⇒ m1 ; inr y ⇒ m2]] \tag{computations} \\
+          &\mid [[join j x = m1 in m2]] \mid [[jump j v]] \nonumber
+  \end{align}
+  \caption{Commuting conversion normal form with join points}
+  \Description[]{}
+  \label{fig:ccnf-join}
+\end{figure}
+
+To transform a plain CBPV program to one in CCNF,
+we follow \citet{ANF} and define a compiler using a continuation $[[K]]$,
+whose forms are given in \cref{fig:kont}.
+As usual, it can be the empty continuation $[[□]]$,
+or it can be the let continuation $[[let x ← □ in m]]$:
+a let expression is compiled by first translating the let-bound expression,
+then binding its result to $[[x]]$, and finally continuing on with a translated computation $[[m]]$.
 
 \begin{figure}[h]
   \begin{align*}
-    [[K]] &\dblcolon= [[□]] \mid [[let x ← □ in m]] \mid [[ K[□ v] ]] \mid [[ K[fst □] ]] \mid [[ K[snd □] ]]
+    [[K]] &\dblcolon= [[□]] \mid [[let x ← □ in m]] \mid [[ K[k] ]] &
+    [[k]] &\dblcolon= [[□ v]] \mid [[fst □]] \mid [[snd □]]
   \end{align*}
-  \caption{Commuting conversion normalization continuation}
+  \caption{Commuting conversion normalization continuations}
   \Description[]{}
   \label{fig:kont}
+\end{figure}
+
+However, we have three more contiunation forms corresponding to each of the remaining three evaluation contexts:
+application, first projection, and second projection.
+They are needed because in contrast to ANF for the lambda calculus,
+functions and computation pairs are \emph{computations} and not \emph{values},
+so they can't be let-bound, and their elimination forms can take arbitrary \Acom{}s.
+
+As an example, $[[(fst ⟨λx. return x, return w⟩) v]]$ is also valid CCNF.
+During the translation of this term, as we'll see shortly,
+we need to handle the inner computation $[[⟨λx. return x, return w⟩]]$
+using the sequence of continuations $[[ (□[□ v])[ fst □ ] ]]$.
+As shorthand, we also write this sequence as $[[(fst □) v]]$,
+plugging whatever is in brackets into the $[[□]]$ of the preceding continuation.
+We define the plugging operation \fbox{$[[ K[m] ]]$} in the same manner,
+so that $[[ ((fst □) v)[⟨λx. return x, return w⟩] ]]$ yields the original term.
+
+\begin{figure}[h]
+  \begin{subfigure}{0.35\textwidth}
+    \begin{align*}
+      % \mathclap{\fbox{$[[⟦v⟧]] \coloneqq v$} \hfill} \\
+      [[⟦ x ⟧]] &\coloneqq [[x]] \\
+      [[⟦()⟧]] &\coloneqq [[()]] \\
+      [[⟦inl v⟧]] &\coloneqq [[inl ⟦v⟧]] \\
+      [[⟦inr v⟧]] &\coloneqq [[inr ⟦v⟧]] \\
+      [[⟦{m}⟧]] &\coloneqq [[{⟦m⟧□}]]
+    \end{align*}
+    \vspace{-\baselineskip}
+    \caption{Translation of values}
+    \label{fig:CC-norm-val}
+  \end{subfigure}
+  %
+  \begin{subfigure}{0.55\textwidth}
+    \begin{align*}
+      % \mathclap{\fbox{$[[⟦m⟧ K]] \coloneqq [[n]]$} \hfill} \\
+      [[⟦v!⟧ K]] &\coloneqq [[ K[⟦v⟧!] ]] \\
+      [[⟦return v⟧ K]] &\coloneqq [[ K[return ⟦v⟧] ]] \\
+      [[⟦λx. m⟧ K]] &\coloneqq [[ K[λx. ⟦m⟧□] ]] \\
+      [[⟦⟨m1, m2⟩⟧ K]] &\coloneqq [[ K[⟨⟦m1⟧□, ⟦m2⟧□⟩] ]] \\
+      [[⟦m v⟧ K]] &\coloneqq [[ ⟦m⟧ (K[□ v]) ]] \\
+      [[⟦fst m⟧ K]] &\coloneqq [[ ⟦m⟧ (K[fst □]) ]] \\
+      [[⟦snd m⟧ K]] &\coloneqq [[ ⟦m⟧ (K[snd □]) ]] \\
+      [[⟦let x ← m1 in m2⟧ K]] &\coloneqq [[⟦m1⟧ (let x ← □ in ⟦m2⟧K)]]
+    \end{align*}
+    \vspace{-\baselineskip}
+    \caption{Translation of computations}
+    \label{fig:CC-norm-com}
+  \end{subfigure}
+
+  \caption{Commuting conversion normalization translation (excluding $\kw{case}$)}
+  \Description[]{}
+  \label{fig:CC-norm}
+\end{figure}
+
+\begin{figure}
+  \begin{multline*}
+    [[⟦case v of inl x ⇒ m1 ; inr y ⇒ m2⟧ K]] \coloneqq \\
+    \begin{cases}
+      \: [[case ⟦v⟧ of inl y ⇒ ⟦m1⟧ K ; inr z ⇒ ⟦m2⟧ K]]
+      &\textit{if} ~{}~ [[K]] \equiv [[□]] [k_1] \dots [k_i] \\
+      \: [[join j x = m in _]] &\textit{if} ~{}~ [[K]] \equiv [[(let x ← □ in m)]][ [[k1]] ] \dots [ [[ki]] ] \\
+      \: \quad [[case ⟦v⟧ of inl y ⇒ ⟦m1⟧ K' ; inr z ⇒ ⟦m2⟧ K']]
+    \end{cases}
+    \\
+    \textit{where} ~{}~ [[K']] \coloneqq [[(let x ← □ in jump j x)]][ [[k1]] ] \dots [ [[ki]] ]
+  \end{multline*}
+  \caption{Translation of case expressions to CCNF with join points}
+  \Description[]{}
+  \label{fig:CC-norm-case}
 \end{figure}
 
 \section{Commuting Conversion Normalization with Join Points Preserves Evaluation} \label{sec:proof}

@@ -6,6 +6,10 @@ embed
     \newcommand{\kw}[1]{ \mathsf{#1} }
   }}
 
+indexvar i ::=
+  {{ com sequence index }}
+  {{ lex alphanum }}
+
 metavar x, y, z ::=
   {{ com term variables }}
   {{ lex alphanum }}
@@ -67,6 +71,9 @@ v, w :: 'val_' ::= {{ com values }}
   | (# v #) :: S :: SParens
     {{ com invisible parentheses }}
     {{ tex [[v]] }}
+  % translation
+  | ⟦ v ⟧ :: :: CCNormVal
+    {{ tex \llbracket [[v]] \rrbracket }}
 
 m, n :: 'com_' ::= {{ com computations }}
   | v ! :: :: Force
@@ -106,6 +113,9 @@ m, n :: 'com_' ::= {{ com computations }}
   | K [ n ] :: :: Plug
     {{ com plugging into a continuation }}
     {{ tex [[K]] [ [[n]] ] }}
+  | k [ n ] :: :: Plugs
+    {{ com plugging into a sugared continuation }}
+    {{ tex [[k]] [ [[n]] ] }}
   | E [ n ] :: :: Eval
     {{ com plugging into an evaluation context }}
     {{ tex [[E]] [ [[n]] ] }}
@@ -139,8 +149,6 @@ m, n :: 'com_' ::= {{ com computations }}
     {{ com invisible parentheses }}
     {{ tex [[m]] }}
   % translation
-  | ⟦ v ⟧ :: :: CCNormVal
-    {{ tex \llbracket [[v]] \rrbracket }}
   | ⟦ m ⟧ K :: :: CCNormCom
     {{ tex \llbracket [[m]] \rrbracket [[K]] }}
   | ⟦ m ⟧ :: S :: CCNormComNil
@@ -185,17 +193,31 @@ L :: 'tail_' ::= {{ com tail contexts }}
   | case v of inl x ⇒ □ ; inr y ⇒ □ :: :: Case
     {{ tex \kw{case} \gap [[v]] \mathrel{ \kw{of} } \mathopen{\lbrace} \kw{inl} \gap [[x]] \mathbin{\Rightarrow} \square \mathpunct{;} \kw{inr} \gap [[y]] \mathbin{\Rightarrow} \square \mathclose{\rbrace} }}
 
-K :: 'kont_' ::= {{ com continuations }}
+K :: 'Kont_' ::= {{ com continuations }}
   | □ :: :: Empty
     {{ tex \square }}
   | let x ← □ in m :: :: Let
     {{ tex \kw{let} \gap [[x]] \mathrel{\leftarrow} \square \mathrel{ \kw{in} } [[m]] }}
-  | K [ □ v ] :: :: App
-    {{ tex [[K]] [ \square \gap [[v]] ] }}
-  | K [ fst □ ] :: :: Fst
-    {{ tex [[K]] [ \kw{fst} \gap \square ] }}
-  | K [ snd □ ] :: :: Snd
-    {{ tex [[K]] [ \kw{snd} \gap \square ] }}
+  | K [ k ] :: :: Kont
+    {{ tex [[K]] [ [[k]] ] }}
+  | ( K ) :: S :: Parens
+    {{ tex ([[K]]) }}
+  | (# K #) :: S :: SParens
+    {{ tex [[K]] }}
+
+k :: 'kont_' ::= {{ com continuations }}
+  | K :: :: Kont
+    {{ tex [[K]] }}
+  | k v :: :: App
+    {{ tex [[k]] \gap [[v]] }}
+  | fst k :: :: Fst
+    {{ tex \kw{fst} \gap [[k]] }}
+  | snd k :: :: Snd
+    {{ tex \kw{snd} \gap [[k]] }}
+  | ( k ) :: S :: Parens
+    {{ tex ([[k]]) }}
+  | (# k #) :: S :: SParens
+    {{ tex [[k]] }}
 
 r {{ tex \rho }}, s {{ tex \sigma }}, t {{ tex \tau }} :: 'subst_' ::= {{ com substitutions }}
   | • :: :: Nil
