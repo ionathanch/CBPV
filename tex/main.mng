@@ -19,6 +19,7 @@
 \usepackage[supertabular]{ottalt}
 \let\newlist\relax
 \let\renewlist\relax
+\usepackage{thmtools} % fix cref lemma/corollary names; load BEFORE cleveref
 \usepackage[capitalize,nameinlink,noabbrev]{cleveref}
 \usepackage{enumitem,booktabs,subcaption,xspace,doi}
 \usepackage{mathpartir,stmaryrd,colonequals}
@@ -54,6 +55,7 @@
 
 \setlength{\fboxsep}{1.5pt}
 \setlength{\abovecaptionskip}{0.25\baselineskip}
+\setlength{\floatsep}{\baselineskip}
 \setlength{\textfloatsep}{\baselineskip}
 \setlength{\intextsep}{0.25\baselineskip}
 \setlength{\jot}{0\baselineskip}
@@ -337,8 +339,8 @@ Another benefit of commuting conversions is that it unnests expressions,
 bringing it closer to lower-level code.
 Unnested expressions are easier to compile because control flow follows the shape of the syntax.
 In \cref{eq:let-let}, finding the next computation to execute on the left-hand side requires
-traversing into the $[[x]]$ binding, then evaluating then $[[y]]$ binding,
-and finally popping back out to to evaluate the body $[[m]]$.
+traversing into the $[[x]]$ binding, then evaluating the $[[y]]$ binding,
+and finally popping back out to evaluate the body $[[m]]$.
 In contrast, the right-hand side makes it explicit that we first evaluate the $[[y]]$ binding,
 then the $[[x]]$ binding, then the body.
 
@@ -757,7 +759,7 @@ or they are explicitly empty in premises for a few reasons:
   \item Join represent local blocks of code that are jumped to,
     and aren't closures that capture their environment.
     The computation inside of a thunk in \rref{T-thunk}
-    needs to be closed with repsect to jump variables
+    needs to be closed with respect to jump variables
     to prevent jumps from escaping their scopes.
   \item Jumping from inside a constructor violates type safety.
     For example, if we try to take a projection of $[[⟨jump j v, m⟩]]$,
@@ -767,7 +769,7 @@ or they are explicitly empty in premises for a few reasons:
   \item We restrict jumps to tail positions, in contrast to \citet{join},
     who allow jumps in scrutinee positions,
     and require type polymorphism to assign arbitrary types to jumps.
-    Our one-pass transformation doesn't require the flexibilty afforded
+    Our one-pass transformation doesn't require the flexibility afforded
     by permitting computations such as $[[fst (jump j v)]]$.
     The benefit is that we don't need extra reduction steps that discard unneeded contexts,
     such as $[[fst (jump j v) ⇝ jump j v]]$,
@@ -802,13 +804,13 @@ The important typing lemmas that we need are weakening lemmas for both value and
 In the mechanization, they are proven by induction on the typing derivation via renaming lemmas;
 for now, we ignore issues of renaming de Bruijn indices, as they are standard.
 
-\begin{lemma}[Weakening (value contexts)]
+\begin{lemma}[Weakening (value contexts)] \label{lem:wk:val}
   Suppose $[[x]]$ is not free in $[[m]]$.
   If $[[G | D ⊢ m : B]]$, then $[[G, x : A | D ⊢ m : B]]$.
   Similarly, if $[[G, y : A' | D ⊢ m : B]]$, then $[[G, x : A, y : A' | D ⊢ m : B]]$.
 \end{lemma}
 
-\begin{lemma}[Weakening (jump contexts)]
+\begin{lemma}[Weakening (jump contexts)] \label{lem:wk:jump}
   Suppose $[[j]]$ is not free in $[[m]]$.
   If $[[G | D ⊢ m : B]]$, then $[[G | D, j : A ↗ B' ⊢ m : B]]$.
 \end{lemma}
@@ -873,20 +875,23 @@ then binding its result to $[[x]]$, and finally continuing on with a translated 
   \label{fig:kont}
 \end{figure}
 
-However, we have three more contiunation forms corresponding to each of the remaining three evaluation contexts:
+However, we have three more continuation forms corresponding to each of the remaining three evaluation contexts:
 application, first projection, and second projection.
 They are needed because in contrast to ANF for the lambda calculus,
 functions and computation pairs are \emph{computations} and not \emph{values},
 so they can't be let-bound, and their elimination forms can take arbitrary \Acom{}s.
+To see how they're used, we turn to the mutual definitions of the translation
+of values \fbox{$[[⟦v⟧]]$} and computations \fbox{$[[⟦m⟧ K]]$} in \cref{fig:CC-norm},
+delaying the translation of case expressions for the moment.
 
-As an example, $[[(fst ⟨λx. return x, return w⟩) v]]$ is also valid CCNF.
-During the translation of this term, as we'll see shortly,
-we need to handle the inner computation $[[⟨λx. return x, return w⟩]]$
-using the sequence of continuations $[[ (□[□ v])[ fst □ ] ]]$.
-As shorthand, we also write this sequence as $[[(fst □) v]]$,
-plugging whatever is in brackets into the $[[□]]$ of the preceding continuation.
-We define the plugging operation \fbox{$[[ K[m] ]]$} in the same manner,
-so that $[[ ((fst □) v)[⟨λx. return x, return w⟩] ]]$ yields the original term.
+% As an example, $[[(fst ⟨λx. return x, return w⟩) v]]$ is also valid CCNF.
+% During the translation of this term, as we'll see shortly,
+% we need to handle the inner computation $[[⟨λx. return x, return w⟩]]$
+% using the sequence of continuations $[[ (□[□ v])[ fst □ ] ]]$.
+% As shorthand, we also write this sequence as $[[(fst □) v]]$,
+% plugging whatever is in brackets into the $[[□]]$ of the preceding continuation.
+% We define the plugging operation \fbox{$[[ K[m] ]]$} in the same manner,
+% so that $[[ ((fst □) v)[⟨λx. return x, return w⟩] ]]$ yields the original term.
 
 \begin{figure}[h]
   \begin{subfigure}{0.35\textwidth}
@@ -925,7 +930,79 @@ so that $[[ ((fst □) v)[⟨λx. return x, return w⟩] ]]$ yields the original
   \label{fig:CC-norm}
 \end{figure}
 
-\begin{figure}
+The translation of computations takes a continuation as a second argument,
+representing the rest of the computation that expects the result of the translated computation.
+The translation of values is directly recursive on the term,
+with the translation of thunks being the thunk
+of the translated computation using the empty continuation,
+since there's no computation left to do inside the thunk.
+
+To define the translation of computations,
+we need a plugging operation \fbox{$[[ K[m] ]]$}
+that replaces the hole $[[□]]$ in the continuation $[[K]]$ by the given computation $[[m]]$.
+If $[[K]]$ is a sequence of $[[k]]$, the leftmost $[[k]]$ represents the outermost continuation,
+so we plug from right to left.
+For example, given the continuation $[[ ((let x ← □ in m)[□ v])[fst □] ]]$,
+plugging in a \Acom{} $[[n]]$ yields the computation \mbox{$[[let x ← (fst n) v in m]]$}.
+
+As the holes only appear in $[[n]]$ positions, to produce a CCNF,
+we can only plug \Acom{}s into continuations.
+This is the case for the translations of forcing thunks, returning values, functions, and computation pairs:
+we translate their subterms---%
+using empty continuations if needed, since we don't commute into introduction forms---%
+and plug them directly into the continuation.
+(\Cref{sec:related} discusses why we don't commute.)
+
+In the translation of let expressions,
+the evaluation order would first compute $[[m1]]$, then $[[m2]]$,
+followed by whatever computation remains in $[[K]]$.
+Therefore, we translate $[[m1]]$ using a let continuation
+that represents binding the result of $[[m1]]$ to $[[x]]$ then running the translation of $[[m2]]$.
+For function applications and pair projections,
+we translate the subterm, which we expect to yield a function or a pair,
+under the continuation extended with application or projection, respectively.
+
+To see how the translation yields CCNFs,
+we can look at how they act on the left-hand side
+of the commuting conversions in \cref{eq:let-let,eq:app-let},
+assuming that $[[n]]$ is already in CCNF,
+and using the fact that $[[⟦n⟧ K]] = [[ K[n] ]]$.
+%
+\begin{align}
+  &  [[⟦let x ← (let y ← n in return v) in m⟧ □]]             \tag{\cref{eq:let-let}} \\
+  &= [[⟦let x ← n in return v⟧ (let y ← □ in ⟦m⟧ □)]]         \tag{\textit{let}} \\
+  &= [[⟦n⟧ (let x ← □ in ⟦return v⟧ (let y ← □ in ⟦m⟧ □))]]   \tag{\textit{let}} \\
+  &= [[ (let x ← □ in (let y ← □ in ⟦m⟧ □)[return ⟦v⟧])[n] ]] \tag{\textit{$[[n]]$, ret}} \\
+  &= [[let x ← n in (let y ← return ⟦v⟧ in ⟦m⟧ □)]]           \tag{\textit{plug}} \\
+  &  [[⟦(let x ← n in λy. m) v⟧ □]]                           \tag{\cref{eq:app-let}} \\
+  &= [[⟦let x ← n in λy. m⟧ (□ ⟦v⟧)]]                         \tag{\textit{app}} \\
+  &= [[⟦n⟧ (let x ← □ in ⟦λy. m⟧ (□ ⟦v⟧))]]                   \tag{\textit{let}} \\
+  &= [[ (let x ← □ in (□ ⟦v⟧)[λy. ⟦m⟧ □])[n] ]]               \tag{\textit{$[[n]]$, fun}} \\
+  &= [[let x ← n in (λy. ⟦m⟧ □) ⟦v⟧]]                         \tag{\textit{plug}}
+\end{align}
+
+\hfill
+
+The na\"ive translation of conditional expressions duplicates the continuation:
+$$[[⟦if v then m1 else m2⟧K]] = [[if ⟦v⟧ then ⟦m1⟧ K else ⟦m2⟧ K]].$$
+If $[[K]]$ only contains application and projection continuations,
+this is the desired translation.
+From $[[fst (if v then ⟨m1, m2⟩ else n)]]$ we get $[[if v then fst ⟨m1, m2⟩ else fst n]]$,
+whose true branch can then be inlined.
+It doesn't make sense to jump to a join point that performs the projection,
+since it would make the inlining opportunity harder to find,
+and require unnecessarily thunking the computation pair to pass it to the join point.
+
+However, if the continuation is $[[let x ← □ in m]]$,
+duplicating it would duplicate the arbitrary computation $[[m]]$.
+In this case, we move $[[m]]$ to a join point and replace it in the continuation by a jump.
+From $[[let x ← (if v then return w else n) in m]]$ we get
+$$[[join j x = m in (if v then (let x ← return w in jump j x) else (let x ← n in jump j x))]],$$
+and the true branch can still inline the let binding.
+\Cref{fig:CC-norm-case} generalizes this strategy to case expressions and nested continuations;
+whether we construct a join point depends on whether the continuation ends in a let continuation.
+
+\begin{figure}[h]
   \begin{multline*}
     [[⟦case v of inl x ⇒ m1 ; inr y ⇒ m2⟧ K]] \coloneqq \\
     \begin{cases}
@@ -942,7 +1019,113 @@ so that $[[ ((fst □) v)[⟨λx. return x, return w⟩] ]]$ yields the original
   \label{fig:CC-norm-case}
 \end{figure}
 
-\section{Commuting Conversion Normalization with Join Points Preserves Evaluation} \label{sec:proof}
+In the mechanization, this is a source-to-source translation
+over CBPV terms (without join points) to CBPV terms (with join points).
+We need to explicitly prove that the translation indeed produces terms in CCNF,
+which holds by inspection, \ie mutual induction over the syntax.
+
+\begin{lemma}[Plugging preserves CCNF] \leavevmode \\
+  If the subterms of $[[K]]$ are in CCNF and $[[n]]$ is in CCNF,
+  then $[[ K[n] ]]$ is in CCNF.
+\end{lemma}
+
+\begin{lemma}[CCNF preservation] \label{lem:ccnf-preservation} \leavevmode \\
+  If the subterms of $[[K]]$ are in CCNF,
+  then $[[⟦v⟧]]$ and $[[⟦m⟧ K]]$ are in CCNF.
+\end{lemma}
+
+\subsection{Commuting conversion preserves typing}
+
+With \cref{lem:ccnf-preservation},
+we know that the translation performs all the commuting conversions
+in the directions we desire.
+However, this alone doesn't guarantee that the translation preserves the \emph{meaning}
+of the values and computations.
+We say what we mean by meaning preservation in the next section,
+whose proof uses typing preservation:
+a translated term must behave like the same kind of term as the original term.
+
+\begin{figure}[h]
+  \begin{mathpar}
+    \fbox{$[[G | D ⊢ K : B1 ⇒ B2]]$} \hfill \\
+    \inferrule[\ottdrulename{K-let}]
+      {[[G, x : A | D ⊢ m : B]]}
+      %------------------------------------%
+      {[[G | D ⊢ let x ← □ in m : F A ⇒ B]]}
+    \and
+    \inferrule[\ottdrulename{K-app}]
+      {[[G ⊢ v : A]] \\
+       [[G | D ⊢ K : B1 ⇒ B2]]}
+      %----------------------------------%
+      {[[G | D ⊢ K[□ v] : (A → B1) ⇒ B2]]}
+    \and
+    \inferrule[\ottdrulename{K-fst}]
+      {[[G | D ⊢ K : B1 ⇒ B]]}
+      %------------------------------------%
+      {[[G | D ⊢ K[fst □] : (B1 & B2) ⇒ B]]}
+    \quad
+    \inferrule[\ottdrulename{K-snd}]
+      {[[G | D ⊢ K : B1 ⇒ B]]}
+      %------------------------------------%
+      {[[G | D ⊢ K[snd □] : (B1 & B2) ⇒ B]]}
+    \quad
+    \inferrule[\ottdrulename{K-hole}]{~}
+      {[[G | D ⊢ □ : B ⇒ B]]}
+  \end{mathpar}
+  \caption{Typing rules for continuations}
+  \Description[]{}
+  \label{fig:typing-K}
+\end{figure}
+
+To show type preservation, we first need a typing judgement for the continuations,
+given in \cref{fig:typing-K}.
+A continuation $[[K]]$ having type $[[B1 ⇒ B2]]$ means that
+if the hole in $[[K]]$ represents a missing computation of type $[[B1]]$,
+then $[[K]]$ with its hole plugged in would be a computation of type $[[B2]]$.
+Consequently, we can show that plugging preserves typing,
+which is used in the proof of type preservation.
+We also need an inversion lemma for continuations that end in let continuations.
+
+\begin{lemma}[Plugging preserves typing] \label{lem:preservation:plug}
+  If $[[G | D ⊢ K : B1 ⇒ B2]]$ and $[[G | • ⊢ n : B1]]$,
+  then $[[G | D ⊢ K[n] : B2]]$.
+\end{lemma}
+
+\begin{proof}
+  By induction on the typing derivation of $[[K]]$,
+  using \cref{lem:wk:jump} in the \rref*{K-hole} case.
+\end{proof}
+
+\begin{lemma}[Let continuation inversion] \label{lem:k-let:inv}
+  If $[[K]] = [[(let x ← □ in m)]][ [[k1]] ] \dots [ [[ki]] ]$
+  and $[[G | D ⊢ K : B1 ⇒ B2]]$,
+  then there exists some $[[A]]$ such that
+  $[[G | D, j : A ↗ B2 ⊢ K' : B1 ⇒ B2]]$
+  and $[[G, x : A | D ⊢ m : B2]]$,
+  where $[[K']] = [[(let x ← □ in jump j x)]][ [[k1]] ] \dots [ [[ki]] ]$.
+\end{lemma}
+
+\begin{proof}
+  By induction on the typing derivation of $[[K]]$.
+\end{proof}
+
+\begin{lemma}[Type preservation]
+  Suppose $[[v]]$ and $[[m]]$ are plain CBPV terms
+  (and thus have no join points or jumps).
+  If $[[G ⊢ v : A]]$, then $[[G ⊢ ⟦v⟧ : A]]$,
+  and if $[[G | • ⊢ m : B1]]$ and $[[G | D ⊢ K : B1 ⇒ B2]]$,
+  then $[[G | D ⊢ ⟦m⟧ K : B2]]$.
+\end{lemma}
+
+\begin{proof}
+  By mutual induction on the typing derivations of $[[v]]$ and $[[m]]$,
+  using \cref{lem:preservation:plug} in the \rref*{T-force,T-fun,T-pair} cases.
+  In the \rref*{T-case} case,
+  if $[[K]]$ is a let continuation,
+  use \cref{lem:k-let:inv} and \rref{T-join} to construct the derivation.
+\end{proof}
+
+\section{Commuting Conversion Normalization Preserves Evaluation} \label{sec:proof}
 
 Normalizing by all commuting conversions shouldn't affect the meaning of a program.
 Formally, if a closed computation evaluates to a returned value,

@@ -9,7 +9,9 @@
         "sequentializing",
         "sequentialization",
         "thunked",
+        "thunking",
         "IRs",
+        "inlined",
         "inlining",
         "inlinings",
         "subexpression",
@@ -19,11 +21,14 @@
         "scrutinee",
         "scrutinees",
         "unnest",
+        "unnests",
+        "unnested",
         "dedupe",
         "naïve",
         "naïvely",
         "Bruijn",
         "well-typedness",
+        "well-scopedness",
         "multi-step",
         "PLDI",
         "Rocq",
@@ -37,7 +42,8 @@
     },
     "disabledRules": {
       "en-CA": [
-        "OUTSIDE_OF"
+        "OUTSIDE_OF",
+        "SENT_START_CONJUNCTIVE_LINKING_ADVERB_COMMA"
       ]
     },
     "hiddenFalsePositives": {
@@ -70,8 +76,11 @@
         "\\Crefrange{}{}": "dummy",
         "\\crefformat{}{}": "ignore",
         "\\Crefformat{}{}": "ignore",
+        "\\crefmultiformat{}{}{}{}{}": "ignore",
+        "\\Crefmultiformat{}{}{}{}{}": "ignore",
         "\\crefrangeformat{}{}": "ignore",
         "\\Crefrangeformat{}{}": "ignore",
+        "\\emph{}": "dummy",
         "\\ottdrulename{}": "ignore",
         "\\rref{}": "dummy",
         "\\rref*{}": "dummy",
