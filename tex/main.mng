@@ -1086,7 +1086,7 @@ Consequently, we can show that plugging preserves typing,
 which is used in the proof of type preservation.
 We also need an inversion lemma for continuations that end in let continuations.
 
-\begin{lemma}[Plugging preserves typing] \label{lem:preservation:plug}
+\begin{lemma}[Plugging preserves typing] \label{lem:preservation:plug} \leavevmode \\
   If $[[G | D ⊢ K : B1 ⇒ B2]]$ and $[[G | • ⊢ n : B1]]$,
   then $[[G | D ⊢ K[n] : B2]]$.
 \end{lemma}
@@ -1154,7 +1154,8 @@ such as the following statement, unfortunately doesn't work.
   which reduces to $[[let x ← (let y ← n1 in n2) in m]]$.
   The left-hand side translates to itself, since it's already in CCNF,
   while the right-hand side translates to $[[let y ← n1 in let x ← n2 in m]]$.
-  Therefore, we need to show that the right-hand side reduces to its own translation,
+  By transitivity, it remains to show that
+  $[[let x ← (let y ← n1 in n2) in m ⇝* let y ← n1 in let x ← n2 in m]]$,
   but there is no such reduction sequence since there is no reduction step that commutes let bindings.
 \end{proof}
 
@@ -1162,7 +1163,7 @@ However, if we know that $[[n1]]$ in the counterexample reduces to some $[[retur
 then we can deduce that the right side and its translation must reduce to
 $[[let x ← n2{y ↦ v} in m]]$, which gives us an equivalence between the original term and its translation.
 If our counterexample is well typed,
-then the logical equivalence gives us precisely the required information that
+then a logical equivalence gives us precisely the required information that
 subterms must reduce to canonical terms such as returned values.
 
 The proof of \cref{thm:ground-run} proceeds by:
@@ -1188,14 +1189,172 @@ and \cref{sec:proof:end} covers \cref{item:end}.
 \subsection{Logical equivalence and the fundamental theorem} \label{sec:proof:logrel}
 
 \begin{figure}[h]
-  \begin{align}
-    [[s]], [[r]] &\dblcolon= [[•]] \mid [[s, x ↦ v]] \tag{substitution maps} \\
-    [[p]], [[q]] &\dblcolon= [[•]] \mid [[p, j x = m]] \tag{join stacks}
-  \end{align}
+  \begin{align*}
+    \mathclap{\fbox{$[[(v, w) ∈ A]]$} \quad \fbox{$[[(m, n) ∈ B]]$} \quad \fbox{$[[(m, n) ∈* B]]$}} \hfill \\
+    [[((), ()) ∈ ⊤]] & \\
+    [[(inl v, inl w) ∈ A1 + A2]]       &\textit{ iff } [[(v, w) ∈ A1]] \\
+    [[(inr v, inr w) ∈ A1 + A2]]       &\textit{ iff } [[(v, w) ∈ A2]] \\
+    [[({m}, {n}) ∈ U B]]               &\textit{ iff } [[(m, n) ∈* B]] \\
+    [[(return v, return w) ∈ F A]]     &\textit{ iff } [[(v, w) ∈ A]] \\
+    [[(λx. m, λx. n) ∈ A → B]]         &\textit{ iff } \forall [[v]], [[w]] \mathpunct{.} [[(v, w) ∈ A]] ⇒ [[(m{x ↦ v}, n{x ↦ w}) ∈* B]] \\
+    [[(⟨m1, m2⟩, ⟨n1, n2⟩) ∈ B1 & B2]] &\textit{ iff } [[(m1, n1) ∈* B1]] \wedge [[(m2, n2) ∈* B2]] \\
+    [[(m, n) ∈* B]]                    &\textit{ iff } \exists [[tm1]], [[tm2]] \mathpunct{.} ([[m ⇓ tm1]]) \wedge ([[n ⇓ tm2]]) \wedge [[(tm1, tm2) ∈ B]]
+  \end{align*}
+  \caption{Logical equivalence of terms over CBPV types}
+  \Description[]{}
+  \label{fig:logeq}
+\end{figure}
+
+Our logical relation relates two closed values or computations at a value or computation type, respectively.
+We equivalently say that a pair of terms are in the interpretation of some type.
+Following the presentation by \citet{CBPV-Coq},
+we use an auxiliary interpretation $[[⟦B⟧*]]$ which relates computations
+that normalize to terminals related at $[[B]]$.
+It follows that if $[[(m, n) ∈ B]]$, then $[[(m, n) ∈* B]]$.
+
+The interpretations, defined by mutual recursion over types, are otherwise standard:
+unit values are related,
+left and right injections are related when their values are related at the respective left or right type,
+thunks are related when their computations are related,
+functions are related when their bodies are related for all related arguments,
+and pairs are related when their first and second components are respectively related.
+
+The first property we need of logical equivalence is backward closure under evaluation of $[[⟦B⟧*]]$,
+which holds by unfolding its definition and transitivity of evaluation.
+A helpful corollary adds congruence under join points.
+
+\begin{lemma}[Backward closure] \leavevmode \\
+  If $[[m1 ⇝ m2]]$ and $[[n1 ⇝ n2]]$ and $[[(m2, n2) ∈* B]]$,
+  then $[[(m1, n1) ∈* B]]$
+\end{lemma}
+
+\begin{lemma}[Backward closure under join points]
+  If $[[m1 ⇝ m2]]$ and $[[n1 ⇝ n2]]$ and $[[(m2, n2) ∈* B]]$,
+  then $[[(join j x = m' in m1, join j x = n' in m2) ∈* B]]$,
+  using \rref{E-join,E-drop}.
+\end{lemma}
+
+The second property is symmetry and transitivity,
+making it a partial equivalence relation over all terms.
+These lemmas are proven by induction over the type and unfolding definitions.
+
+\begin{lemma}[Symmetry and transitivity (logical equivalence)] \label{lem:logeq:PER} \leavevmode
+  \begin{itemize}
+    \item If $[[(v, w) ∈ A]]$ then $[[(w, v) ∈ A]]$,
+    \item If $[[(m, n) ∈ B]]$ then $[[(n, m) ∈ B]]$.
+    \item If $[[(m, n) ∈* B]]$ then $[[(n, m) ∈* B]]$.
+    \item If $[[(v1, v2) ∈ A]]$ and $[[(v2, v3) ∈ A]]$ then $[[(v1, v3) ∈ A]]$,
+    \item If $[[(m1, m2) ∈ B]]$ and $[[(m2, m3) ∈ B]]$ then $[[(m1, m3) ∈ B]]$.
+    \item If $[[(m1, m2) ∈* B]]$ and $[[(m2, m3) ∈* B]]$ then $[[(m1, m3) ∈* B]]$.
+  \end{itemize}
+\end{lemma}
+
+\begin{figure}[h]
+  \begin{align*}
+    [[s]], [[t]] &\dblcolon= [[•]] \mid [[s, x ↦ v]] &
+    [[p]], [[q]] &\dblcolon= [[•]] \mid [[p, j x = m]]
+  \end{align*}
   \caption{Substitution maps and join stacks}
   \Description[]{}
   \label{fig:ctxt-subst}
 \end{figure}
+
+To work with equivalence of well-typed terms,
+which may be open with respect to value and jump contexts,
+we need close over value and jump variables
+using substitution maps $[[s]]$ and join stacks $[[p]]$,
+defined in \cref{fig:ctxt-subst}.
+Applying a substitution map $[[v{s}]]$, $[[m{s}]]$
+corresponds to simultaneous substitution (so order doesn't matter in $[[s]]$).
+Given a join stack $[[p]] \equiv [[j1 x1 = m1]], \dots, [[ji xi = mi]]$,
+the computation $[[joins p in m]]$ represents wrapping $[[m]]$ in join points outward in,
+corresponding to the term $[[join j1 x1 = m1 in _]] \dots [[join ji xi = mi in m]]$
+(so order \emph{does} matter in $[[p]]$).
+
+\begin{figure}
+  \begin{mathpar}
+    \fbox{$[[(s, t) ∈ G]]$} \quad \fbox{$[[(p, q) ∈ D]]$} \hfill \\
+    % [[(s, t) ∈ G]] \textit{ iff } \forall [[x : A ∈ G]] \mathpunct{.} [[(s(x), t(x)) ∈ A]] \\
+    % \mprset{fraction={{-~} {~-~} {~-}}}
+    \inferrule[\ottdrulename{S-nil}]{~}{(•, •) ∈ •}
+    \and
+    \inferrule[\ottdrulename{S-cons}]
+      {[[(s, t) ∈ G]] \and [[(v, w) ∈ A]]}
+      %----------------------------------------%
+      {[[((s, x ↦ v), (t, x ↦ w)) ∈ G, x : A]]}
+    \and
+    \inferrule[\ottdrulename{J-nil}]{~}{(•, •) ∈ •}
+    \and
+    \inferrule[\ottdrulename{J-cons}]
+      {[[(p, q) ∈ D]] \and \forall [[v]], [[w]] \mathpunct{.} [[(v, w) ∈ A]] ⇒ [[(joins p in m{x ↦ v}, joins q in n{x ↦ w}) ∈ B]]}
+      %-----------------------------------------------%
+      {[[((p, j x = m), (q, j x = n)) ∈ D, j : A ↗ B]]}
+  \end{mathpar}
+  \caption{Logical equivalence of substitution maps and join stacks}
+  \Description[]{}
+  \label{fig:logeq-subst}
+\end{figure}
+
+We extend logical equivalence to substitution maps and join stacks,
+relating two of them at a particular context.
+\Cref{fig:logeq-subst} gives inductive rules for these logical equivalences.
+\Rref{S-nil,S-cons} are equivalent to stating that
+$[[(s, t) ∈ G]]$ holds when for all $[[x : A ∈ G]]$, $[[(s(x), t(x)) ∈ A]]$ holds.
+\Rref{S-cons} states that we can extend a pair of related join stacks $[[p]]$ and $[[q]]$
+by join points $[[m]]$ and $[[n]]$ of type $[[A ↗ B]]$
+when the join points themselves are related at $[[B]]$ given arguments related at $[[A]]$
+\emph{and} closed over by $[[p]]$ and $[[q]]$.
+They need to be closed over since $[[m]]$ and $[[n]]$ themselves may jump to earlier join points.
+We can show that substitution maps and join stacks are partial equivalence relations
+by induction on their derivations.
+
+\begin{lemma}[Symmetry and transitivity (logical equivalence at contexts)] \label{lem:logeq-subst:PER} \leavevmode
+  \begin{itemize}
+    \item If $[[(s, t) ∈ G]]$ then $[[(t, s) ∈ G]]$.
+    \item If $[[(p, q) ∈ D]]$ then $[[(p, q) ∈ D]]$.
+    \item If $[[(s1, s2) ∈ G]]$ and $[[(s2, s3) ∈ G]]$ then $[[(s1, s3) ∈ G]]$.
+    \item If $[[(p1, p2) ∈ D]]$ and $[[(p2, p3) ∈ D]]$ then $[[(p1, p3) ∈ D]]$.
+  \end{itemize}
+\end{lemma}
+
+Using substitution maps and join stacks, we can define semantic equivalence of open terms.
+They are also partial equivalence relations,
+which follows from \cref{lem:logeq:PER,lem:logeq-subst:PER}.
+
+\begin{definition}[Semantic equivalence of values]
+  Values $[[v]]$ and $[[w]]$ are semantically equivalent under context $[[G]]$ at type $[[A]]$,
+  written \fbox{$[[G ⊧ v ~ w : A]]$},
+  when for all substitution maps $[[(s, t) ∈ G]]$,
+  $[[(v{s}, w{t}) ∈ A]]$ holds.
+\end{definition}
+
+\begin{definition}[Semantic equivalence of computations]
+  Computations $[[m]]$ and $[[n]]$ are semantically equivalent under contexts $[[G]]$ and $[[D]]$ at type $[[B]]$,
+  written \fbox{$[[G | D ⊧ m ~ n : B]]$},
+  when for all substitution maps $[[(s, t) ∈ G]]$ and join stacks $[[(p, q) ∈ D]]$,
+  $[[(joins p in m{s}, joins q in n{t}) ∈ B]]$ holds.
+\end{definition}
+
+\begin{lemma}[Symmetry and transitivity (semantic equivalence)] \leavevmode
+  \begin{itemize}
+    \item If $[[G ⊧ v ~ w : A]]$ then $[[G ⊧ w ~ v : A]]$.
+    \item If $[[G | D ⊧ m ~ n : B]]$ then $[[G | D ⊧ n ~ m : B]]$.
+    \item If $[[G ⊧ v1 ~ v2 : A]]$ and $[[G ⊧ v2 ~ v3 : A]]$ then $[[G ⊧ v1 ~ v3 : A]]$.
+    \item If $[[G | D ⊧ m1 ~ m2 : B]]$ and $[[G | D ⊧ m2 ~ m3 : B]]$ then $[[G | D ⊧ m1 ~ m3 : B]]$.
+  \end{itemize}
+\end{lemma}
+
+Finally, we show the fundamental theorem of semantic equivalence:
+well-typed terms are semantically equivalent to themselves.
+
+\begin{theorem}[Fundamental theorem of semantic equivalence]
+  If $[[G ⊢ v : A]]$ then $[[G ⊧ v ~ v : A]]$,
+  and if $[[G | D ⊢ m : B]]$ then $[[G | D ⊧ m ~ m : B]]$.
+\end{theorem}
+
+\begin{proof}
+  \TODO
+\end{proof}
 
 \subsection{Semantic equivalence of commuting conversions} \label{sec:proof:cc}
 

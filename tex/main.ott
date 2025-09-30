@@ -46,9 +46,11 @@ T :: 'termty_' ::= {{ com ground types }}
   | ⊤ :: :: Unit
   | T1 + T2 :: :: Sum
 
-C :: 'kontty_' ::= {{ com continuation types }}
+C :: 'fakety_' ::= {{ com fake types }}
   | B1 ⇒ B2 :: :: Kont
     {{ tex [[B1]] \Rightarrow [[B2]] }}
+  | A ↗ B :: :: Jump
+    {{ tex [[A]] \mathbin{\nnearrow}\! [[B]]}}
 
 v, w :: 'val_' ::= {{ com values }}
   | x :: :: Var
@@ -65,6 +67,13 @@ v, w :: 'val_' ::= {{ com values }}
     {{ tex \kw{false} }}
   | { m } :: :: Thunk
     {{ tex \mathopen{\lbrace} [[m]] \mathclose{\rbrace} }}
+  % substitution metafunctions
+  | s ( x ) :: :: Subst
+    {{ tex [[s]]([[x]]) }}
+    {{ com single substitution into values }}
+  | v { s } :: :: SubstsVal
+    {{ com simultaneous substitution into values }}
+    {{ tex [[v]] [ [[s]] ] }}
   % syntactic sugar for typesetting
   | v & :: S :: Align
     {{ com align after }}
@@ -109,6 +118,8 @@ m, n :: 'com_' ::= {{ com computations }}
     {{ tex \kw{join} \gap [[j]] \gap [[x]] \mathrel{=} [[m1]] \mathrel{ \kw{in} } [[m2]] }}
   | join j = m1 in m2 :: M :: Join'
     {{ tex \kw{join} \gap [[j]] \mathrel{=} [[m1]] \mathrel{ \kw{in} } [[m2]] }}
+  | joins p in m :: M :: Joins
+    {{ tex \kw{joins} \gap [[p]] \mathrel{ \kw{in} } [[m]] }}
   | jump j v :: :: Jump
     {{ tex \kw{jump} \gap [[j]] \mathrel{ \kw{with} } [[v]] }}
   | jump j :: M :: Jump'
@@ -133,9 +144,6 @@ m, n :: 'com_' ::= {{ com computations }}
   | m { x ↦ v } :: :: SubstCom
     {{ com single substitution into computations }}
     {{ tex [[m]] [ [[x]] \mapsto [[v]] ] }}
-  | v { s } :: :: SubstsVal
-    {{ com simultaneous substitution into values }}
-    {{ tex [[v]] [ [[s]] ] }}
   | m { s } :: :: SubstsCom
     {{ com simultaneous substitution into computations }}
     {{ tex [[m]] [ [[s]] ] }}
@@ -230,12 +238,24 @@ r {{ tex \rho }}, s {{ tex \sigma }}, t {{ tex \tau }} :: 'subst_' ::= {{ com su
     {{ tex \cdot }}
   | s , x ↦ v :: :: Cons
     {{ tex [[s]] \mathpunct{,} [[x]] \mathbin{\mapsto} [[v]] }}
+  | x ↦ v :: M :: Singleton
+    {{ tex [[x]] \mathbin{\mapsto} [[v]] }}
+  | ( s ) :: S :: Parens
+    {{ tex ([[s]]) }}
+  | (# s #) :: S :: SParens
+    {{ tex [[s]] }}
 
 J, p {{ tex \varphi }}, q {{ tex \psi }} :: 'join_' ::= {{ com join points }}
-  | □ :: :: Nil
+  | • :: :: Nil
     {{ tex \square }}
   | J , j x = m :: :: Cons
-    {{ tex [[J]] [ \kw{join} \gap [[j]] \gap [[x]] \mathrel{=} [[m]] \mathrel{ \kw{in} } \square ] }}
+    {{ tex [[J]] \mathpunct{,} \gap [[j]] \gap [[x]] \mathrel{=} [[m]] }}
+  | j x = m :: M :: Singleton
+    {{ tex [[j]] \gap [[x]] \mathrel{=} [[m]] }}
+  | ( J ) :: S :: Parens
+    {{ tex ([[J]]) }}
+  | (# J #) :: S :: SParens
+    {{ tex [[J]] }}
 
 G {{ tex \Gamma }} :: 'ctxt_' ::= {{ com term contexts }}
   | • :: :: Nil
@@ -257,6 +277,14 @@ D {{ tex \Delta }} :: 'dtxt_' ::= {{ com join contexts }}
   | D1 , D2 :: M :: Append
     {{ tex [[D1]] \mathpunct{,} [[D2]] }}
 
+S :: 'set_' ::= {{ com sets }}
+  | ⟦ A ⟧ :: :: InterpVal
+    {{ tex \llbracket [[A]] \rrbracket }}
+  | ⟦ B ⟧ :: :: InterpCom
+    {{ tex \llbracket [[B]] \rrbracket }}
+  | ⟦ B ⟧* :: :: InterpEval
+    {{ tex \llbracket [[B]] \rrbracket^\ast }}
+
 formula :: 'formula_' ::=
   | judgement :: :: judgement
   % syntactics
@@ -275,6 +303,8 @@ formula :: 'formula_' ::=
     {{ tex ( [[v]] \mathpunct{,} [[w]] ) \mathrel{\in} \llbracket [[A]] \rrbracket }}
   | ( m , n ) ∈ B :: :: LogCom
     {{ tex ( [[m]] \mathpunct{,} [[n]] ) \mathrel{\in} \llbracket [[B]] \rrbracket }}
+  | ( m , n ) ∈* B :: :: LogEval
+    {{ tex ( [[m]] \mathpunct{,} [[n]] ) \mathrel{\in} \llbracket [[B]] \rrbracket^\ast }}
   | ( s , t ) ∈ G :: :: LogSubst
     {{ tex ( [[s]] \mathpunct{,} [[t]] ) \mathrel{\in} \llbracket [[G]] \rrbracket }}
   | ( p , q ) ∈ D :: :: LogJoin
