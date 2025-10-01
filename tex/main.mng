@@ -1375,37 +1375,45 @@ We present them as derivable rules in \cref{fig:semeq:cc} for legibility.
     \infer*[Right=\ottdrulename{let-let}]
       {[[G | • ⊢ let x ← n in m : F A]] \\
        [[G, y : A | D ⊢ m' : B]]}
+      %----------------------------------%
       {[[G | D ⊧ let y ← (let x ← n in m) in m' ~ let x ← n in let y ← m in m' : B]]}
     \and
     \infer*[Right=\ottdrulename{let-app}]
       {[[G | • ⊢ let x ← n in m : A → B]] \\
        [[G ⊢ v : A]]}
+      %------------------------------------%
       {[[G | D ⊧ (let x ← n in m) v ~ let x ← n in (m v) : B]]}
     \and
     \infer*[Right=\ottdrulename{let-fst}]
       {[[G | • ⊢ let x ← n in m : B1 & B2]]}
+      %------------------------------------%
       {[[G | D ⊧ fst (let x ← n in m) ~ let x ← n in (fst m) : B1]]}
     \and
     \infer*[Right=\ottdrulename{let-snd}]
       {[[G | • ⊢ let x ← n in m : B1 & B2]]}
+      %------------------------------------%
       {[[G | D ⊧ snd (let x ← n in m) ~ let x ← n in (snd m) : B2]]}
     \and
     \infer*[Right=\ottdrulename{case-let}]
       {[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : F A]] \\
        [[G, z : A | D ⊢ m : B]]}
+      %----------------------------------------------------%
       {[[G | D ⊧ let z ← (case v of inl x ⇒ m1; inr y ⇒ m2) in m \\ ~ case v of inl x ⇒ (let z ← m1 in m); inr y ⇒ (let z ← m2 in m) : B]]}
     \and
     \infer*[Right=\ottdrulename{case-app}]
       {[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : A → B]] \\
        [[G ⊢ w : A]]}
+      %------------------------------------------------------%
       {[[G | D ⊧ (case v of inl x ⇒ m1; inr y ⇒ m2) w \\ ~ case v of inl x ⇒ (m1 w); inr y ⇒ (m2 w) : B]]}
     \and
     \infer*[Right=\ottdrulename{case-fst}]
       {[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : B1 & B2]]}
+      %------------------------------------------------------%
       {[[G | D ⊧ fst (case v of inl x ⇒ m1; inr y ⇒ m2) \\ ~ case v of inl x ⇒ (fst m1); inr y ⇒ (fst m2) : B1]]}
     \and
     \infer*[Right=\ottdrulename{case-snd}]
       {[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : B1 & B2]]}
+      %------------------------------------------------------%
       {[[G | D ⊧ snd (case v of inl x ⇒ m1; inr y ⇒ m2) \\ ~ case v of inl x ⇒ (snd m1); inr y ⇒ (snd m2) : B2]]}
   \end{mathpar}
   \caption{Semantic equivalence of commuting conversions}
@@ -1448,7 +1456,35 @@ We step through only the proof of \rref*{let-app} as a representative case.
   \TODO
 \end{proof}
 
-\TODO: \rref*{join-join}
+Although our translation doesn't involve commuting join points,
+we do require a corresponding semantic equivalence to unnest join points,
+stated in \cref{fig:semeq:join-join}.
+
+\begin{figure}[h]
+  \begin{mathpar}
+    \mprset{fraction={{-~} {~-~} {~-}}}
+    \infer[\ottdrulename{join-join}]
+      {[[G, x1 : A1 | D ⊢ m1 : B]] \\
+       [[G, x2 : A2 | D, j1 : A1 ↗ B ⊢ m2 : B]] \\
+       [[G | D, j2 : A2 ↗ B ⊢ m : B]]}
+      {[[G | D ⊧ join j2 x2 = (join j1 x1 = m1 in m2) in m ~ join j1 x1 = m1 in join j2 x2 = m2 in m : B]]}
+  \end{mathpar}
+  \caption{Semantic equivalence of commuting join points}
+  \Description[]{}
+  \label{fig:semeq:join-join}
+\end{figure}
+
+On the right-hand side, $[[m]]$ can't directly jump to $[[j1]]$,
+since it isn't in scope in its typing,
+so if $[[m]]$ doesn't jump to $[[j2]]$, then both join points can be dropped.
+In the mechanization, this isn't so easy to prove,
+since we're using de Bruijn indexed jump variables.
+Consequently, $[[m]]$ must be explicitly weakened on the right-hand side,
+and to show that join points can be dropped,
+we first need to show that evaluation preserves weakening.
+These technical details aside, the proof proceeds similarly to those for the commuting conversions.
+\TODO: I'd like to add a discussion subsection for mechanization details like these,
+but I'm not sure I can fit it in.
 
 \subsection{Semantic equivalence of plugging continuations} \label{sec:proof:plug}
 
