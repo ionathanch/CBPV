@@ -280,7 +280,7 @@ theorem sndCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ B₁ B₂}
       _ ⇒⋆ n₂                := by rw [weakenJCom0]
     exact ℰ.bwdsRejoin r₁' r₂' hB₁
 
-theorem joinJoin {Γ δ} {Δ : Dtxt δ} {n₁ n₂ m A B} (hn₁ : Γ ∷ A ∣ Δ ⊢ n₁ ∶ B) (hn₂ : Γ ∷ A ∣ Δ ∷ A ↗ B ⊢ n₂ ∶ B) (hm : Γ ∣ Δ ∷ A ↗ B ⊢ m ∶ B) :
+theorem joinJoin {Γ δ} {Δ : Dtxt δ} {n₁ n₂ m A₁ A₂ B} (hn₁ : Γ ∷ A₁ ∣ Δ ⊢ n₁ ∶ B) (hn₂ : Γ ∷ A₂ ∣ Δ ∷ A₁ ↗ B ⊢ n₂ ∶ B) (hm : Γ ∣ Δ ∷ A₂ ↗ B ⊢ m ∶ B) :
   Γ ∣ Δ ⊨ join (join (renameCom (lift succ) n₁) n₂) m ~ join n₁ (join n₂ (renameJCom (liftJ .succ) m)) ∶ B := by
   intro σ τ hστ js₁ js₂ hjs
   have hright := soundCom (.join hn₁ (.join hn₂ (wtRenameJ (wRenameJLift wRenameJSucc) hm))) hστ hjs
