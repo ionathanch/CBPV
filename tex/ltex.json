@@ -43,16 +43,18 @@
     "disabledRules": {
       "en-CA": [
         "OUTSIDE_OF",
+        "ENGLISH_WORD_REPEAT_BEGINNING_RULE",
         "SENT_START_CONJUNCTIVE_LINKING_ADVERB_COMMA"
       ]
     },
     "hiddenFalsePositives": {
       "en-CA": [
-        {"rule": "EN_COMPOUNDS_MULTI_STEP", "sentence": "multi-step"},
-        {"rule": "POSSESSIVE_APOSTROPHE",   "sentence": "optimizations"},
-        {"rule": "LET_IT_INFINITIVE",       "sentence": "to express"},
-        {"rule": "COMMA_COMPOUND_SENTENCE", "sentence": "and we know"},
-        {"rule": "BE_INTEREST_IN",          "sentence": "interesting in our setting"}
+        {"rule": "EN_COMPOUNDS_MULTI_STEP",            "sentence": "multi-step"},
+        {"rule": "POSSESSIVE_APOSTROPHE",              "sentence": "optimizations"},
+        {"rule": "LET_IT_INFINITIVE",                  "sentence": "to express"},
+        {"rule": "COMMA_COMPOUND_SENTENCE",            "sentence": "and we know"},
+        {"rule": "BE_INTEREST_IN",                     "sentence": "interesting in our setting"},
+        {"rule": "SINGULAR_VERB_AFTER_THESE_OR_THOSE", "sentence": "proving these is"}
       ]
     },
     "latex": {
@@ -86,6 +88,7 @@
         "\\rref*{}": "dummy",
         "\\Rref{}": "dummy",
         "\\Rref*{}": "dummy",
+        "\\nameref{}": "dummy",
         "\\inferrule[]{}{}": "ignore",
         "\\inferrule*[]{}{}": "ignore",
         "\\infer[]{}{}": "ignore",

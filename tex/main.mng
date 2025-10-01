@@ -643,7 +643,7 @@ and multi-step evaluations always evaluate to the same terminal.
   then $[[tm1]] = [[tm2]]$.
 \end{corollary}
 
-\begin{corollary}[Merging]
+\begin{corollary}[Merging] \label{lem:eval:merging}
   If $[[m ⇓ tm]]$ and $[[m ⇝* m']]$,
   then $[[m' ⇓ tm]]$.
 \end{corollary}
@@ -1138,7 +1138,7 @@ but aren't necessarily syntactically equal.
 
 \begin{theorem} \label{thm:ground-run}
   Given $[[m]]$ such that $[[• | • ⊢ m : F T]]$,
-  if $[[m ⇓ return v]]$, then $[[⟦ m ⟧ ⇓ return v]]$.
+  if $[[m ⇓ return v]]$, then $[[⟦ m ⟧ □ ⇓ return v]]$.
 \end{theorem}
 
 We prove this property as a corollary of a logical equivalence between a computation and its translation.
@@ -1146,7 +1146,7 @@ This machinery is required because the simpler method using a simulation argumen
 such as the following statement, unfortunately doesn't work.
 
 \begin{fail}[Simulation]
-  If $[[m ⇝ n]]$ then $[[⟦m⟧ ⇝* ⟦n⟧]]$.
+  If $[[m ⇝ n]]$ then $[[⟦m⟧ □ ⇝* ⟦n⟧ □]]$.
 \end{fail}
 \begin{proof}[Counterexample]
   Suppose we have CCNF computations $[[n1]]$, $[[n2]]$ and configuration $[[m]]$.
@@ -1166,7 +1166,10 @@ If our counterexample is well typed,
 then a logical equivalence gives us precisely the required information that
 subterms must reduce to canonical terms such as returned values.
 
-The proof of \cref{thm:ground-run} proceeds by:
+To handle translations with arbitrary translation continuation $[[K]]$,
+we generalize to proving that a translation $[[⟦m⟧ K]]$
+must be equivalent to plugging the computation back in as $[[ K[m] ]]$.
+The proof of \cref{thm:ground-run} then proceeds by:
 \begin{enumerate}
   \item \label{item:logrel} Defining a standard logical equivalence over CBPV types;
   \item \label{item:semeq} Closing over term and join point contexts with a semantic equivalence;
@@ -1223,12 +1226,12 @@ The first property we need of logical equivalence is backward closure under eval
 which holds by unfolding its definition and transitivity of evaluation.
 A helpful corollary adds congruence under join points.
 
-\begin{lemma}[Backward closure] \leavevmode \\
+\begin{lemma}[Backward closure] \label{lem:logeq:bwds} \leavevmode \\
   If $[[m1 ⇝ m2]]$ and $[[n1 ⇝ n2]]$ and $[[(m2, n2) ∈* B]]$,
   then $[[(m1, n1) ∈* B]]$
 \end{lemma}
 
-\begin{lemma}[Backward closure under join points]
+\begin{lemma}[Backward closure under join points] \label{lem:logeq:bwds-joins}
   If $[[m1 ⇝ m2]]$ and $[[n1 ⇝ n2]]$ and $[[(m2, n2) ∈* B]]$,
   then $[[(join j x = m' in m1, join j x = n' in m2) ∈* B]]$,
   using \rref{E-join,E-drop}.
@@ -1347,7 +1350,7 @@ which follows from \cref{lem:logeq:PER,lem:logeq-subst:PER}.
 Finally, we show the fundamental theorem of semantic equivalence:
 well-typed terms are semantically equivalent to themselves.
 
-\begin{theorem}[Fundamental theorem of semantic equivalence]
+\begin{theorem}[Fundamental theorem of semantic equivalence] \label{thm:semeq}
   If $[[G ⊢ v : A]]$ then $[[G ⊧ v ~ v : A]]$,
   and if $[[G | D ⊢ m : B]]$ then $[[G | D ⊧ m ~ m : B]]$.
 \end{theorem}
@@ -1358,7 +1361,155 @@ well-typed terms are semantically equivalent to themselves.
 
 \subsection{Semantic equivalence of commuting conversions} \label{sec:proof:cc}
 
+As the translation normalizes with respect to all commuting conversions,
+to show that semantic equivalence of the translation,
+naturally we need to show semantic equivalence of the commuting conversions.
+Recall that with four evaluation contexts and two tail contexts,
+there are eight total commuting conversions to handle,
+each assuming well-typedness of various subterms.
+We present them as derivable rules in \cref{fig:semeq:cc} for legibility.
+
+\begin{figure}[h]
+  \begin{mathpar}
+    \mprset{fraction={{-~} {~-~} {~-}}}
+    \infer*[Right=\ottdrulename{let-let}]
+      {[[G | • ⊢ let x ← n in m : F A]] \\
+       [[G, y : A | D ⊢ m' : B]]}
+      {[[G | D ⊧ let y ← (let x ← n in m) in m' ~ let x ← n in let y ← m in m' : B]]}
+    \and
+    \infer*[Right=\ottdrulename{let-app}]
+      {[[G | • ⊢ let x ← n in m : A → B]] \\
+       [[G ⊢ v : A]]}
+      {[[G | D ⊧ (let x ← n in m) v ~ let x ← n in (m v) : B]]}
+    \and
+    \infer*[Right=\ottdrulename{let-fst}]
+      {[[G | • ⊢ let x ← n in m : B1 & B2]]}
+      {[[G | D ⊧ fst (let x ← n in m) ~ let x ← n in (fst m) : B1]]}
+    \and
+    \infer*[Right=\ottdrulename{let-snd}]
+      {[[G | • ⊢ let x ← n in m : B1 & B2]]}
+      {[[G | D ⊧ snd (let x ← n in m) ~ let x ← n in (snd m) : B2]]}
+    \and
+    \infer*[Right=\ottdrulename{case-let}]
+      {[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : F A]] \\
+       [[G, z : A | D ⊢ m : B]]}
+      {[[G | D ⊧ let z ← (case v of inl x ⇒ m1; inr y ⇒ m2) in m \\ ~ case v of inl x ⇒ (let z ← m1 in m); inr y ⇒ (let z ← m2 in m) : B]]}
+    \and
+    \infer*[Right=\ottdrulename{case-app}]
+      {[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : A → B]] \\
+       [[G ⊢ w : A]]}
+      {[[G | D ⊧ (case v of inl x ⇒ m1; inr y ⇒ m2) w \\ ~ case v of inl x ⇒ (m1 w); inr y ⇒ (m2 w) : B]]}
+    \and
+    \infer*[Right=\ottdrulename{case-fst}]
+      {[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : B1 & B2]]}
+      {[[G | D ⊧ fst (case v of inl x ⇒ m1; inr y ⇒ m2) \\ ~ case v of inl x ⇒ (fst m1); inr y ⇒ (fst m2) : B1]]}
+    \and
+    \infer*[Right=\ottdrulename{case-snd}]
+      {[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : B1 & B2]]}
+      {[[G | D ⊧ snd (case v of inl x ⇒ m1; inr y ⇒ m2) \\ ~ case v of inl x ⇒ (snd m1); inr y ⇒ (snd m2) : B2]]}
+  \end{mathpar}
+  \caption{Semantic equivalence of commuting conversions}
+  \Description[]{}
+  \label{fig:semeq:cc}
+\end{figure}
+
+\iffalse
+\begin{lemma}[Semantic equivalence of commuting conversions] \label{lem:semeq:cc} \leavevmode \\
+  \begin{itemize}
+    \item If $[[G | • ⊢ let x ← n in m : F A]]$ and $[[G, y : A | D ⊢ m' : B]]$, then
+      $[[G | D ⊧ let y ← (let x ← n in m) in m' ~ let x ← n in let y ← m in m' : B]]$.
+    \item If $[[G | • ⊢ let x ← n in m : A → B]]$ and $[[G ⊢ v : A]]$, then
+      $[[G | D ⊧ (let x ← n in m) v ~ let x ← n in (m v) : B]]$.
+    \item If $[[G | • ⊢ let x ← n in m : B1 & B2]]$, then
+      $[[G | D ⊧ fst (let x ← n in m) ~ let x ← n in (fst m) : B1]]$.
+    \item If $[[G | • ⊢ let x ← n in m : B1 & B2]]$, then
+      $[[G | D ⊧ snd (let x ← n in m) ~ let x ← n in (snd m) : B2]]$.
+    \item If $[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : F A]]$ and $[[G, z : A | D ⊢ m : B]]$, then
+      $[[G | D ⊧ let z ← (case v of inl x ⇒ m1; inr y ⇒ m2) in m ~ case v of inl x ⇒ (let z ← m1 in m); inr y ⇒ (let z ← m2 in m) : B]]$.
+    \item If $[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : A → B]]$ and $[[G ⊢ w : A]]$, then
+      $[[G | D ⊧ (case v of inl x ⇒ m1; inr y ⇒ m2) w ~ case v of inl x ⇒ (m1 w); inr y ⇒ (m2 w) : B]]$.
+    \item If $[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : B1 & B2]]$, then
+      $[[G | D ⊧ fst (case v of inl x ⇒ m1; inr y ⇒ m2) ~ case v of inl x ⇒ (fst m1); inr y ⇒ (fst m2) : B1]]$.
+    \item If $[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : B1 & B2]]$, then
+      $[[G | D ⊧ snd (case v of inl x ⇒ m1; inr y ⇒ m2) ~ case v of inl x ⇒ (snd m1); inr y ⇒ (snd m2) : B2]]$.
+  \end{itemize}
+\end{lemma}
+\fi
+
+The general strategy to proving these is by using the \cref{thm:semeq} on the typing derivations,
+extracting a logical equivalence for the desired type,
+applying \cref{lem:logeq:bwds} or \cref{lem:logeq:bwds-joins},
+then using the evaluation rules and \cref{lem:eval:merging}
+to find the correct evaluation sequence from the left and right sides of the lemma statement
+to the respective sides of the extracted logical equivalence.
+We step through only the proof of \rref*{let-app} as a representative case.
+
+\begin{proof}
+  \TODO
+\end{proof}
+
+\TODO: \rref*{join-join}
+
 \subsection{Semantic equivalence of plugging continuations} \label{sec:proof:plug}
+
+Just as the \nameref{thm:semeq} requires related substitution maps and related join stacks,
+for the final proof in the next section, we need a notion of related continuations.
+Rather than first defining a logical equivalence over continuations,
+we directly define semantic equivalence in a way that incorporates plugging.
+Here, $[[K{s}]]$ denotes applying the substitution map $[[s]]$
+to all value and computation subterms of $[[K]]$.
+
+\begin{definition}[Semantic equivalence of continuations]
+  Continuations $[[K1]]$ and $[[K2]]$ are semantically equivalent
+  under contexts $[[G]]$ and $[[D]]$ at type $[[B1 ⇒ B2]]$,
+  written \fbox{$[[G | D ⊧ K1 ~ K2 : B1 ⇒ B2]]$},
+  when for all substitution maps $[[(s, t) ∈ G]]$, join stacks $[[(p, q) ∈ D]]$,
+  and computations $[[(n1, n2) ∈* B1]]$,
+  $[[(joins p in K{s}[n1], joins q in K{t}[n2]) ∈ B2]]$ holds.
+\end{definition}
+
+A fundamental theorem for semantic equivalence of continuations holds as well,
+which relies on the corresponding theorem for terms,
+as well as congruence of evaluating under plugging.
+
+\begin{lemma}[\textsc{E-plug}] \label{lem:E-plug}
+  If $[[n1 ⇝* n2]]$, then $[[ K[n1] ⇝* K[n2] ]]$,
+  by induction on the structure of $[[K]]$.
+\end{lemma}
+
+\begin{theorem}[Fundamental theorem of semantic equivalence of continuations] \label{thm:semeq:K} \leavevmode \\
+  If $[[G | D ⊢ K : B1 ⇒ B2]]$ then $[[G | D ⊧ K ~ K : B1 ⇒ B2]]$.
+\end{theorem}
+
+\begin{proof}
+  By induction on the typing derivation of $[[K]]$.
+  In the \rref*{K-app} case, use \cref{thm:semeq} on the value argument,
+  and in the \rref*{K-let} case, use \cref{thm:semeq} on the computation body.
+  In the \rref*{K-app,K-fst,K-snd} cases,
+  use \nameref{lem:E-plug} to reduce under the rest of the continuation.
+\end{proof}
+
+Plugging semantically equivalent computations into both
+the same continuation and equivalent continuations
+then yield equivalent computations
+as long as substitution commutes with plugging.
+
+\begin{lemma}[Substitution commutes with plugging] \label{lem:subst-plug} \leavevmode \\
+  $[[(K[n]){s}]] = [[(K{s})[n{s}] ]]$,
+  by induction on the structure of $[[K]]$.
+\end{lemma}
+
+\begin{lemma}[Semantic equivalence of plugging] \label{lem:semeq:plug}
+  If $[[G | D ⊧ K1 ~ K2 : B1 ⇒ B2]]$ and $[[G | • ⊧ n1 ~ n2 : B1]]$,
+  then $[[G | D ⊧ K1[n1] ~ K2[n2] : B2]]$,
+  trivially after rewriting by \cref{lem:subst-plug}.
+\end{lemma}
+
+\begin{corollary} \label{cor:semeq:plug}
+  If $[[G | D ⊢ K : B1 ⇒ B2]]$ and $[[G | • ⊧ n1 ~ n2 : B1]]$,
+  then $[[G | D ⊧ K[n1] ~ K[n2] : B2]]$,
+  using \cref{lem:semeq:plug} and \cref{thm:semeq:K}.
+\end{corollary}
 
 \subsection{Commuting conversion normalization is semantically equivalent to plugging} \label{sec:proof:end}
 

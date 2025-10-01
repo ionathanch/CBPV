@@ -73,7 +73,7 @@ v, w :: 'val_' ::= {{ com values }}
     {{ com single substitution into values }}
   | v { s } :: :: SubstsVal
     {{ com simultaneous substitution into values }}
-    {{ tex [[v]] [ [[s]] ] }}
+    {{ tex [[v]] \mathopen{\lbrace} [[s]] \mathclose{\rbrace} }}
   % syntactic sugar for typesetting
   | v & :: S :: Align
     {{ com align after }}
@@ -138,15 +138,9 @@ m, n :: 'com_' ::= {{ com computations }}
     {{ com plugging into a tail context }}
     {{ tex [[L]] [ [[m]] ] }}
   % substitution metafunctions
-  | w { x ↦ v } :: :: SubstVal
-    {{ com single substitution into values }}
-    {{ tex [[w]] [ [[x]] \mapsto [[v]] ] }}
-  | m { x ↦ v } :: :: SubstCom
-    {{ com single substitution into computations }}
-    {{ tex [[m]] [ [[x]] \mapsto [[v]] ] }}
   | m { s } :: :: SubstsCom
     {{ com simultaneous substitution into computations }}
-    {{ tex [[m]] [ [[s]] ] }}
+    {{ tex [[m]] \mathopen{\lbrace} [[s]] \mathclose{\rbrace} }}
   % syntactic sugar for typesetting
   | _ :: :: Hole
     {{ com hole }}
@@ -214,6 +208,8 @@ K :: 'Kont_' ::= {{ com continuations }}
     {{ tex \kw{let} \gap [[x]] \mathrel{\leftarrow} \square \mathrel{ \kw{in} } [[m]] }}
   | K [ k ] :: :: Kont
     {{ tex [[K]] [ [[k]] ] }}
+  | K { s } :: :: Subst
+    {{ tex [[K]] \mathopen{\lbrace} [[s]] \mathclose{\rbrace} }}
   | ( K ) :: S :: Parens
     {{ tex ([[K]]) }}
   | (# K #) :: S :: SParens
@@ -313,6 +309,13 @@ formula :: 'formula_' ::=
     {{ tex [[G]] \mathrel{\vDash} [[v]] \mathrel{\sim} [[w]] \mathrel{:} [[A]] }}
   | G | D ⊧ m ~ n : B :: :: SemCom
     {{ tex [[G]] \mid [[D]] \mathrel{\vDash} [[m]] \mathrel{\sim} [[n]] \mathrel{:} [[B]] }}
+  | G | D ⊧ m \\ ~ n : B :: :: SemComBreak
+    {{ tex { \begin{aligned}[t]
+        [[G]] \mid [[D]] &\mathrel{\vDash} [[m]] \\[-0.25\baselineskip]
+        &\mathrel{\sim} [[n]] \mathrel{:} [[B]]
+      \end{aligned} } }}
+  | G | D ⊧ K1 ~ K2 : B1 ⇒ B2 :: :: SemKont
+    {{ tex [[G]] \mid [[D]] \mathrel{\vDash} [[K1]] \mathrel{\sim} [[K2]] \mathrel{:} [[B1]] \Rightarrow [[B2]] }}
   % evaluation
   | m ⇝ n :: :: Eval
     {{ tex [[m]] \mathbin{\rightsquigarrow} [[n]] }}
