@@ -638,7 +638,7 @@ and multi-step evaluations always evaluate to the same terminal.
   if $[[m ⇝* tm]]$.
 \end{definition}
 
-\begin{corollary}[Determinism of normalization]
+\begin{corollary}[Determinism of normalization] \label{lem:norm:det}
   If $[[m ⇓ tm1]]$ and $[[m ⇓ tm2]]$,
   then $[[tm1]] = [[tm2]]$.
 \end{corollary}
@@ -1323,6 +1323,7 @@ by induction on their derivations.
 Using substitution maps and join stacks, we can define semantic equivalence of open terms.
 They are also partial equivalence relations,
 which follows from \cref{lem:logeq:PER,lem:logeq-subst:PER}.
+In all proofs that follow, we freely use symmetry and transitivity without explicit reference.
 
 \begin{definition}[Semantic equivalence of values]
   Values $[[v]]$ and $[[w]]$ are semantically equivalent under context $[[G]]$ at type $[[A]]$,
@@ -1484,7 +1485,7 @@ and to show that join points can be dropped,
 we first need to show that evaluation preserves weakening.
 These technical details aside, the proof proceeds similarly to those for the commuting conversions.
 \TODO: I'd like to add a discussion subsection for mechanization details like these,
-but I'm not sure I can fit it in.
+but I'm not sure if I can fit it in.
 
 \subsection{Semantic equivalence of plugging continuations} \label{sec:proof:plug}
 
@@ -1549,6 +1550,90 @@ as long as substitution commutes with plugging.
 
 \subsection{Commuting conversion normalization is semantically equivalent to plugging} \label{sec:proof:end}
 
+Now that we have both semantic equivalence of commuting conversions and of plugging,
+we use them together to show that plugging commutes with tail contexts.
+
+\begin{lemma}[Semantic equivalence of plugging let expressions] \label{lem:plug-let} \leavevmode \\
+  If $[[G | D ⊢ K : B1 ⇒ B2]]$ and $[[G | • ⊢ let x ← n in m : B1]]$, \\
+  then $[[G | D ⊧ K[let x ← n in m] ~ let x ← n in K[m] : B2]]$.
+\end{lemma}
+
+\begin{proof}
+  By induction on the typing derivation of $[[K]]$.
+  In the \rref*{K-nil} case, this holds by \cref{thm:semeq}.
+  In all other cases, the left-hand side involves a subterm of the form
+  $[[let y ← (let x ← n in m) in m']]$,
+  $[[(let x ← n in m) v]]$,
+  $[[fst (let x ← n in m)]]$, or
+  $[[snd (let x ← n in m)]]$,
+  so we use derived \rref{let-let,let-app,let-fst,let-snd} respectively to commute them.
+  For case \rref*{K-let}, we are done;
+  for the remaining cases, we require \cref{cor:semeq:plug} to commute under a plugged $[[K]]$,
+  then use the induction hypothesis to transitively connect to the right-hand side.
+\end{proof}
+
+\begin{lemma}[Semantic equivalence of plugging case expressions] \label{lem:plug-case} \leavevmode \\
+  If $[[G | D ⊢ K : B1 ⇒ B2]]$ and $[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : B1]]$, \\
+  then $[[G | D ⊧ K[case v of inl x ⇒ m1; inr y ⇒ m2] ~ case v of inl x ⇒ K[m1]; inr y ⇒ K[m2] : B2]]$.
+\end{lemma}
+
+\begin{proof}
+  By induction on the typing derivation of $[[K]]$,
+  using \cref{thm:semeq,cor:semeq:plug}
+  along with derived rules \rref{case-let,case-app,case-fst,case-snd}
+  similarly to \cref{lem:plug-let}.
+\end{proof}
+
+Finally, we have all pieces to prove the main theorem:
+the translation under continuation $[[K]]$ is semantically equivalent to plugging into $[[K]]$.
+The equivalence we want follows from instantiating by the empty continuation.
+
+\begin{theorem}
+  Suppose that $[[v]]$ and $[[m]]$ are terms containing no join points and jumps,
+  and $[[K1]], [[K2]]$ are continuations that may contain join points and jumps.
+  \begin{itemize}
+    \item If $[[G ⊢ v : A]]$ then $[[G ⊧ v ~ ⟦v⟧ : A]]$.
+    \item If \mbox{$[[G | • ⊢ m : B1]]$}, \mbox{$[[G | D ⊢ K1 : B1 ⇒ B2]]$},
+      \mbox{$[[G | D ⊢ K2 : B1 ⇒ B2]]$}, \\ and
+      \mbox{$[[G | D ⊧ K1 ~ K2 : B1 ⇒ B2]]$}, then
+      $[[G | D ⊧ K1[m] ~ ⟦m⟧ K2 : B2]]$.
+  \end{itemize}
+\end{theorem}
+
+\begin{proof}
+  By mutual induction on the typing derivations of $[[v]]$ and $[[m]]$.
+  \TODO
+\end{proof}
+
+\begin{corollary} \label{cor:semeq-ccnf}
+  Suppose $[[m]]$ contains no join points and jumps. \\
+  If \mbox{$[[G | • ⊢ m : B]]$} then \mbox{$[[G | • ⊧ m ~ ⟦m⟧ □ : B]]$}.
+\end{corollary}
+
+At last we are able to prove \cref{thm:ground-run}, restated below,
+with one more minor lemma.
+
+\begin{lemma}[Equivalent ground values are equal] \label{lem:logeq:gval} \leavevmode \\
+  If $[[(v, w) ∈ T]]$ then $[[v]] = [[w]]$,
+  proven by induction on $[[T]]$.
+\end{lemma}
+
+\begin{theorem} \label{thm:ground-run}
+  Given $[[m]]$ such that $[[• | • ⊢ m : F T]]$,
+  if $[[m ⇓ return v]]$, then $[[⟦ m ⟧ □ ⇓ return v]]$.
+\end{theorem}
+
+\begin{proof}
+  From \cref{cor:semeq-ccnf}, we have $[[• | • ⊧ m ~ ⟦m⟧ □ : F T]]$.
+  Instantiating with empty substitution maps and empty join stacks,
+  we have $(m, ⟦m⟧ □) ∈* F T$.
+  By inversion, we know that there exists some $([[w1]], [[w2]]) ∈ T$
+  such that $[[m ⇓ return w1]]$ and $[[⟦m⟧ □ ⇓ return w2]]$.
+  By \cref{lem:norm:det}, we have $[[v]] = [[w1]]$,
+  and by \cref{lem:logeq:gval}, we have $[[w1]] = [[w2]]$.
+  Therefore, $[[⟦m⟧ □ ⇓ return v]]$.
+\end{proof}
+
 \section{Related Work and Discussion} \label{sec:related}
 
 \Citet{CBPV-Coq} mechanize in Rocq a vast amount of metatheory for call-by-push-value,
@@ -1557,8 +1642,7 @@ Our work builds on their design of logical equivalence between terms.
 They show a number of commuting conversions as semantic equivalences,
 namely commuting let-bound let expressions (Lemma 8.4, Equation 5)
 and function application of let expressions (Lemma 8.6, Equation 1),
-but are not comprehensive in listing all possible commuting conversions systematically
-as we have done in (\TODO: eventually).
+but are not comprehensive in listing all possible commuting conversions systematically as we have done.
 
 Conversely, while we consider commuting conversions to only involve elimination forms,
 \opcit also consider equivalences involving the function introduction form
