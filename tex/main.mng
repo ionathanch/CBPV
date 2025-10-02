@@ -44,7 +44,7 @@
 \newcommand{\wellformedness}{well-\hspace{0pt}formedness\@\xspace}
 \newcommand{\welldefinedness}{well-\hspace{0pt}definedness\@\xspace}
 \newcommand{\crude}{crude-\hspace{0pt}but-\hspace{0pt}effective\@\xspace}
-\newcommand{\Acom}{???\@\xspace}
+\newcommand{\Acom}{tail-free computation\@\xspace}
 \newcommand{\highlight}[1]{\colorbox{pink}{#1}}
 
 \newcommand{\thmref}[2]{%
@@ -256,6 +256,9 @@ we include the unit value, value sums, functions, and computation pairs.%
 \footnote{For simplicity, we omit value pairs, which are present in Levy's original CBPV;
 they are interesting in our setting because the eliminator is pattern matching,
 but we already have pattern matching on value sums to consider.}
+In examples to follow, we also use boolean conditionals
+$\kw{if} \dots \kw{then} \dots \kw{else} \dots$
+as syntactic sugar for case expressions on unit sums.
 
 As an example of the way CBN and CBV translations differ,
 consider the lambda calculus term $[[(λx. x) ((λy. y) z)]]$,
@@ -297,8 +300,8 @@ pushing evaluation contexts into tail positions of eliminators
 that preserve evaluation order.
 An important benefit of performing commuting conversions is that it exposes inlining opportunities ---
 that is, subexpressions that can be reduced to simplify code.
+(We refer to all subexpression $\beta$-reduction as inlining.)
 For instance, we can commute a let-bound conditional to reveal direct bindings of returned values.
-(We use syntactic sugar for boolean conditionals implemented as sums.)
 %
 \usetagform{brack}
 \begin{align}
@@ -318,7 +321,8 @@ and is a well-known technique \citep{join};
 this particular commutation is part of \emph{case-floating}.
 
 Following \citet{join}, we define commuting conversions as all transformations
-that push elimination forms inside of blocking computations.
+that push elimination forms inside of tail positions,
+\ie the bodies of let expressions and the branches of case expressions.
 \Cref{eq:let-if} pushes let bindings into conditionals;
 as shown below, we can also push let bindings into other let bindings,
 as well as function applications into let bindings and conditionals,
@@ -335,9 +339,10 @@ to expose those inlining opportunities.
 \end{align}
 \usetagform{default}
 
-Another benefit of commuting conversions is that it unnests expressions,
-bringing it closer to lower-level code.
-Unnested expressions are easier to compile because control flow follows the shape of the syntax.
+Another benefit of commuting conversions is that they unnest expressions,
+moving multiple steps of computation out of evaluation contexts,
+which brings them closer to lower-level code.
+Commuted code is easier to compile because control flow follows the shape of the syntax.
 In \cref{eq:let-let}, finding the next computation to execute on the left-hand side requires
 traversing into the $[[x]]$ binding, then evaluating the $[[y]]$ binding,
 and finally popping back out to evaluate the body $[[m]]$.
@@ -358,8 +363,8 @@ then performing sequentialization afterwards \citep{ANF-dead}.
 %
 \begin{figure}[h]
   \begin{align}
-    [[n]] &\dblcolon= [[v!]] \mid [[λx. m]] \mid [[n v]] \mid [[return v]] \mid [[⟨m, m⟩]] \mid [[fst n]] \mid [[snd n]] \tag{\Acom} \\
-    [[m]] &\dblcolon= n \mid [[let x ← n in m]] \mid [[case v of inl x ⇒ m1 ; inr y ⇒ m2]] \tag{computations}
+    [[n]] &\dblcolon= [[v!]] \mid [[λx. m]] \mid [[n v]] \mid [[return v]] \mid [[⟨m, m⟩]] \mid [[fst n]] \mid [[snd n]] \tag{\Acom{}s} \\
+    [[m]] &\dblcolon= n \mid [[let x ← n in m]] \mid [[case v of inl x ⇒ m1 ; inr y ⇒ m2]] \tag{configurations}
   \end{align}
   \caption{Commuting conversion normal form of computations}
   \Description[]{}
@@ -367,20 +372,19 @@ then performing sequentialization afterwards \citep{ANF-dead}.
 \end{figure}
 
 Rather than performing commuting conversions one by one,
-we present a one-pass transformation into a normal form
-with respect to all commuting conversions (CCNF) in \cref{sec:ccnf} % TODO: Is this really the best name?
+we present a one-pass transformation into commuting conversion normal form (CCNF) in \cref{sec:ccnf}
 % \footnote{Compiling with Continuations, Continued also calls them cc-normal form.}
 that resembles the usual one-pass transformation into ANF \citep{ANF}.
 In ANF, terms are divided into values, computations, and configurations,
 where computations are a subset of configurations that don't include
 let expressions and conditionals (or case expressions generally).
 \Cref{fig:ccnf} makes the same distinction for CBPV, where values remain unchanged;
-to avoid confusion, we continue calling $[[m]]$s \emph{computations},
-while we call $[[n]]$s \emph{\Acom}.
+to avoid confusion, we also call $[[m]]$s \emph{configurations},
+while we call $[[n]]$s \emph{\Acom{}s},
+which are both subsets of CBPV \emph{computations}.
 
 Inlining in $[[n]]$ positions in general doesn't preserve CCNF.
-Because commuting conversions push computations only into
-the bodies of let expressions and the branches of case expressions,
+Because commuting conversions push computations only into tail positions,
 \emph{new} opportunities for inlining only occur in $[[m]]$ positions,
 so performing those new inlinings won't violate CCNF.
 However, subsequent inlinings that involve forcing direct thunks may violate CCNF.
@@ -396,6 +400,8 @@ The resulting term is in CCNF, but if we force the thunk,
 we end up with a nested let expression, which is not in CCNF.
 Therefore, renormalization may be required only after forcing thunks
 that appear in $[[n]]$ positions as a result of inlining.
+
+\TODO (SCW): Why do I need to know this now? What are the implications of this information?
 
 \subsection{Join points}
 
@@ -422,14 +428,14 @@ Similarly, in CBPV, we can bind a thunked function to be forced and applied.
 %
 \usetagform{brack}
 \begin{align}
-  & \nonumber {\color{gray} [[let x ← (case v of inl y1 ⇒ m1 ; inr y2 ⇒ m2) in m]]} \\
+  & \nonumber [[let x ← (case v of inl y1 ⇒ m1 ; inr y2 ⇒ m2) in m]] \\
   \label{eq:let-join} \Longrightarrow \ &[[let z ← return {λx. m} in _]] \\
   & \nonumber \phantom{\kw{let} \gap}
   [[case v of inl y1 ⇒ (let x ← m1 in z! x) ; inr y2 ⇒ (let x ← m2 in z! x)]]
 \end{align}
 \usetagform{default}
 
-To the next compiler passes that see this code,
+To the next compiler passes that sees this code,
 the thunk is a value that may capture variables and escape its scope,
 so somewhere along the pipeline, the thunk will be converted into a closure and lifted out,
 and $[[z! x]]$ will correspond to a function call.
@@ -450,24 +456,24 @@ and should be compiled to a local code block that is jumped to.
 \end{figure}
 
 Inspired by \citet{join},
-who tackle the same issue with commuting conversion in System F with case expressions,
-we too add explicit join point and jump constructs to CBPV in \cref{fig:join}.
+who tackle the same issue with commuting conversions in System F with case expressions,
+we add explicit join point and jump constructs to CBPV in \cref{fig:join}.
 They are accompanied by typing rules that restrict where join points may be used,
 which we cover in \cref{sec:cbpv}.
 In contrast to \opcit,
 our jumps aren't \Acom{}s and may only appear in tail position,
-as commuting conversion normalization discards contexts around jumps.
-This simplifies both the evaluation semantics and our proofs
-while also ruling out extraneous terms such as $[[(jump j v) w]]$.
-% All in all, these restrictions ensure that join points are only ever used by local tail jumps.
+which simplifies both the evaluation semantics and our proofs.
+\Cref{sec:related} discusses why we can make this restriction.
 
 Coming back to the commuting conversion of \cref{eq:let-join},
 we use join points in place of the bound thunk,
 jumping to them after binding the branches.
+Let expressions only bind a single variable,
+so we only need join points and jumps that take a single argument.
 %
 \usetagform{brack}
 \begin{align}
-  & \nonumber {\color{gray} [[let x ← (case v of inl y1 ⇒ m1 ; inr y2 ⇒ m2) in m]]} \\
+  & \nonumber [[let x ← (case v of inl y1 ⇒ m1 ; inr y2 ⇒ m2) in m]] \\
   \Longrightarrow \ &[[join j x = m in _]] \\
   & \nonumber \phantom{\kw{join} \gap}
   [[case v of inl y1 ⇒ (let x ← m1 in jump j x) ; inr y2 ⇒ (let x ← m2 in jump j x)]]
@@ -550,23 +556,25 @@ and freely use jump well-scopedness throughout the proofs.
 \subsection{Evaluation semantics}
 
 The purpose of join points is best explained by what they do;
-their single-step evaluation rules, written \fbox{$[[m ⇝ m']]$},
-are listed in \cref{fig:eval}, alongside rules for the usual CBPV constructs.
+their single-step evaluation rules are listed in \cref{fig:eval},
+alongside rules for the usual CBPV constructs.
 We write \fbox{$[[m ⇝* m']]$} for their reflexive, transitive closure.
 The names of the rules involving join points and jumps not found in plain CBPV are highlighted in salmon.
 
 \begin{figure}[h]
+  \setlength{\fboxsep}{3pt}
   \begin{align}
-    [[{m}! &⇝ m]]                         \tag{\ottdrulename{E-force}} \\
-    [[(λx. m) v &⇝ m{x ↦ v}]]             \tag{\ottdrulename{E-app}} \\
-    [[fst ⟨m1, m2⟩ &⇝ m1]]                \tag{\ottdrulename{E-fst}} \\
-    [[snd ⟨m1, m2⟩ &⇝ m2]]                \tag{\ottdrulename{E-snd}} \\
-    [[let x ← return v in m &⇝ m{x ↦ v}]] \tag{\ottdrulename{E-ret}} \\
-    [[case (inl v) of inl x ⇒ m1 ; inr y ⇒ m2 &⇝ m1{x ↦ v}]] \tag{\ottdrulename{E-left}} \\
-    [[case (inr v) of inl x ⇒ m1 ; inr y ⇒ m2 &⇝ m2{y ↦ v}]] \tag{\ottdrulename{E-right}} \\
-    [[join j x = m in jump j v &⇝ m{x ↦ v}]]   \tag{\highlight{\ottdrulename{E-jump}}} \\
-    [[join j' x = m' in jump j v &⇝ jump j v]] \tag{\highlight{\ottdrulename{E-skip}}} \\
-    [[join j' x = m' in tm &⇝ tm]]             \tag{\highlight{\ottdrulename{E-drop}}}
+    \boxed{[[m ⇝ m]]}                        \nonumber \\
+    && [[{m}! &⇝ m]]                         \tag{\ottdrulename{E-force}} \\
+    && [[(λx. m) v &⇝ m{x ↦ v}]]             \tag{\ottdrulename{E-app}} \\
+    && [[fst ⟨m1, m2⟩ &⇝ m1]]                \tag{\ottdrulename{E-fst}} \\
+    && [[snd ⟨m1, m2⟩ &⇝ m2]]                \tag{\ottdrulename{E-snd}} \\
+    && [[let x ← return v in m &⇝ m{x ↦ v}]] \tag{\ottdrulename{E-ret}} \\
+    && [[case (inl v) of inl x ⇒ m1 ; inr y ⇒ m2 &⇝ m1{x ↦ v}]] \tag{\ottdrulename{E-left}} \\
+    && [[case (inr v) of inl x ⇒ m1 ; inr y ⇒ m2 &⇝ m2{y ↦ v}]] \tag{\ottdrulename{E-right}} \\
+    && [[join j x = m in jump j v &⇝ m{x ↦ v}]]   \tag{\highlight{\ottdrulename{E-jump}}} \\
+    && [[join j' x = m' in jump j v &⇝ jump j v]] \tag{\highlight{\ottdrulename{E-skip}}} \\
+    && [[join j' x = m' in tm &⇝ tm]]             \tag{\highlight{\ottdrulename{E-drop}}}
   \end{align}
 
   \begin{mathpar}
@@ -592,11 +600,11 @@ and case analysis on the left or right injections
 reduce to the left or right branches, respectively.
 \Rref{E-cong} states that evaluation may occur under evaluation contexts $[[E]]$,
 which are elimination forms with holes in scrutinee position.
+We exclude join expressions from evaluation contexts $[[E]]$
+because we later use $[[E]]$ to define our set of commuting conversions,
+which don't commute into join expressions.
 
-Join expressions evaluate similarly to let expressions,
-where evaluation occurs under the context $[[join j x = m in □]]$ in \rref{E-join};
-we state the rule separately instead of including this context in $[[E]]$
-to distinguish the new rules from the old.
+Join expressions evaluate under a context $[[join j x = m in □]]$ in \rref{E-join}.
 The inner evaluation is done when it reaches a jump or
 a terminal computation $[[tm]]$, which are computation introduction forms.
 If the body of the join expression is a jump to the bound join point,
@@ -606,8 +614,7 @@ then this inner join point binding is discarded in \rref{E-skip}.
 The binding is also discarded when a terminal is reached in \rref{E-drop}.
 
 To illustrate, consider the following reduction sequence for three join points.
-Intuitively, we jump to $[[j3]]$ which jumps to $[[j1]]$ which is $[[m1]]$,
-so we ought to end up at $[[m1{x ↦ v}]]$;
+Intuitively, we jump to $[[j3]]$ which jumps to $[[j1]]$ which is $[[m1]]$, so we end up at $[[m1{x ↦ v}]]$;
 the reductions that apply to get there are first to jump, then to skip, then to jump.
 %
 \begin{align}
@@ -620,10 +627,8 @@ the reductions that apply to get there are first to jump, then to skip, then to 
 This is in fact the \emph{only} sequence of reductions,
 because evaluation is deterministic.
 If we define normalization as evaluation to a terminal,%
-\footnote{This is weak normalization, not strong normalization,
-since subterms are not normalized,
-but we won't consider strong normalization,
-so we simply call it normalization.}
+\footnote{This is weak normalization, not strong normalization, since subterms are not normalized.
+We won't consider strong normalization, so we simply call it normalization.}
 then normalization is deterministic as well,
 and multi-step evaluations always evaluate to the same terminal.
 
@@ -756,25 +761,28 @@ When we include jump contexts, they are either threaded through rules unchanged,
 or they are explicitly empty in premises for a few reasons:
 
 \begin{itemize}
-  \item Join represent local blocks of code that are jumped to,
-    and aren't closures that capture their environment.
+  \item Join represent local blocks of code that are jumped to
+    with the current environment, and aren't closures.
     The computation inside of a thunk in \rref{T-thunk}
     needs to be closed with respect to jump variables
-    to prevent jumps from escaping their scopes.
-  \item Jumping from inside a constructor violates type safety.
+    to prevent jumps from escaping their local scopes.
+  \item Jumping from inside the computation constructors
+    (functions and computation pairs) violates type safety.
     For example, if we try to take a projection of $[[⟨jump j v, m⟩]]$,
     but $[[j]]$ jumps to a join point that isn't a pair, the program will crash.
     Thus the premises of \rref{T-pair} must have empty jump contexts,
     as well as \rref{T-fun} by a similar argument.
   \item We restrict jumps to tail positions, in contrast to \citet{join},
-    who allow jumps in scrutinee positions,
-    and require type polymorphism to assign arbitrary types to jumps.
-    Our one-pass transformation doesn't require the flexibility afforded
-    by permitting computations such as $[[fst (jump j v)]]$.
-    The benefit is that we don't need extra reduction steps that discard unneeded contexts,
-    such as $[[fst (jump j v) ⇝ jump j v]]$,
-    and that a well-typed jump has a known fixed type according to the jump context,
-    which makes it much easier to define the logical relation in \cref{sec:proof:logrel}.
+    who allow jumps in scrutinee positions.
+    They require type polymorphism to assign arbitrary types to jumps
+    so that type safety isn't violated.
+    We propagate the jump context only in premises with the same type
+    so that jumping never changes the type.
+    Although this restricts jumps to only tail positions,
+    it exactly captures what CC-normalization needs:
+    the ability to jump to another computation at the very end of the previous one.
+    As a result, the evaluation semantics are simpler
+    and the metatheory is cleaner.
     To enforce this restriction,
     the scrutinee premises of \rref{T-app,T-let,T-fst,T-snd}
     require empty jump contexts,
@@ -804,15 +812,15 @@ The important typing lemmas that we need are weakening lemmas for both value and
 In the mechanization, they are proven by induction on the typing derivation via renaming lemmas;
 for now, we ignore issues of renaming de Bruijn indices, as they are standard.
 
-\begin{lemma}[Weakening (value contexts)] \label{lem:wk:val}
+\begin{lemma}[Weakening (value contexts)] \label{lem:wk:val} \leavevmode \\
   Suppose $[[x]]$ is not free in $[[m]]$.
-  If $[[G | D ⊢ m : B]]$, then $[[G, x : A | D ⊢ m : B]]$.
-  Similarly, if $[[G, y : A' | D ⊢ m : B]]$, then $[[G, x : A, y : A' | D ⊢ m : B]]$.
+  If $[[G1, G2 | D ⊢ m : B]]$, then $[[G1, x : A, G2 | D ⊢ m : B]]$.
 \end{lemma}
 
-\begin{lemma}[Weakening (jump contexts)] \label{lem:wk:jump}
+\begin{lemma}[Weakening (jump contexts)] \label{lem:wk:jump} \leavevmode \\
   Suppose $[[j]]$ is not free in $[[m]]$.
-  If $[[G | D ⊢ m : B]]$, then $[[G | D, j : A ↗ B' ⊢ m : B]]$.
+  If $[[G | D1, D2 ⊢ m : B]]$, then $[[G | D1, j : A ↗ B', D2 ⊢ m : B]]$.
+
 \end{lemma}
 
 \section{Commuting Conversion Normalization} \label{sec:ccnf}
@@ -840,7 +848,7 @@ and they expose inlining opportunities because these evaluation contexts are no 
 blocked by tail contexts that still have a ``first step'' to compute.
 The shape of commuting conversions inform the shape of its normal form of computations,
 reproduced in \cref{fig:ccnf-join}, where \Acom{}s $[[n]]$ are computations that don't contain tail contexts,
-and CC-normal computations $[[m]]$ are all computations that don't contain tail contexts in scrutinee positions,
+and configurations $[[m]]$ are all computations that don't contain tail contexts in scrutinee positions,
 \ie where holes appear in evaluation contexts.
 By inspection, CCNF is indeed normal with respect to commuting conversions because no $[[m]]$s appear in $[[n]]$s,
 and therefore there must be no more commuting conversions to do.
@@ -848,8 +856,8 @@ and therefore there must be no more commuting conversions to do.
 \begin{figure}[h]
   \begin{align}
     [[v]] &\dblcolon= [[x]] \mid [[()]] \mid [[inl v]] \mid [[inr v]] \mid [[{m}]] \tag{values} \\
-    [[n]] &\dblcolon= [[v!]] \mid [[λx. m]] \mid [[n v]] \mid [[return v]] \mid [[⟨m, m⟩]] \mid [[fst n]] \mid [[snd n]] \tag{\Acom} \\
-    [[m]] &\dblcolon= n \mid [[let x ← n in m]] \mid [[case v of inl x ⇒ m1 ; inr y ⇒ m2]] \tag{computations} \\
+    [[n]] &\dblcolon= [[v!]] \mid [[λx. m]] \mid [[n v]] \mid [[return v]] \mid [[⟨m, m⟩]] \mid [[fst n]] \mid [[snd n]] \tag{\Acom{}s} \\
+    [[m]] &\dblcolon= n \mid [[let x ← n in m]] \mid [[case v of inl x ⇒ m1 ; inr y ⇒ m2]] \tag{configurations} \\
           &\mid [[join j x = m1 in m2]] \mid [[jump j v]] \nonumber
   \end{align}
   \caption{Commuting conversion normal form with join points}
@@ -863,7 +871,7 @@ whose forms are given in \cref{fig:kont}.
 As usual, it can be the empty continuation $[[□]]$,
 or it can be the let continuation $[[let x ← □ in m]]$:
 a let expression is compiled by first translating the let-bound expression,
-then binding its result to $[[x]]$, and finally continuing on with a translated computation $[[m]]$.
+then binding its result to $[[x]]$, and finally continuing on with a configuration $[[m]]$.
 
 \begin{figure}[h]
   \begin{align*}
@@ -880,9 +888,9 @@ application, first projection, and second projection.
 They are needed because in contrast to ANF for the lambda calculus,
 functions and computation pairs are \emph{computations} and not \emph{values},
 so they can't be let-bound, and their elimination forms can take arbitrary \Acom{}s.
-To see how they're used, we turn to the mutual definitions of the translation
-of values \fbox{$[[⟦v⟧]]$} and computations \fbox{$[[⟦m⟧ K]]$} in \cref{fig:CC-norm},
-delaying the translation of case expressions for the moment.
+The mutual definitions of the translation of values \fbox{$[[⟦v⟧]]$} and computations \fbox{$[[⟦m⟧ K]]$}
+in \cref{fig:CC-norm} show how they are used;
+we delay the translation of case expressions for the moment.
 
 % As an example, $[[(fst ⟨λx. return x, return w⟩) v]]$ is also valid CCNF.
 % During the translation of this term, as we'll see shortly,
@@ -937,16 +945,27 @@ with the translation of thunks being the thunk
 of the translated computation using the empty continuation,
 since there's no computation left to do inside the thunk.
 
-To define the translation of computations,
-we need a plugging operation \fbox{$[[ K[m] ]]$}
-that replaces the hole $[[□]]$ in the continuation $[[K]]$ by the given computation $[[m]]$.
-If $[[K]]$ is a sequence of $[[k]]$, the leftmost $[[k]]$ represents the outermost continuation,
-so we plug from right to left.
-For example, given the continuation $[[ ((let x ← □ in m)[□ v])[fst □] ]]$,
-plugging in a \Acom{} $[[n]]$ yields the computation \mbox{$[[let x ← (fst n) v in m]]$}.
+\begin{figure}[h]
+  \begin{align*}
+    [[ (let x ← □ in m)[n] ]] &\coloneqq [[let x ← n in m]]
+    & [[ (K[fst □])[n] ]] &\coloneqq [[ K[fst n] ]]
+    & [[ □[n] ]] &\coloneqq [[n]] \\
+    [[ (K[□ v])[n] ]] &\coloneqq [[ K[n v] ]]
+    & [[ (K[snd □])[n] ]] &\coloneqq [[ K[snd n] ]]
+  \end{align*}
+  \caption{Plugging a computation in a continuation}
+  \Description[]{}
+  \label{fig:plug}
+\end{figure}
 
-As the holes only appear in $[[n]]$ positions, to produce a CCNF,
-we can only plug \Acom{}s into continuations.
+To define the translation of computations,
+we need a plugging operation \fbox{$[[ K[n] ]]$}
+that collapses the stack of $[[k]]$s in the continuation
+and replaces the final hole $[[□]]$ by the given computation $[[n]]$,
+defined in \cref{fig:plug}.
+Although the operation is defined over all computations,
+as the holes only appear in $[[n]]$ positions,
+we can only plug \Acom{}s into continuations if we want to produce a configuration.
 This is the case for the translations of forcing thunks, returning values, functions, and computation pairs:
 we translate their subterms---%
 using empty continuations if needed, since we don't commute into introduction forms---%
@@ -994,7 +1013,7 @@ since it would make the inlining opportunity harder to find,
 and require unnecessarily thunking the computation pair to pass it to the join point.
 
 However, if the continuation is $[[let x ← □ in m]]$,
-duplicating it would duplicate the arbitrary computation $[[m]]$.
+duplicating it would duplicate the arbitrary configuration $[[m]]$.
 In this case, we move $[[m]]$ to a join point and replace it in the continuation by a jump.
 From $[[let x ← (if v then return w else n) in m]]$ we get
 $$[[join j x = m in (if v then (let x ← return w in jump j x) else (let x ← n in jump j x))]],$$
@@ -1007,12 +1026,12 @@ whether we construct a join point depends on whether the continuation ends in a 
     [[⟦case v of inl x ⇒ m1 ; inr y ⇒ m2⟧ K]] \coloneqq \\
     \begin{cases}
       \: [[case ⟦v⟧ of inl y ⇒ ⟦m1⟧ K ; inr z ⇒ ⟦m2⟧ K]]
-      &\textit{if} ~{}~ [[K]] \equiv [[□]] [k_1] \dots [k_i] \\
-      \: [[join j x = m in _]] &\textit{if} ~{}~ [[K]] \equiv [[(let x ← □ in m)]][ [[k1]] ] \dots [ [[ki]] ] \\
+      &\textit{if} ~{}~ [[K]] \equiv [[ □ [k1] - [k_i] ]] \\
+      \: [[join j x = m in _]] &\textit{if} ~{}~ [[K]] \equiv [[ (let x ← □ in m) [k1] - [ki] ]] \\
       \: \quad [[case ⟦v⟧ of inl y ⇒ ⟦m1⟧ K' ; inr z ⇒ ⟦m2⟧ K']]
     \end{cases}
     \\
-    \textit{where} ~{}~ [[K']] \coloneqq [[(let x ← □ in jump j x)]][ [[k1]] ] \dots [ [[ki]] ]
+    \textit{where} ~{}~ [[K']] \coloneqq [[(let x ← □ in jump j x) [k1] - [ki] ]]
   \end{multline*}
   \caption{Translation of case expressions to CCNF with join points}
   \Description[]{}
@@ -1149,7 +1168,7 @@ such as the following statement, unfortunately doesn't work.
   If $[[m ⇝ n]]$ then $[[⟦m⟧ □ ⇝* ⟦n⟧ □]]$.
 \end{fail}
 \begin{proof}[Counterexample]
-  Suppose we have CCNF computations $[[n1]]$, $[[n2]]$ and configuration $[[m]]$.
+  Suppose we have \Acom{}s $[[n1]]$, $[[n2]]$ and configuration $[[m]]$.
   Consider the term $[[let x ← {let y ← n1 in n2}! in m]]$,
   which reduces to $[[let x ← (let y ← n1 in n2) in m]]$.
   The left-hand side translates to itself, since it's already in CCNF,
@@ -1618,7 +1637,7 @@ with one more minor lemma.
   proven by induction on $[[T]]$.
 \end{lemma}
 
-\begin{theorem} \label{thm:ground-run}
+\begin{theorem}
   Given $[[m]]$ such that $[[• | • ⊢ m : F T]]$,
   if $[[m ⇓ return v]]$, then $[[⟦ m ⟧ □ ⇓ return v]]$.
 \end{theorem}

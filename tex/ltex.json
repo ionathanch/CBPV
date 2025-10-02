@@ -55,7 +55,8 @@
         {"rule": "LET_IT_INFINITIVE",                  "sentence": "to express"},
         {"rule": "COMMA_COMPOUND_SENTENCE",            "sentence": "and we know"},
         {"rule": "BE_INTEREST_IN",                     "sentence": "interesting in our setting"},
-        {"rule": "SINGULAR_VERB_AFTER_THESE_OR_THOSE", "sentence": "proving these is"}
+        {"rule": "SINGULAR_VERB_AFTER_THESE_OR_THOSE", "sentence": "proving these is"},
+        {"rule": "MISSING_TO_BEFORE_A_VERB",           "sentence": "need join points"}
       ]
     },
     "latex": {

@@ -75,6 +75,9 @@ v, w :: 'val_' ::= {{ com values }}
     {{ com simultaneous substitution into values }}
     {{ tex [[v]] \mathopen{\lbrace} [[s]] \mathclose{\rbrace} }}
   % syntactic sugar for typesetting
+  | _ :: :: Hole
+    {{ com hole }}
+    {{ tex \relax }}
   | v & :: S :: Align
     {{ com align after }}
     {{ tex [[v]] & }}
@@ -206,24 +209,32 @@ K :: 'Kont_' ::= {{ com continuations }}
     {{ tex \square }}
   | let x ← □ in m :: :: Let
     {{ tex \kw{let} \gap [[x]] \mathrel{\leftarrow} \square \mathrel{ \kw{in} } [[m]] }}
-  | K [ k ] :: :: Kont
-    {{ tex [[K]] [ [[k]] ] }}
+  | K [ k ] :: :: Konts
+    {{ tex [[K]] \mathbin{\dblcolon} [[k]] }}
   | K { s } :: :: Subst
     {{ tex [[K]] \mathopen{\lbrace} [[s]] \mathclose{\rbrace} }}
+  | k :: M :: Kont
+    {{ tex [[k]] }}
+  | K [ k1 ] - [ ki ] :: M :: Kontsi
+    {{ tex [[K]] \mathbin{\dblcolon} [[k1]] \mathbin{\dblcolon} \dots \mathbin{\dblcolon} [[ki]] }}
+  | _ :: :: Hole
+    {{ com hole }}
+    {{ tex \relax }}
   | ( K ) :: S :: Parens
     {{ tex ([[K]]) }}
   | (# K #) :: S :: SParens
     {{ tex [[K]] }}
 
 k :: 'kont_' ::= {{ com continuations }}
-  | K :: :: Kont
-    {{ tex [[K]] }}
-  | k v :: :: App
-    {{ tex [[k]] \gap [[v]] }}
-  | fst k :: :: Fst
-    {{ tex \kw{fst} \gap [[k]] }}
-  | snd k :: :: Snd
-    {{ tex \kw{snd} \gap [[k]] }}
+  | K v :: :: App
+    {{ tex [[K]] \gap [[v]] }}
+  | fst K :: :: Fst
+    {{ tex \kw{fst} \gap [[K]] }}
+  | snd K :: :: Snd
+    {{ tex \kw{snd} \gap [[K]] }}
+  | _ :: :: Hole
+    {{ com hole }}
+    {{ tex \relax }}
   | ( k ) :: S :: Parens
     {{ tex ([[k]]) }}
   | (# k #) :: S :: SParens
