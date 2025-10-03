@@ -441,9 +441,9 @@ so somewhere along the pipeline, the thunk will be converted into a closure and 
 and $[[z! x]]$ will correspond to a function call.
 However, we know from the commuting conversion that the thunk will never escape its scope,
 since it's never passed to a function or stored in another thunk;
-all that we do to it is force it and apply the function within.
+all that we want to do is jump to the $[[m]]$ within and pop an argument $[[x]]$.
 Its purpose is only to join up branches of a computation,
-and should be compiled to a local code block that is jumped to.
+and should be compiled to a local code block.
 %
 \begin{figure}[h]
   \begin{align}
