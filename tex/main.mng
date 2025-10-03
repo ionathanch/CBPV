@@ -143,19 +143,14 @@
 
 \section{Introduction}
 
-\TODO: introduction
+Call-by-push-value (CBPV) \citep{CBPV} is a programming language paradigm
+that syntactically distinguishes \emph{values} from \emph{computations}.
+Explicit constructs between values and computations encode evaluation order
+by marking where computations are suspended and resumed;
+as a result, CBPV subsumes call-by-name (CBN) and call-by-value (CBV) evaluation strategies.
+\Citep{CBPV} also extends CBPV with various effects, isolating them to the computation fragment.
 
-Call-by-push-value (CBPV) \citep{CBPV} is a language with a strong distinction
-between \emph{values} and \emph{computations} in its syntax and types.
-The benefit of the distinction is that its constructs precisely describe
-when computations are executed and when they are suspended as values.
-% isolating purity, advantages other than just CBN + CBV
-With these constructs, CBPV subsumes both call-by-name (CBN) and call-by-value (CBV)
-evaluation strategies of the lambda calculus,
-in the sense that it represents lambda calculus terms with intended CBN or CBV semantics
-as terms with different evaluation behaviour.
-
-By separating out values from computations,
+By separating out pure values from effectful computations,
 CBPV is a suitable setting for reasoning about program equivalences where evaluation order matters.
 \Citet{GTT}, for instance, use $\eta$-equivalences that only hold in CBN or in CBV languages
 to reason about casts in gradual typing,
@@ -165,8 +160,7 @@ such as dead branch elimination and constant subexpression elimination/constant 
 and \citet{equational} use CBPV to verify these kinds of optimizations.
 
 Furthermore, the syntactically explicit evaluation order of CBPV makes it low-level enough
-to be suitable as a bona fide compiler intermediate representation (IR),
-and not merely for modelling compiler optimizations.
+to be suitable as a bona fide compiler intermediate representation (IR).
 In particular, \citet{CFG} show an equivalence between CBPV
 and control flow graph representations (CFG) in single static assignment (SSA) form,
 and thus the viability of CBPV as an IR for imperative languages in lieu of SSA-form CFGs.
@@ -176,7 +170,6 @@ makes it clear where closures ought to be created during compilation,
 so \citet{closures} augment CBPV with explicit closures
 and reason about optimizations related to closure conversion.
 
-\TODO: Sentence to connect above references to why we care about looking at more CBPV compiler transformations.
 In this paper, we focus on a set of \emph{commuting conversion} compiler transformations,
 which are source-to-source transformations in CBPV
 that rearrange the syntax of programs without affecting evaluation order.
