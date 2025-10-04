@@ -218,7 +218,8 @@ leading to the following contributions.
     $\hookrightarrow$~\cref{sec:proof}
 \end{itemize}
 %
-We discuss related work in \cref{sec:related},
+We discuss some other program equivalences in \cref{sec:discuss},
+compare with related work in \cref{sec:related},
 and conclude with future work in \cref{sec:future}.
 
 \section{Overview} \label{sec:overview}
@@ -963,7 +964,7 @@ This is the case for the translations of forcing thunks, returning values, funct
 we translate their subterms---%
 using empty continuations if needed, since we don't commute into introduction forms---%
 and plug them directly into the continuation.
-(\Cref{sec:related} discusses why we don't commute.)
+(\Cref{sec:discuss:constr} discusses why we don't commute.)
 
 In the translation of let expressions,
 the evaluation order would first compute $[[m1]]$, then $[[m2]]$,
@@ -1659,20 +1660,19 @@ with one more minor lemma.
   Therefore, $[[⟦m⟧ □ ⇓ return v]]$.
 \end{proof}
 
-\section{Related Work and Discussion} \label{sec:related}
+\section{Discussion} \label{sec:discuss}
 
-\Citet{CBPV-Coq} mechanize in Rocq a vast amount of metatheory for call-by-push-value,
-including normalization and observational equivalence.
-Our work builds on their design of logical equivalence between terms.
-They show a number of commuting conversions as semantic equivalences,
-namely commuting let-bound let expressions (Lemma 8.4, Equation 5)
-and function application of let expressions (Lemma 8.6, Equation 1),
-but are not comprehensive in listing all possible commuting conversions systematically as we have done.
+\subsection{Case-of-case} \label{sec:discuss:case-case}
 
-Conversely, while we consider commuting conversions to only involve elimination forms,
-\opcit also consider equivalences involving the function introduction form
-(Lemma 8.5, Equation 3; Lemma 8.6, Equation 2),
-listed below with two more for the pair introduction form.
+\subsection{Commuting constructors} \label{sec:discuss:constr}
+
+Our notion of commuting conversions only involves elimination forms,
+as they make up evaluation contexts $[[E]]$ and tail contexts $[[L]]$.
+Other work \citep{CBPV,CBPV-Coq} also consider equations which
+commuting elimination forms with introduction forms,
+specifically computation constructors in tail position,
+listed below.
+In particular, the first equation is part of \citeauthor{CBPV}'s \emph{sequencing laws}.
 %
 \begin{align*}
   [[let x ← n in λy. m]]
@@ -1696,6 +1696,16 @@ Furthermore, neither transformation appears to reveal any more optimization oppo
 % transforming left to right exposes the same function reduction opportunity
 % as would pushing an application into the let expression,
 % while transforming right to left destroys it and creates more work for us.
+
+\section{Related Work} \label{sec:related}
+
+\Citet{CBPV-Coq} mechanize in Rocq a vast amount of metatheory for call-by-push-value,
+including normalization and observational equivalence.
+Our work builds on their design of logical equivalence between terms.
+They show a number of commuting conversions as semantic equivalences,
+namely commuting let-bound let expressions (Lemma 8.4, Equation 5)
+and function application of let expressions (Lemma 8.6, Equation 1),
+but are not comprehensive in listing all possible commuting conversions systematically as we have done.
 
 Our join points and their typing judgements with a separate join point typing context
 are inspired by \citet{join}, who add join points and jumps to System F,
