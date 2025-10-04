@@ -153,7 +153,8 @@ def Acom {δ δ'} (k : K δ) (le : δ' ≤ δ) : Com δ' → Com δ
   | jump j v => jump (Fin.castLE le j) (⟦ v ⟧ᵥ)
   | case v m₁ m₂ =>
     match k.jumpify with
-    | .no => .case ⟦ v ⟧ᵥ (⟦ m₁ ⟧ₘ renameK succ k # le) (⟦ m₂ ⟧ₘ renameK succ k # le)
+    | .no | .yes _ (jump _ _) =>
+      .case ⟦ v ⟧ᵥ (⟦ m₁ ⟧ₘ renameK succ k # le) (⟦ m₂ ⟧ₘ renameK succ k # le)
     | .yes k m =>
       .join m (.case ⟦ v ⟧ᵥ (⟦ m₁ ⟧ₘ renameK succ k # .step le)
                             (⟦ m₂ ⟧ₘ renameK succ k # .step le))
@@ -319,7 +320,7 @@ theorem isANF : (∀ v, isVal ⟦v⟧ᵥ) ∧
   case jump ih => exact ih
   case case isc₁ isc₂ =>
     split <;> simp
-    case _ => exact ⟨isc₁ _ le (isk.rename), isc₂ _ le (isk.rename)⟩
+    case _ | _ => exact ⟨isc₁ _ le (isk.rename), isc₂ _ le (isk.rename)⟩
     case _ e =>
       let ⟨isk, ism⟩ := isk.jumpify e
       exact ⟨ism, isc₁ _ (.step le) (isk.rename), isc₂ _ (.step le) (isk.rename)⟩
@@ -427,7 +428,7 @@ theorem preservation {Γ} :
   -- let ⟨nj, mj⟩ := mj; exact .join (hn le nj (wtK.weaken hk)) (hm (succ_le_succ le) mj (wtK.weakenJ hk))
   case case hv hm₁ hm₂ =>
     let ⟨vj, mj₁, mj₂⟩ := mj; simp; split
-    case _ =>
+    case _ | _ =>
       exact .case (hv vj) (hm₁ le mj₁ (wtK.weaken hk)) (hm₂ le mj₂ (wtK.weaken hk))
     case _ e =>
       let ⟨_, hk, hm⟩ := hk.jumpify e
@@ -647,9 +648,11 @@ theorem soundA {Γ} :
     | .inl ⟨v, w, hA₁, ev, ew⟩ =>
       have hB₂ := ihm₁ rfl mj₁ wtk₁.weaken wtk₂.weaken hk.weaken (semCtxt.cons hA₁ hστ) hjs
       simp; split <;> simp [ev, ew]
-      . refine ℰ.bwd (.rejoin .ιl) (.rejoin .ιl) ?_
+      case _ | _ =>
+        refine ℰ.bwd (.rejoin .ιl) (.rejoin .ιl) ?_
         rw [substUnion, substUnion]; exact hB₂
-      . rename K _ => k'; rename Com _ => m'; rename _ = _ => e
+      case _ =>
+        rename K _ => k'; rename Com _ => m'; rename _ = _ => e
         rw [← rejoin.eq_2]
         refine ℰ.bwd (.rejoin .ιl) (.rejoin .ιl) ?_
         rw [substUnion, substUnion]
@@ -662,9 +665,11 @@ theorem soundA {Γ} :
     | .inr ⟨v, w, hA₂, ev, ew⟩ =>
       have hB₂ := ihm₂ rfl mj₂ wtk₁.weaken wtk₂.weaken hk.weaken (semCtxt.cons hA₂ hστ) hjs
       simp; split <;> simp [ev, ew]
-      . refine ℰ.bwd (.rejoin .ιr) (.rejoin .ιr) ?_
+      case _ | _ =>
+        refine ℰ.bwd (.rejoin .ιr) (.rejoin .ιr) ?_
         rw [substUnion, substUnion]; exact hB₂
-      . rename K _ => k'; rename Com _ => m'; rename _ = _ => e
+      case _ =>
+        rename K _ => k'; rename Com _ => m'; rename _ = _ => e
         rw [← rejoin.eq_2]
         refine ℰ.bwd (.rejoin .ιr) (.rejoin .ιr) ?_
         rw [substUnion, substUnion]
