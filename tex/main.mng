@@ -1005,23 +1005,33 @@ It doesn't make sense to jump to a join point that performs the projection,
 since it would make the inlining opportunity harder to find,
 and require unnecessarily thunking the computation pair to pass it to the join point.
 
-However, if the continuation is $[[let x ← □ in m]]$,
+If the continuation is $[[let x ← □ in m]]$,
 duplicating it would duplicate the arbitrary configuration $[[m]]$.
 In this case, we move $[[m]]$ to a join point and replace it in the continuation by a jump.
-From $[[let x ← (if v then return w else n) in m]]$ we get
+For example, from $[[let x ← (if v then return w else n) in m]]$ we get
 $$[[join j x = m in (if v then (let x ← return w in jump j x) else (let x ← n in jump j x))]],$$
 and the true branch can still inline the let binding.
-\Cref{fig:CC-norm-case} generalizes this strategy to case expressions and nested continuations;
-whether we construct a join point depends on whether the continuation ends in a let continuation.
+However, we avoid creating extra join points in nested branching.
+For example, from $[[let x ← (if v then n1 else (if w then n2 else n3)) in m]]$ we get
+%
+\begin{align*}
+  &[[join j x = m in _]] \\
+  &\quad [[if v then (let x ← n1 in jump j x) else _]] \\
+  &\qquad [[(if w then (let x ← n2 in jump j x) else (let x ← n2 in jump j x))]],
+\end{align*}
+%
+rather than another extraneous join point $[[j' x = jump j x]]$ in the outer false branch.
 
 \begin{figure}[h]
   \begin{multline*}
     [[⟦case v of inl x ⇒ m1 ; inr y ⇒ m2⟧ K]] \coloneqq \\
     \begin{cases}
       \: [[case ⟦v⟧ of inl y ⇒ ⟦m1⟧ K ; inr z ⇒ ⟦m2⟧ K]]
-      &\textit{if} ~{}~ [[K]] \equiv [[ □ [k1] - [k_i] ]] \\
+      &\textit{if} ~{}~ [[K]] \equiv [[ □ [k1] - [ki] ]] \\
+      &\textit{or} ~{}~ [[K]] \equiv [[(let x ← □ in jump j x) [k1] - [ki] ]] \\
       \: [[join j x = m in _]] &\textit{if} ~{}~ [[K]] \equiv [[ (let x ← □ in m) [k1] - [ki] ]] \\
       \: \quad [[case ⟦v⟧ of inl y ⇒ ⟦m1⟧ K' ; inr z ⇒ ⟦m2⟧ K']]
+      &\textit{and} ~{}~ [[m]] \not\equiv [[jump j x]]
     \end{cases}
     \\
     \textit{where} ~{}~ [[K']] \coloneqq [[(let x ← □ in jump j x) [k1] - [ki] ]]
@@ -1031,6 +1041,9 @@ whether we construct a join point depends on whether the continuation ends in a 
   \label{fig:CC-norm-case}
 \end{figure}
 
+\Cref{fig:CC-norm-case} generalizes this strategy to case expressions and nested continuations;
+whether we construct a join point depends on whether the continuation ends in a let continuation
+whose body isn't already a jump to a join point.
 In the mechanization, this is a source-to-source translation
 over CBPV terms (without join points) to CBPV terms (with join points).
 We need to explicitly prove that the translation indeed produces terms in CCNF,
