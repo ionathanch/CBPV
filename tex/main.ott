@@ -108,8 +108,21 @@ m, n :: 'com_' ::= {{ com computations }}
     (+ bind x in m1 +)
     (+ bind y in m2 +)
     {{ tex \kw{case} \gap [[v]] \mathrel{ \kw{of} } \mathopen{\lbrace} \kw{inl} \gap [[x]] \mathbin{\Rightarrow} [[m1]] \mathpunct{;} \kw{inr} \gap [[y]] \mathbin{\Rightarrow} [[m2]] \mathclose{\rbrace} }}
+  | case' v of inl x ⇒ m1 ; inr y ⇒ m2 :: S :: CaseAlign
+    {{ tex \begin{aligned}[t]
+        &\kw{case} \gap [[v]] \mathrel{ \kw{of} } \mathopen{\lbrace}
+        \kw{inl} \gap [[x]] \mathbin{\Rightarrow} [[m1]] \mathpunct{;} \\
+        &\phantom{\kw{case} \gap [[v]] \mathrel{ \kw{of} } \mathopen{\lbrace} }
+        \kw{inr} \gap [[y]] \mathbin{\Rightarrow} [[m2]] \mathclose{\rbrace}
+      \end{aligned} }}
   | if v then m1 else m2 :: :: If
     {{ tex \kw{if} \gap [[v]] \mathrel{ \kw{then} } [[m1]] \mathrel{ \kw{else} }[[m2]] }}
+  | if v _ :: S :: IfOnly
+    {{ tex \kw{if} \gap [[v]] }}
+  | if v then m _ :: S :: IfNoElse
+    {{ tex \kw{if} \gap [[v]] \mathrel{ \kw{then} } [[m]] }}
+  | else m :: S :: IfNoThen
+    {{ tex \mathrel{ \kw{else} } [[m]] }}
   | ⟨ m1 , m2 ⟩ :: :: Pair
     {{ tex \langle [[m1]] \mathpunct{,} [[m2]] \rangle }}
   | fst m :: :: Fst
@@ -119,14 +132,10 @@ m, n :: 'com_' ::= {{ com computations }}
   | join j x = m1 in m2 :: :: Join
     (+ bind x in m1 +)
     {{ tex \kw{join} \gap [[j]] \gap [[x]] \mathrel{=} [[m1]] \mathrel{ \kw{in} } [[m2]] }}
-  | join j = m1 in m2 :: M :: Join'
-    {{ tex \kw{join} \gap [[j]] \mathrel{=} [[m1]] \mathrel{ \kw{in} } [[m2]] }}
   | joins p in m :: M :: Joins
     {{ tex \kw{joins} \gap [[p]] \mathrel{ \kw{in} } [[m]] }}
   | jump j v :: :: Jump
     {{ tex \kw{jump} \gap [[j]] \mathrel{ \kw{with} } [[v]] }}
-  | jump j :: M :: Jump'
-    {{ tex \kw{jump} \gap [[j]] }}
   % plugging metafunctions
   | K [ n ] :: :: Plug
     {{ com plugging into a continuation }}
@@ -170,7 +179,7 @@ tm {{ tex \textit{tm} }} :: 'term_' ::= {{ com terminals }}
   | λ x . m :: :: Fun
   | ⟨ m1 , m2 ⟩ :: :: Pair
 
-lc {{ tex \mathit{lc} }} :: 'lc_' ::= {{ com lambda calculus terms }}
+lc {{ tex \mathit{lc} }}, e :: 'lc_' ::= {{ com lambda calculus terms }}
   | x :: :: Var
     {{ tex \mathit{[[x]]} }}
   | true :: :: True
@@ -183,6 +192,8 @@ lc {{ tex \mathit{lc} }} :: 'lc_' ::= {{ com lambda calculus terms }}
     {{ tex [[lc1]] \gap [[lc2]] }}
   | if lc1 then lc2 else lc3 :: :: If
     {{ tex \kw{if} \gap [[lc1]] \mathrel{ \kw{then} } [[lc2]] \mathrel{ \kw{else} }[[lc3]] }}
+  | let x = lc1 in lc2 :: :: Let
+    {{ tex \kw{let} \gap [[x]] \mathrel{=} [[lc1]] \mathrel{ \kw{in} } [[lc2]] }}
   | ( lc ) :: S :: Parens
     {{ tex ([[lc]]) }}
 

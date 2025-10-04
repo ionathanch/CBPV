@@ -487,7 +487,7 @@ where the left-hand side would be optimized with join points to the right-hand s
 \usetagform{brack}
 \begin{align}
   &[[:concrete: if (if v then false else w) then m_1 else m_2]] \nonumber \\
-  \Longrightarrow \ &[[join j = m2 in (if v then jump j else (if w then m1 else jump j))]]
+  \Longrightarrow \ &[[join j z = m2 in (if v then jump j () else (if w then m1 else jump j ()))]]
 \end{align}
 \usetagform{default}
 
@@ -1510,8 +1510,6 @@ Consequently, $[[m]]$ must be explicitly weakened on the right-hand side,
 and to show that join points can be dropped,
 we first need to show that evaluation preserves weakening.
 These technical details aside, the proof proceeds similarly to those for the commuting conversions.
-\TODO: I'd like to add a discussion subsection for mechanization details like these,
-but I'm not sure if I can fit it in.
 
 \subsection{Semantic equivalence of plugging continuations} \label{sec:proof:plug}
 
@@ -1664,6 +1662,91 @@ with one more minor lemma.
 
 \subsection{Case-of-case} \label{sec:discuss:case-case}
 
+In the lambda calculus with, for instance, conditional expressions,
+the \emph{case-of-case} transformation commutes
+a conditional whose condition is another conditional.
+The na\"ive transformation directly moves the outer conditional into the branches of the inner,
+duplicating the code in its branches.
+%
+\usetagform{brack}
+\begin{align}
+  &[[if (if e1 then e2 else e3) then e4 else e5]] \nonumber \\
+  &\Longrightarrow [[if e1 then (if e2 then e4 else e5) else (if e3 then e4 else e5)]] \label{eq:if-if}
+\end{align}
+\usetagform{default}
+%
+Let-binding the outer branches avoids this duplication.
+Notably, doing so doesn't touch the direct scrutinization of $[[e2]]$ and $[[e3]]$,
+so if they are literal $[[true]]$ or $[[false]]$ values,
+then those branches can be inlined to just $[[x]]$ or $[[y]]$.
+%
+\usetagform{brack}
+\begin{align}
+  &[[if (if e1 then e2 else e3) then e4 else e5]] \nonumber \\
+  &\Longrightarrow [[let x = e4 in let y = e5 in if e1 then (if e2 then x else y) else (if e3 then x else y)]] \label{eq:let-if-if}
+\end{align}
+\usetagform{default}
+If we translate the left-hand lambda expression to a CBPV term,
+both CBV and CBN translations yield a term of the following shape.
+%
+\usetagform{brack}
+\begin{align}
+  &[[let y ← (let x ← m1 in if x then m2 else m3) in if y then m4 else m5]] \label{eq:CBPV-if-if}
+\end{align}
+\usetagform{default}
+%
+CC-normalizing this term moves the outer let binding into the branches of the conditional on $[[x]]$,
+with jumps to avoid duplication.
+%
+\usetagform{brack}
+\begin{align}
+  &[[let x ← m1 in join j y = if y then m4 else m5 in _]] \nonumber \\
+  &\quad [[if x then (let y ← m2 in jump j y) else (let y ← m3 in jump j y)]] \label{eq:CC-if-if}
+\end{align}
+\usetagform{default}
+Unfortunately, even if $[[m2]]$ is the computation $[[return true]]$,
+inlining it will only reduce the branch down to $[[jump j true]]$,
+whose evaluation will still need to jump to the conditional in the join point
+that could otherwise have been inlined away statically.
+What we would like is to create separate join points for $[[m4]]$ and $[[m5]]$
+and jump to them individually to permit the kind of inlining above,
+similar to the right-hand side of \cref{eq:let-if-if}.
+%
+\usetagform{brack}
+\begin{align}
+  &[[let x ← m1 in join j4 z = m4 in join j5 z = m5 in _]] \nonumber \\
+  &\quad [[if x then (let y ← m2 in if y then jump j4 () else jump j5 ()) _]] \nonumber \\
+  &\quad \phantom{[[if x _]]} [[else (let y ← m3 in if y then jump j4 () else jump j5 ())]] \label{eq:CC2-if-if}
+\end{align}
+\usetagform{default}
+
+Therefore, we prove a semantic equivalence between \cref{eq:CC-if-if} and \cref{eq:CC2-if-if},
+generalizing to case expressions.
+Consequently, a transformation from the former to the latter is valid,
+and we recover the desired case-of-case transformation.
+
+\begin{lemma}[Case-of-case]
+  Suppose the following hold:
+  \begin{itemize}
+    \item $[[G ⊢ v : A3 + A4]]$
+    \item $[[G, y1 : A1 | D ⊢ m1 : B]]$
+    \item $[[G, y2 : A2 | D ⊢ m2 : B]]$
+    \item $[[G, y3 : A3 | • ⊢ m3 : F (A1 + A2)]]$
+    \item $[[G, y4 : A4 | • ⊢ m4 : F (A1 + A2)]]$
+  \end{itemize}
+  Then under contexts $[[G]], [[D]]$, the computation
+  \begin{align*}
+    &[[join j x = case x of inl y1 ⇒ m1; inr y2 ⇒ m2 in _]] \\
+    &\quad [[case v of inl y3 ⇒ (let x ← m3 in jump j x); inr y4 ⇒ (let x ← m3 in jump j x)]]
+  \end{align*}
+  is semantically equivalent at type $[[B]]$ to the computation
+  \begin{align*}
+    &[[join j1 y1 = m1 in join j2 y2 = m2 in _]] \\
+    &\quad [[case' v of inl y3 ⇒ (let x ← m3 in case x of inl y1 ⇒ jump j1 y1; inr y2 ⇒ jump j2 y2);
+                        inr y4 ⇒ (let x ← m4 in case x of inl y1 ⇒ jump j1 y1; inr y2 ⇒ jump j2 y2)]]
+  \end{align*}
+\end{lemma}
+
 \subsection{Commuting constructors} \label{sec:discuss:constr}
 
 Our notion of commuting conversions only involves elimination forms,
@@ -1688,10 +1771,11 @@ In particular, the first equation is part of \citeauthor{CBPV}'s \emph{sequencin
 
 We don't consider these because it's unclear which direction to pick and what benefits they provide.
 Going left to right, the case equations only apply when the branches are both exactly an introduction form,
-and the pair equations must duplicate code.
+and the pair equations must duplicate code,
+since we can't jump from within a computation pair.
 Going right to left, the pair equations only apply when the projections both eliminate exactly the same thing.
 Either way, they are sensitive to slight syntactic variation, \eg permuted let bindings.
-Furthermore, neither transformation appears to reveal any more optimization opportunities.
+Furthermore, neither direction appear to reveal optimization opportunities.
 % Taking the first equation as example,
 % transforming left to right exposes the same function reduction opportunity
 % as would pushing an application into the let expression,
