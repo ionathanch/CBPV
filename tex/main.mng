@@ -170,6 +170,8 @@ makes it clear where closures ought to be created during compilation,
 so \citet{closures} augment CBPV with explicit closures
 and reason about optimizations related to closure conversion.
 
+\TODO: mention compiling to assembly \citep{CBPV-STAL} with and without CC-normalization optimizations
+
 In this paper, we focus on a set of \emph{commuting conversion} compiler transformations,
 which are source-to-source transformations in CBPV
 that rearrange the syntax of programs without affecting evaluation order.
@@ -218,9 +220,8 @@ leading to the following contributions.
     $\hookrightarrow$~\cref{sec:proof}
 \end{itemize}
 %
-We discuss some other program equivalences in \cref{sec:discuss},
-compare with related work in \cref{sec:related},
-and conclude with future work in \cref{sec:future}.
+We discuss some other program equivalences and future work in \cref{sec:discuss},
+and compare with related work in \cref{sec:related}.
 
 \section{Overview} \label{sec:overview}
 
@@ -1781,6 +1782,50 @@ Furthermore, neither direction appear to reveal optimization opportunities.
 % as would pushing an application into the let expression,
 % while transforming right to left destroys it and creates more work for us.
 
+\subsection{Extensions and future work} \label{sec:future}
+
+\paragraph{Effects} Like \citet{CBPV-Coq}, the CBPV we consider doesn't include effects.
+By inspection, we can see that commuting conversions would be effect safe.
+For instance, considering $[[let y ← (let x ← n1 in n2) in m]]$,
+if $[[n1]]$, $[[n2]]$, and $[[m]]$ contained effects,
+they would be executed in that very order according to the evaluation semantics
+both before and after commutation.
+
+However, not all semantically equivalent computations necessarily preserve effect order.
+Given $[[n1]]$ and $[[n2]]$ where neither $[[x]]$ nor $[[y]]$ are free,
+$[[let x ← n1 in let y ← n2 in m]]$ is semantically equivalent to
+$[[let y ← n2 in let x ← n1 in m]]$, but would swap the order of effects in $[[n1]]$ and $[[n2]]$.
+Therefore, formally proving that CC-normalization is effect safe
+would require incorporating effects into the logical relation to rule out such equivalences.
+
+\paragraph{Stack usage} Commuting conversions optimize stack usage.
+For the CBV lambda calculus, where the A-reductions of ANF are commuting conversions,
+\citet{ANF-dead} views ANF as the A-normalization of monadic normal form (MNF),
+the syntactic form of the monadic meta-language by \citet{MNF}
+that binds intermediate computations,
+and shows that first taking A-reduction steps from MNF to ANF
+optimizes stack usage in comparison to evaluating the original MNF term
+under stack machine semantics.
+
+Similarly, we can see that our CBPV commuting conversions may also reduce stack usage.
+For instance, considering $[[let y ← (let x ← n1 in n2) in m]]$,
+stack machine evaluation would first push $[[let y ← □ in m]]$ onto the stack,
+followed by $[[let x ← □ in n2]]$,
+before evaluating $[[n1]]$ and popping these two stack frames.
+In contrast, evaluating $[[let x ← n1 in let y ← n2 in m]]$
+pushes $[[let x ← □ in let y ← n2 in m]]$ onto the stack,
+evaluates $[[n]]$, pops this stack frame,
+then pushes $[[let y ← □ in m]]$ next,
+using one fewer total stack frame.
+
+Because our translation is a single-pass transformation that uses a continuation
+rather than a sequence of commuting conversions,
+which traverses the term each time,
+showing that CC-normalized computations optimize stack usage is nontrivial.
+It may require going through an intermediate big-step semantics to track maximum stack usage,
+similar to how \citet{cost} use big-step to track space and time usage
+in their cost model of CBPV.
+
 \section{Related Work} \label{sec:related}
 
 \Citet{CBPV-Coq} mechanize in Rocq a vast amount of metatheory for call-by-push-value,
@@ -1824,14 +1869,7 @@ and it would be interesting to see whether a similar technique could be applied 
 
 \TODO: compare to \url{https://github.com/zydeco-lang/zydeco}
 
-\section{Conclusion and Future Work} \label{sec:future}
-
-\begin{itemize}
-  \item \TODO: compiling to assembly \citep{CBPV-STAL} with and without CC-normalization optimizations
-  \item \TODO: measuring stack size using cost model \citep{cost}
-  \item \TODO: actual effects --- effects produced from evaluation are preserved and not reordered, tick + tock
-  \item \TODO: real-life evaluation (for PLDI?)
-\end{itemize}
+\section{Conclusion} \label{sec:conclusion}
 
 \bibliography{main}
 
