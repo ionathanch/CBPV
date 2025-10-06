@@ -52,6 +52,7 @@
 }
 
 \newtheorem{fail}{Falsehood}[section]
+\newtheorem{prop}{Proposition}[section]
 
 \setlength{\fboxsep}{1.5pt}
 \setlength{\abovecaptionskip}{0.25\baselineskip}
@@ -1757,8 +1758,9 @@ and we recover the desired case-of-case transformation.
   \end{align*}
 \end{lemma}
 
-\subsection{Equational theory and inlining}
+\subsection{Inlining and CCNF}
 
+\iffalse
 \begin{figure}
   \begin{align}
     [[join j x = m in jump j v & ≡ m{x ↦ v}]]   \tag{\ottdrulename{Eq-jump}} \\
@@ -1783,8 +1785,10 @@ and we recover the desired case-of-case transformation.
 Inlining opportunities correspond to $\beta$-redexes that appear in subterms.
 They are justified by the equational theory, which in turn is justified by semantic equivalence.
 We extend the equational theory of CBPV with rules for join points and jumps in \cref{fig:equational}
-and show that syntactically equivalent terms are semantically equivalent,
-proven by induction on the equational judgement.
+and show that syntactically equivalent terms are semantically equivalent.
+
+\TODO: It turns out this requires logical equivalence on open terms,
+which amounts to proving strong normalization, so we're not doing that.
 
 \begin{lemma}[Soundness of equational theory] \leavevmode
   \begin{itemize}
@@ -1792,6 +1796,7 @@ proven by induction on the equational judgement.
     \item If $[[G | D ⊢ m : B]]$, $[[G | D ⊢ n : B]]$, and $[[m ≡ n]]$, then $[[G | D ⊧ m ~ n : B]]$.
   \end{itemize}
 \end{lemma}
+\fi
 
 Recall that new opportunities for inlining revealed by CC-normalization preserve CCNF,
 since they only occur in tail positions,
