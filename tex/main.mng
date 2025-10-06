@@ -64,6 +64,7 @@
 \setlist[enumerate]{topsep=0pt}
 \setlist[enumerate,1]{label=\arabic*.,ref=\arabic*}
 
+\allowdisplaybreaks
 \mathtoolsset{showmanualtags}
 \newtagform{brack}{[}{]}
 \urlstyle{tt}
@@ -137,6 +138,8 @@
 
 \begin{abstract}
 
+\TODO
+
 \end{abstract}
 
 \maketitle
@@ -150,6 +153,35 @@ by marking where computations are suspended and resumed;
 as a result, CBPV subsumes call-by-name (CBN) and call-by-value (CBV) evaluation strategies.
 \Citep{CBPV} also extends CBPV with various effects, isolating them to the computation fragment.
 
+CBPV's low-level distinction of pure values from effectful computations
+makes it a suitable compiler intermediate representation (IR).
+Existing work covers CBPV as an IR to compile to, compile from,
+and perform compiler optimizations on.
+
+\begin{itemize}
+  \item \citet{CFG} argue for using CBPV as a more compositional alternative
+    to low-level control flow graph representations by showing a tight equivalence between the two.
+  \item \Citet{CBPV-STAL} draws parallels between CBPV and stack-based typed assembly language (STAL) \citep{STAL},
+    and proposes an assembly-like language that CBPV could compile to.
+  \item Explicit thunked computations in CBPV make it clear where closures ought to be created,
+    and \citet{closures} add abstract closures and incremental closure conversion to CBPV
+    so that optimizations involving closure conversion can be done gradually.
+  \item \Citet{equational} develop an equational theory for CBPV that justify compiler optimizations
+    based on $\beta\eta$-reductions, such as dead branch elimination and constant folding.
+\end{itemize}
+
+However, $\beta\eta$-equational theories as developed by \citet{equational} and later by \citet{CBPV-Coq}
+do not validate \emph{commuting conversion} compiler transformations,
+which syntactically rearrange computations without affecting their evaluation order.
+\Citeauthor{CBPV-Coq} list a few commuting conversions in passing,
+but they aren't comprehensive and aren't framed in the context of compilation.
+Such transformations are part of well-known compiler passes such as A-normalization \citep{ANF},
+which unnest computations so that control flow is syntactically explicit,
+making code easier to compile further.
+Moreover, they can expose new opportunities for further program inlining and simplification.
+Therefore, in this work, we look at a source-to-source transformation that applies commuting conversions to CBPV.
+
+\iffalse
 By separating out pure values from effectful computations,
 CBPV is a suitable setting for reasoning about program equivalences where evaluation order matters.
 \Citet{GTT}, for instance, use $\eta$-equivalences that only hold in CBN or in CBV languages
@@ -170,8 +202,6 @@ makes it clear where closures ought to be created during compilation,
 so \citet{closures} augment CBPV with explicit closures
 and reason about optimizations related to closure conversion.
 
-\TODO: mention compiling to assembly \citep{CBPV-STAL} with and without CC-normalization optimizations
-
 In this paper, we focus on a set of \emph{commuting conversion} compiler transformations,
 which are source-to-source transformations in CBPV
 that rearrange the syntax of programs without affecting evaluation order.
@@ -181,7 +211,8 @@ However, CBPV already binds intermediate computations,
 so we can isolate just the commuting conversions.
 The benefit of commuting conversions is twofold:
 as a compiler optimization, they expose opportunities for program inlining,
-and as a compiler pass, they unnest computations to more resemble the sequential nature of low-level code.
+and as a compiler pass, they unnest computations to more resemble the sequential nature of lower-level code.
+\fi
 
 An issue with na\"ively applying commuting conversions,
 in particular in the presence of branching computations,
@@ -189,9 +220,9 @@ is that code may be duplicated;
 applying many commuting conversions can then cause exponential code bloat.
 To resolve this issue, we adapt the join point constructs by \citep{join}
 from the lambda calculus to CBPV and adapt the type system to accommodate them.
-Introducing specialized constructs rather than using existing ones
+Introducing separate constructs rather than using existing ones
 allows us to restrict their usage to only where they are needed,
-which can lead to more efficient compilation later on.
+which can lead to more efficient, specialized compilation later on.
 
 This work presents a normal form for CBPV with respect to commuting conversions,
 and a single-pass transformation into this normal form using join points.
@@ -202,8 +233,7 @@ In the next section, we give an overview of the language, the transformation, an
 leading to the following contributions.
 
 \begin{itemize}
-  \item We identify a subset of CBPV that is normal with respect to
-    all commuting conversions that syntactically unnest computations.
+  \item We identify a subset of CBPV that is normal with respect to all commuting conversions.
     To this subset, we add join point and jump constructs,
     and design a type system enforcing non-escaping join points and tail-only jumps.
     $\hookrightarrow$~\cref{sec:cbpv}
@@ -351,10 +381,6 @@ For the lambda calculus, A-normalization makes control flow syntactically explic
 it binds intermediate computations, and it sequentializes computations.
 Translations from the lambda calculus to CBPV already bind intermediate computations,
 so all that's left to do is to sequentialize them via commuting conversions.%
-\footnote{This is similar to first compiling to monadic normal form (MNF),
-which only binds intermediate computations,
-then performing sequentialization afterwards \citep{ANF-dead}.
-\TODO: Move this to related work.}
 %
 \begin{figure}[h]
   \begin{align}
@@ -377,26 +403,9 @@ let expressions and conditionals (or case expressions generally).
 to avoid confusion, we also call $[[m]]$s \emph{configurations},
 while we call $[[n]]$s \emph{\Acom{}s},
 which are both subsets of CBPV \emph{computations}.
-
-Inlining in $[[n]]$ positions in general doesn't preserve CCNF.
 Because commuting conversions push computations only into tail positions,
 \emph{new} opportunities for inlining only occur in $[[m]]$ positions,
 so performing those new inlinings won't violate CCNF.
-However, subsequent inlinings that involve forcing direct thunks may violate CCNF.
-Consider the following sequence of a computation followed by an inlining that reduces a function.
-%
-\begin{align}
-  &[[(let x ← n1 in (λy'. let y ← y'! in m1)) {let z ← n2 in m2}]] \nonumber \\
-  &\Longrightarrow [[let x ← n1 in ((λy'. let y ← y'! in m1) {let z ← n2 in m2})]] \tag{\textit{commute}} \\
-  &\Longrightarrow [[let x ← n1 in (let y ← {let z ← n2 in m2}! in m1)]] \tag{\textit{inline}}
-\end{align}
-
-The resulting term is in CCNF, but if we force the thunk,
-we end up with a nested let expression, which is not in CCNF.
-Therefore, renormalization may be required only after forcing thunks
-that appear in $[[n]]$ positions as a result of inlining.
-
-\TODO (SCW): Why do I need to know this now? What are the implications of this information?
 
 \subsection{Join points}
 
@@ -471,7 +480,7 @@ so we only need join points and jumps that take a single argument.
   & \nonumber [[let x ← (case v of inl y1 ⇒ m1 ; inr y2 ⇒ m2) in m]] \\
   \Longrightarrow \ &[[join j x = m in _]] \\
   & \nonumber \phantom{\kw{join} \gap}
-  [[case v of inl y1 ⇒ (let x ← m1 in jump j x) ; inr y2 ⇒ (let x ← m2 in jump j x)]]
+  [[case' v of inl y1 ⇒ (let x ← m1 in jump j x) ; inr y2 ⇒ (let x ← m2 in jump j x)]]
 \end{align}
 \usetagform{default}
 
@@ -981,7 +990,7 @@ we can look at how they act on the left-hand side
 of the commuting conversions in \cref{eq:let-let,eq:app-let},
 assuming that $[[n]]$ is already in CCNF,
 and using the fact that $[[⟦n⟧ K]] = [[ K[n] ]]$.
-%
+
 \begin{align}
   &  [[⟦let x ← (let y ← n in return v) in m⟧ □]]             \tag{\cref{eq:let-let}} \\
   &= [[⟦let x ← n in return v⟧ (let y ← □ in ⟦m⟧ □)]]         \tag{\textit{let}} \\
@@ -1748,6 +1757,70 @@ and we recover the desired case-of-case transformation.
   \end{align*}
 \end{lemma}
 
+\subsection{Equational theory and inlining}
+
+\begin{figure}
+  \begin{align}
+    [[join j x = m in jump j v & ≡ m{x ↦ v}]]   \tag{\ottdrulename{Eq-jump}} \\
+    [[join j' x = m' in jump j v & ≡ jump j v]] \tag{\ottdrulename{Eq-skip}} \\
+    [[join j' x = m' in tm & ≡ tm]]             \tag{\ottdrulename{Eq-drop}}
+  \end{align}
+  \begin{mathpar}
+    \inferrule[\ottdrulename{Eq-join-cong}]
+      {[[m1 ≡ m2]] \\
+       [[n1 ≡ n2]]}
+      {[[join j x = m1 in n1 ≡ join j x = m2 in n2]]}
+    \and
+    \inferrule[\ottdrulename{Eq-jump-cong}]
+      {[[v ≡ w]]}
+      {[[jump j v ≡ jump j w]]}
+  \end{mathpar}
+  \caption{Equational rules for join points and jumps}
+  \Description[]{}
+  \label{fig:equational}
+\end{figure}
+
+Inlining opportunities correspond to $\beta$-redexes that appear in subterms.
+They are justified by the equational theory, which in turn is justified by semantic equivalence.
+We extend the equational theory of CBPV with rules for join points and jumps in \cref{fig:equational}
+and show that syntactically equivalent terms are semantically equivalent,
+proven by induction on the equational judgement.
+
+\begin{lemma}[Soundness of equational theory] \leavevmode
+  \begin{itemize}
+    \item If $[[G ⊢ v : A]]$, $[[G ⊢ w : A]]$, and $[[v ≡ w]]$, then $[[G ⊧ v ~ w : A]]$.
+    \item If $[[G | D ⊢ m : B]]$, $[[G | D ⊢ n : B]]$, and $[[m ≡ n]]$, then $[[G | D ⊧ m ~ n : B]]$.
+  \end{itemize}
+\end{lemma}
+
+Recall that new opportunities for inlining revealed by CC-normalization preserve CCNF,
+since they only occur in tail positions,
+so even if inlining reduces tail-free computations to configurations,
+the whole term is still in CCNF, such as the following.
+%
+\begin{align}
+  &[[let x ← n in (λx. let y ← return x in m) v]] \nonumber \\
+  &\Longrightarrow [[let x ← n in let y ← return v in m]] \tag{\rref*{E-app}} \\
+  &\Longrightarrow [[let x ← n in m{y ↦ v}]] \tag{\rref*{E-ret}}
+\end{align}
+
+However, subsequent inlinings that involve forcing direct thunks may violate CCNF.
+Consider the following sequence of a commuting conversion,
+followed by an inlining that reduces a function,
+followed by an inlining that forces a thunk.
+%
+\begin{align}
+  &[[(let x ← n1 in (λy'. let y ← y'! in m1)) {let z ← n2 in m2}]] \nonumber \\
+  &\Longrightarrow [[let x ← n1 in ((λy'. let y ← y'! in m1) {let z ← n2 in m2})]] \tag{\textit{commute}} \\
+  &\Longrightarrow [[let x ← n1 in (let y ← {let z ← n2 in m2}! in m1)]] \tag{\rref*{E-app}} \\
+  &\Longrightarrow [[let x ← n1 in (let y ← (let z ← n2 in m2) in m1)]] \tag{\rref*{E-force}}
+\end{align}
+
+The resulting term after commuting and inlining once is in CCNF, but if we force the thunk,
+we end up with a nested let expression, which isn't in CCNF.
+Therefore, renormalization may be required only after forcing thunks
+that appear in $[[n]]$ positions as a result of inlining.
+
 \subsection{Commuting constructors} \label{sec:discuss:constr}
 
 Our notion of commuting conversions only involves elimination forms,
@@ -1776,7 +1849,7 @@ and the pair equations must duplicate code,
 since we can't jump from within a computation pair.
 Going right to left, the pair equations only apply when the projections both eliminate exactly the same thing.
 Either way, they are sensitive to slight syntactic variation, \eg permuted let bindings.
-Furthermore, neither direction appear to reveal optimization opportunities.
+Furthermore, neither direction appears to reveal optimization opportunities.
 % Taking the first equation as example,
 % transforming left to right exposes the same function reduction opportunity
 % as would pushing an application into the let expression,
@@ -1784,7 +1857,8 @@ Furthermore, neither direction appear to reveal optimization opportunities.
 
 \subsection{Extensions and future work} \label{sec:future}
 
-\paragraph{Effects} Like \citet{CBPV-Coq}, the CBPV we consider doesn't include effects.
+\paragraph{Effects}
+Like \citet{CBPV-Coq}, the CBPV we consider doesn't include effects.
 By inspection, we can see that commuting conversions would be effect safe.
 For instance, considering $[[let y ← (let x ← n1 in n2) in m]]$,
 if $[[n1]]$, $[[n2]]$, and $[[m]]$ contained effects,
@@ -1798,7 +1872,8 @@ $[[let y ← n2 in let x ← n1 in m]]$, but would swap the order of effects in 
 Therefore, formally proving that CC-normalization is effect safe
 would require incorporating effects into the logical relation to rule out such equivalences.
 
-\paragraph{Stack usage} Commuting conversions optimize stack usage.
+\paragraph{Stack usage}
+Commuting conversions optimize stack usage.
 For the CBV lambda calculus, where the A-reductions of ANF are commuting conversions,
 \citet{ANF-dead} views ANF as the A-normalization of monadic normal form (MNF),
 the syntactic form of the monadic meta-language by \citet{MNF}
@@ -1825,6 +1900,14 @@ showing that CC-normalized computations optimize stack usage is nontrivial.
 It may require going through an intermediate big-step semantics to track maximum stack usage,
 similar to how \citet{cost} use big-step to track space and time usage
 in their cost model of CBPV.
+
+\paragraph{Compilation to assembly}
+One way to reap the benefits of the way commuting conversions unnest computations
+is to compile onwards to a lower-level assembly-like language.
+A potential compilation target is the lower-level ``linearized CBPV'' proposed by \citet{CBPV-STAL},
+which is a stack machine language with explicit push/pop and jump operations.
+We conjecture that CC-normalization prior to compilation to this language would optimize stack usage,
+and that our jumps can be compiled directly to its jumps.
 
 \section{Related Work} \label{sec:related}
 
@@ -1867,9 +1950,11 @@ by virtue of binding intermediate computations.
 However, the corresponding dual of CBPV is stack-passing style \citep{compiling},
 and it would be interesting to see whether a similar technique could be applied using second-class stacks.
 
-\TODO: compare to \url{https://github.com/zydeco-lang/zydeco}
+% \url{https://github.com/zydeco-lang/zydeco}
 
 \section{Conclusion} \label{sec:conclusion}
+
+\TODO
 
 \bibliography{main}
 

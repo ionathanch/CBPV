@@ -316,6 +316,10 @@ formula :: 'formula_' ::=
     {{ tex [[G]] \mid [[D]] \mathrel{\vdash} [[m]] \mathrel{:} [[B]] }}
   | G | D ⊢ K : B1 ⇒ B2 :: :: WtK
     {{ tex [[G]] \mid [[D]] \mathrel{\vdash} [[K]] \mathrel{:} [[B1]] \Rightarrow [[B2]]}}
+  | v ≡ w :: :: EqVal
+    {{ tex [[v]] \equiv [[w]] }}
+  | m ≡ n :: :: EqCom
+    {{ tex [[m]] \equiv [[n]] }}
   % semantics
   | ( v , w ) ∈ A :: :: LogVal
     {{ tex ( [[v]] \mathpunct{,} [[w]] ) \mathrel{\in} \llbracket [[A]] \rrbracket }}
