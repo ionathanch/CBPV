@@ -147,28 +147,43 @@
 
 \section{Introduction}
 
+% CBPV separates functions from closures
+% join points aren't closures, we can guarantee they're won't be closures if only thunks are
+% discussion: binding variables to computations
+
 Call-by-push-value (CBPV) \citep{CBPV} is a programming language paradigm
 that syntactically distinguishes \emph{values} from \emph{computations}.
 Explicit constructs between values and computations encode evaluation order
-by marking where computations are suspended and resumed;
+by marking where and when computations are suspended and resumed;
 as a result, CBPV subsumes call-by-name (CBN) and call-by-value (CBV) evaluation strategies.
 \Citep{CBPV} also extends CBPV with various effects, isolating them to the computation fragment.
 
-CBPV's low-level distinction of pure values from effectful computations
-makes it a suitable compiler intermediate representation (IR).
+CBPV's distinction of pure values from effectful computations
+makes it a suitable compiler intermediate representation (IR)
+because it makes explicit many low-level considerations of compilers
+such as closures and control flow.
 Existing work covers CBPV as an IR to compile to, compile from,
 and perform compiler optimizations on.
 
 \begin{itemize}
-  \item \citet{CFG} argue for using CBPV as a more compositional alternative
-    to low-level control flow graph representations by showing a tight equivalence between the two.
-  \item \Citet{CBPV-STAL} draws parallels between CBPV and stack-based typed assembly language (STAL) \citep{STAL},
-    and proposes an assembly-like language that CBPV could compile to.
+  \item \Citet{CBPV-STAL} draws parallels between how CBPV only binds values to variables
+    with pushing and popping values on the stack in stack-based typed assembly language (STAL) \citep{STAL},
+    showing that they have comparable low-level features.
+    He proposes adding instruction operations to CBPV,
+    bringing it even closer to STAL.
   \item Explicit thunked computations in CBPV make it clear where closures ought to be created,
     and \citet{closures} add abstract closures and incremental closure conversion to CBPV
     so that optimizations involving closure conversion can be done gradually.
-  \item \Citet{equational} develop an equational theory for CBPV that justify compiler optimizations
-    based on $\beta\eta$-reductions, such as dead branch elimination and constant folding.
+  \item By binding all intermediate computations,
+    CBPV makes low-level control flow explicit,
+    but still lends to compositional reasoning with its substitution-based evaluation semantics.
+    \citet{CFG} therefore argue for using CBPV as a more compositional alternative
+    to control flow graph (CFG) compiler representations by showing a tight equivalence between the two.
+  \item While CFGs don't have a simple equational theory,
+    \citet{equational} develop an equational theory for CBPV based on $\beta\eta$-reductions.
+    They use it to trivially justify compiler optimizations,
+    such as dead branch elimination and constant folding,
+    which would otherwise be more difficult to justify in CFGs directly.
 \end{itemize}
 
 However, $\beta\eta$-equational theories as developed by \citet{equational} and later by \citet{CBPV-Coq}
@@ -176,54 +191,25 @@ do not validate \emph{commuting conversion} compiler transformations,
 which syntactically rearrange computations without affecting their evaluation order.
 \Citeauthor{CBPV-Coq} list a few commuting conversions in passing,
 but they aren't comprehensive and aren't framed in the context of compilation.
-Such transformations are part of well-known compiler passes such as A-normalization \citep{ANF},
+Such transformations are key to compilation and
+form part of well-known passes such as A-normalization \citep{ANF},
 which unnest computations so that control flow is syntactically explicit,
 making code easier to compile further.
 Moreover, they can expose new opportunities for further program inlining and simplification.
-Therefore, in this work, we look at a source-to-source transformation that applies commuting conversions to CBPV.
-
-\iffalse
-By separating out pure values from effectful computations,
-CBPV is a suitable setting for reasoning about program equivalences where evaluation order matters.
-\Citet{GTT}, for instance, use $\eta$-equivalences that only hold in CBN or in CBV languages
-to reason about casts in gradual typing,
-and do so in a CBPV setting since it subsumes those equivalences.
-In turn, $\eta$-equivalences justify compiler optimizations
-such as dead branch elimination and constant subexpression elimination/constant folding,
-and \citet{equational} use CBPV to verify these kinds of optimizations.
-
-Furthermore, the syntactically explicit evaluation order of CBPV makes it low-level enough
-to be suitable as a bona fide compiler intermediate representation (IR).
-In particular, \citet{CFG} show an equivalence between CBPV
-and control flow graph representations (CFG) in single static assignment (SSA) form,
-and thus the viability of CBPV as an IR for imperative languages in lieu of SSA-form CFGs.
-In the functional setting, the clear boundary between computations and values
-mediated by thunked computations as values
-makes it clear where closures ought to be created during compilation,
-so \citet{closures} augment CBPV with explicit closures
-and reason about optimizations related to closure conversion.
-
-In this paper, we focus on a set of \emph{commuting conversion} compiler transformations,
-which are source-to-source transformations in CBPV
-that rearrange the syntax of programs without affecting evaluation order.
-Such transformations are often coupled with others that bind intermediate computations,
-such as the A-reductions that characterize A-normal form (ANF) \citep{ANF}.
-However, CBPV already binds intermediate computations,
-so we can isolate just the commuting conversions.
-The benefit of commuting conversions is twofold:
-as a compiler optimization, they expose opportunities for program inlining,
-and as a compiler pass, they unnest computations to more resemble the sequential nature of lower-level code.
-\fi
-
 An issue with na\"ively applying commuting conversions,
 in particular in the presence of branching computations,
 is that code may be duplicated;
 applying many commuting conversions can then cause exponential code bloat.
-To resolve this issue, we adapt the join point constructs by \citep{join}
-from the lambda calculus to CBPV and adapt the type system to accommodate them.
+\Citet{join} resolve this with explicit join point constructs.
+
+Therefore, in this work, we look at a source-to-source transformation that applies commuting conversions to CBPV,
+adapting its syntax and type system to accommodate explicit join points.
 Introducing separate constructs rather than using existing ones
 allows us to restrict their usage to only where they are needed,
 which can lead to more efficient, specialized compilation later on.
+In particular, because closures are represented by thunks,
+adding join points to CBPV reinforces the intent that
+join points represent local code blocks and should \emph{not} be compiled to closures.
 
 This work presents a normal form for CBPV with respect to commuting conversions,
 and a single-pass transformation into this normal form using join points.
@@ -763,36 +749,34 @@ $[[D]] \dblcolon= [[•]] \mid [[D, j : A ↗ B]]$ for jump contexts.
 Without the jump contexts, rules \rref*{T-var} through \rref*{T-snd}
 are the usual typing rules for the values and computations of plain CBPV.
 When we include jump contexts, they are either threaded through rules unchanged,
-or they are explicitly empty in premises for a few reasons:
+or they are explicitly empty in some premises.
+In particular, joins represent local blocks of code that are jumped to
+with the current environment, and aren't closures.
+The computation inside of a thunk in \rref{T-thunk}
+needs to be closed with respect to jump variables
+to prevent jumps from escaping their local scopes.
 
-\begin{itemize}
-  \item Join represent local blocks of code that are jumped to
-    with the current environment, and aren't closures.
-    The computation inside of a thunk in \rref{T-thunk}
-    needs to be closed with respect to jump variables
-    to prevent jumps from escaping their local scopes.
-  \item Jumping from inside the computation constructors
-    (functions and computation pairs) violates type safety.
-    For example, if we try to take a projection of $[[⟨jump j v, m⟩]]$,
-    but $[[j]]$ jumps to a join point that isn't a pair, the program will crash.
-    Thus the premises of \rref{T-pair} must have empty jump contexts,
-    as well as \rref{T-fun} by a similar argument.
-  \item We restrict jumps to tail positions, in contrast to \citet{join},
-    who allow jumps in scrutinee positions.
-    They require type polymorphism to assign arbitrary types to jumps
-    so that type safety isn't violated.
-    We propagate the jump context only in premises with the same type
-    so that jumping never changes the type.
-    Although this restricts jumps to only tail positions,
-    it exactly captures what CC-normalization needs:
-    the ability to jump to another computation at the very end of the previous one.
-    As a result, the evaluation semantics are simpler
-    and the metatheory is cleaner.
-    To enforce this restriction,
-    the scrutinee premises of \rref{T-app,T-let,T-fst,T-snd}
-    require empty jump contexts,
-    while the remaining (tail) premises of \rref{T-let,T-case} may contain jumps.
-\end{itemize}
+Furthermore, we restrict jumps to tail positions, in contrast to \citet{join},
+who allow jumps in scrutinee positions.
+They require type polymorphism to assign arbitrary types to jumps
+so that type safety isn't violated.
+We propagate the jump context only in premises with the same type
+so that jumping never changes the type.
+Although this restricts jumps to only tail positions,
+it exactly captures what CC-normalization needs:
+the ability to jump to another computation at the very end of the previous one.
+As a result, the evaluation semantics are simpler
+and the metatheory is cleaner.
+To enforce this restriction,
+the scrutinee premises of \rref{T-app,T-let,T-fst,T-snd}
+require empty jump contexts,
+while the tail premises of \rref{T-let,T-case} may contain jumps.
+
+Additionally, we don't allow computation constructors \rref{T-fun,T-pair} to contain jumps,
+which prevents stuck terms such as $[[fst (join j x = m in ⟨jump j v, jump j w⟩)]]$.
+While the evaluation rules can be extended so that this computation reduces to $[[m{x ↦ v}]]$,
+doing so again complicates both the evaluation semantics and the metatheory,
+and join points for commuting conversions don't require such flexibility.
 
 In \rref{T-join}, we extend $[[D]]$ with a join declaration when checking the body $[[m2]]$,
 which may jump to the join point $[[m1]]$.
@@ -1850,8 +1834,9 @@ In particular, the first equation is part of \citeauthor{CBPV}'s \emph{sequencin
 
 We don't consider these because it's unclear which direction to pick and what benefits they provide.
 Going left to right, the case equations only apply when the branches are both exactly an introduction form,
-and the pair equations must duplicate code,
-since we can't jump from within a computation pair.
+and these na\"ive pair equations duplicate code,
+so typing and evaluation would need to be extended
+to permit creating join points from the components and jumping from within pairs.
 Going right to left, the pair equations only apply when the projections both eliminate exactly the same thing.
 Either way, they are sensitive to slight syntactic variation, \eg permuted let bindings.
 Furthermore, neither direction appears to reveal optimization opportunities.
