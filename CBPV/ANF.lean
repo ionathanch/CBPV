@@ -120,13 +120,13 @@ theorem Jump.renameJ {δ δ' k k' m} {ξ : Fin δ → Fin δ'} (e : k.jumpify = 
     simp at e; split at e; cases e; injection e with ek em; subst ek em
     case _ e => simp; rw [ih e]
 
-theorem Jump.repeat {δ k' m'} {k : K δ} (e : k.jumpify = yes k' m') : ∃ k'' m'', k'.jumpify = yes k'' m'' := by
+theorem Jump.repeat {δ k' m'} {k : K δ} (e : k.jumpify = yes k' m') : ∃ k'', k'.jumpify = yes k'' (jump 0 (var 0)) := by
   induction k generalizing k' m'
   case nil => cases e
   case letin => injection e with ek' em'; subst ek' em'; simp
   case app ih | fst ih | snd ih =>
     simp at e; split at e; cases e; injection e with ek em; subst ek em
-    case _ e => let ⟨_, _, e⟩ := ih e; simp [e]
+    case _ e => let ⟨_, e⟩ := ih e; simp [e]
 
 /-*------------------------------
   CC-normal translation of CBPV
@@ -218,7 +218,7 @@ theorem Acom.renameJ {δ δ' m m' k k' ξ} (le : δ' ≤ δ + 1) (mj : m.joinles
         cases jumpn't _ _ rfl
       case _ eyes =>
         rw [Jump.renameJ e] at eyes; cases eyes
-        have ⟨_, _, e⟩ := Jump.repeat e
+        have ⟨_, e⟩ := Jump.repeat e
         simp; rw [← renameRenameJK]; constructor
         . apply ih₁ (.step le) mj₁ (Jump.rename e)
         . apply ih₂ (.step le) mj₂ (Jump.rename e)
@@ -666,7 +666,31 @@ theorem semJumpA {Γ δ δ'} {Δ : Dtxt δ} {Δ' : Dtxt δ'} {k k' m m' B₁ B�
     case cons =>
       rw [substUnion, substUnion]
       refine soundCom hm' (semCtxt.cons hvw hττ) hjs₂₂
-  case case => sorry
+  case case hv hm₁ hm₂ ih₁ ih₂ =>
+    intro hστ js₁ js₂ hjs; simp; rw [e]
+    let ⟨vj, mj₁, mj₂⟩ := mj
+    split; contradiction
+    case _ eyes =>
+      cases eyes
+      let ⟨k'', e'⟩ := Jump.repeat e; rw [e']
+      simp
+      let h₁ v w := ih₁ (σ := v +: σ) (τ := w +: τ) le mj₁ (wtK.weaken hk) (Jump.rename e)
+      let h₂ v w := ih₂ (σ := v +: σ) (τ := w +: τ) le mj₂ (wtK.weaken hk) (Jump.rename e)
+      sorry
+    case _ eyes =>
+      cases eyes; split
+      case _ eno =>
+        let ⟨_, e⟩ := Jump.repeat e
+        rw [e] at eno; cases eno
+      case _ eyes =>
+        let ⟨A', hk', hm'⟩ := wtK.jumpify hk e
+        exact soundCom
+          (.join hm' (.case (ValWt.preservation vj hv)
+            (ComWt.preservation (.step le) mj₁ (wtK.weaken hk') hm₁)
+            (ComWt.preservation (.step le) mj₂ (wtK.weaken hk') hm₂))) hστ hjs
+      case _ jumpn't eyes =>
+        let ⟨_, e⟩ := Jump.repeat e
+        rw [e] at eyes; cases eyes; cases jumpn't _ _ rfl
 
 /-*-----------------------------------------------------------
   Soundness of A-normal translation wrt semantic equivalence
