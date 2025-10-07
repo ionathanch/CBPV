@@ -66,6 +66,14 @@ def renameJK {δ δ'} (ξ : Fin δ → Fin δ') : K δ → K δ'
   | .fst k => .fst (renameJK ξ k)
   | .snd k => .snd (renameJK ξ k)
 
+theorem renameRenameJK {δ δ' ζ k} {ξ : Fin δ → Fin δ'} : renameJK ξ (renameK ζ k) = renameK ζ (renameJK ξ k) := by
+  induction k <;> simp <;> try assumption
+  case letin => rw [renameToSubstCom, renameToSubstCom, renameJSubst]
+
+theorem renameJKPlug {δ δ' n} {ξ : Fin δ → Fin δ'} {k : K δ} : renameJCom ξ (k[ n ]) = plug n (renameJK ξ k) := by
+  induction k generalizing n <;> simp [renameWeakenJ]
+  all_goals apply_assumption
+
 /-*--------------------------------------------------
   If a K has the shape
     let x ← k₁[...[kᵢ[□]]] in m,
@@ -103,9 +111,26 @@ theorem Jump.rename {ξ δ k k'} {m : Com δ} (e : k.jumpify = yes k' m) :
     simp at e; split at e; cases e; injection e with ek em; subst ek em
     case _ e => simp; rw [ih e]
 
-/-*-----------------------------
-  A-normal translation of CBPV
------------------------------*-/
+theorem Jump.renameJ {δ δ' k k' m} {ξ : Fin δ → Fin δ'} (e : k.jumpify = yes k' m) :
+  (renameJK ξ k).jumpify = yes (renameJK (liftJ ξ) k') (renameJCom ξ m) := by
+  induction k generalizing k' m
+  case nil => cases e
+  case letin => simp at *; let ⟨ek, em⟩ := e; subst ek em; simp [liftJ]; rfl
+  case app ih | fst ih | snd ih =>
+    simp at e; split at e; cases e; injection e with ek em; subst ek em
+    case _ e => simp; rw [ih e]
+
+theorem Jump.repeat {δ k' m'} {k : K δ} (e : k.jumpify = yes k' m') : ∃ k'' m'', k'.jumpify = yes k'' m'' := by
+  induction k generalizing k' m'
+  case nil => cases e
+  case letin => injection e with ek' em'; subst ek' em'; simp
+  case app ih | fst ih | snd ih =>
+    simp at e; split at e; cases e; injection e with ek em; subst ek em
+    case _ e => let ⟨_, _, e⟩ := ih e; simp [e]
+
+/-*------------------------------
+  CC-normal translation of CBPV
+------------------------------*-/
 
 mutual
 @[simp]
@@ -163,6 +188,41 @@ end
 notation:1023 "⟦" v "⟧ᵥ" => Aval v
 notation:1023 "⟦" m "⟧ₘ" => Acom K.nil (zero_le 0) m
 notation:1022 "⟦" m "⟧ₘ" k "#" le => Acom k le m
+
+/-* Renaming join points commutes with the translation *-/
+theorem Acom.renameJ {δ δ' m m' k k' ξ} (le : δ' ≤ δ + 1) (mj : m.joinless) (e : k.jumpify = .yes k' m') :
+  renameJCom ξ (⟦ m ⟧ₘ k # le) = ⟦ m ⟧ₘ renameJK ξ k # .step le := by
+  mutual_induction m generalizing δ k k' mj ξ
+  all_goals try simp [lift]; rfl
+  case force | ret | lam | prod => exact renameJKPlug
+  case app ih | fst ih | snd ih =>
+    apply ih; simp at mj; simp [mj]; simp; rw [e]
+  case letin ihn ihm =>
+    let ⟨nj, mj⟩ := mj
+    simp; rw [← renameRenameJK]
+    rw [ihn (zero_le (δ + 1)) nj rfl]
+    rw [← ihm le mj (Jump.rename e)]; rfl
+  case case ih₁ ih₂ =>
+    let ⟨vj, mj₁, mj₂⟩ := mj
+    simp; split
+    case _ eno => rw [e] at eno; cases eno
+    case _ eyes =>
+      rw [e] at eyes; cases eyes; rw [Jump.renameJ e]; simp
+      simp [← renameRenameJK, ih₁ le mj₁ (Jump.rename e), ih₂ le mj₂ (Jump.rename e)]
+    case _ jumpn't eyes =>
+      rw [e] at eyes; cases eyes; split
+      case _ eno => rw [Jump.renameJ e] at eno; cases eno
+      case _ eyes =>
+        rw [Jump.renameJ e] at eyes; injection eyes with ek em
+        cases m' <;> cases em
+        cases jumpn't _ _ rfl
+      case _ eyes =>
+        rw [Jump.renameJ e] at eyes; cases eyes
+        have ⟨_, _, e⟩ := Jump.repeat e
+        simp; rw [← renameRenameJK]; constructor
+        . apply ih₁ (.step le) mj₁ (Jump.rename e)
+        . apply ih₂ (.step le) mj₂ (Jump.rename e)
+  case join | jump => cases mj
 
 /-*-----------------------------------------------------------------
   Validity of A-normal translation,
@@ -594,11 +654,18 @@ theorem semJumpA {Γ δ δ'} {Δ : Dtxt δ} {Δ' : Dtxt δ'} {k k' m m' B₁ B�
       λ {σ τ} ↦ ihm le mj hk.weaken (Jump.rename e) (σ := σ) (τ := τ)
     have hττ : Γ ⊨ τ ~ τ := semCtxt.trans hστ.sym hστ
     have hjs₂₂ : Δ ⊨ js₂ ~ js₂ := semDtxt.trans hjs.sym hjs
+    have hmk' : Γ ∷ A ∣ Δ ∷ A' ↗ B₂ ⊢ (⟦ m ⟧ₘ renameK succ k' # .step le) ∶ B₂ :=
+      ComWt.preservation (.step le) mj (wtK.rename wRenameSucc hk') hm
     apply ℰ.trans (ihn (zero_le δ) nj (wtK.letin ahm) rfl hστ hjs)
     apply ℰ.trans (semCom.join aihm (soundCom ahn) hττ hjs₂₂)
-    apply ℰ.trans (joinJoin ?_ ?_ ahn hττ hjs₂₂); simp
+    apply ℰ.trans (joinJoin hm' hmk' ahn hττ hjs₂₂); simp
     rw [← rejoin.eq_2 _ (m'⦃⇑ τ⦄), ← rejoin.eq_2 _ (m'⦃⇑ τ⦄)]
-    all_goals sorry
+    rw [Acom.renameJ (zero_le (δ + 1)) nj rfl]; simp
+    apply ℰ.sym (ihn (zero_le (δ + 1)) nj (.letin hmk') rfl hττ
+      (semDtxt.cons (m := m'⦃⇑ τ⦄) (n := m'⦃⇑ τ⦄) (B := B₂) hjs₂₂ (λ hvw ↦ ?cons)))
+    case cons =>
+      rw [substUnion, substUnion]
+      refine soundCom hm' (semCtxt.cons hvw hττ) hjs₂₂
   case case => sorry
 
 /-*-----------------------------------------------------------
