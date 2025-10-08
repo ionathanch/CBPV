@@ -14,18 +14,6 @@ open Nat Val Com
   The final computation must then have the following shape:
     join j₁ = γx. m₁ in ... join jᵢ = γx. mᵢ in m
 
-  Join stacks satisfy two important properties:
-  * (`rejoinDrop`): Rejoined terminals reduce to those terminals
-    with the entire join stack dropped;
-  * Rejoining (jump j v) drops j joins (as a de Bruijn index).
-
-  The latter resembles the following:
-    J[join 1 = γx. m₁ in ... join j = γx. mⱼ in jump j v]
-    ⇒⋆ J[jump 0 v]
-  Instead of proving it here,
-  it gets combined with the logical relations,
-  e.g. `ClosedSemantics.rejoinJump`.
-
   These definitions are isolated here instead of
   incorporated into Syntax and Evaluation
   because they are not really part of the surface syntax
@@ -75,3 +63,106 @@ theorem nf.rejoin't {δ m js} (nfmn't : ¬ @nf δ m) : ¬ nf (rejoin m js) := by
 theorem Norm.bwdsRejoin {δ m n n' js} (r : m ⇒⋆ n) : n ⇓ₙ n' → rejoin (weakenJCom δ m) js ⇓ₙ n'
   | ⟨r', nfn⟩ =>
     ⟨.trans' (Evals.rejoin (Evals.weakenJ (.trans' r r'))) nfn.rejoinDrop, nfn⟩
+
+/-*------------------------------------------------------------------
+  Properties of rejoining involving antirenaming:
+  * A rejoined computation weakening the first innermost join
+    will either reduce under the joins or drop the innermost join.
+  * A rejoined computation weakening the second innermost join
+    will either reduce under the joins,
+    jump to the first join (so the second join can't be discarded),
+    or drop both joins (reducing to a terminal).
+------------------------------------------------------------------*-/
+
+private theorem Eval.wkJoin {δ} {js : J δ} {m₁ m₂ m} (r : .rejoin (.join m₁ (renameJCom Fin.succ m₂)) js ⇒ m) :
+  (m = .rejoin m₂ js) ∨ (∃ m₂', m₂ ⇒ m₂' ∧ m = .rejoin (.join m₁ (renameJCom Fin.succ m₂')) js) := by
+  let ⟨_, r, e⟩ := r.rejoin_inv
+  generalize erename : renameJCom Fin.succ m₂ = m₂' at r
+  cases r
+  case join r =>
+    subst erename
+    let ⟨n, en, rn⟩ := r.antirenameJ
+    subst en; exact .inr ⟨n, rn, e⟩
+  all_goals cases m₂ <;> injection erename
+  case γ ej _ => cases ej
+  case ret | lam | prod => subst_vars; exact .inl rfl
+  case join't ej ev => rw [Fin.succ_inj.mp ej]; subst ev; exact .inl e
+
+private theorem Eval.wkJoin₂ {δ} {js : J δ} {m₁ m₂ m₃ m} (r : .rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) js ⇒ m) :
+  (∃ (v : Val), m₃ = .jump 0 v ∧ m = .rejoin (.join m₁ (m₂⦃v⦄)) js) ∨
+  (∃ m₃', m₃ = renameJCom Fin.succ m₃' ∧ m ⇒ .rejoin m₃' js) ∨
+  (∃ m₃', m₃ ⇒ m₃' ∧ m = .rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃'))) js) := by
+  let ⟨_, r, e⟩ := r.rejoin_inv
+  generalize erename : renameJCom (liftJ .succ) m₃ = m₃' at r
+  cases r with | join r =>
+  cases r
+  case join r =>
+    subst erename
+    let ⟨n, en, rn⟩ := r.antirenameJ
+    subst en; exact .inr (.inr ⟨n, rn, e⟩)
+  all_goals cases m₃ <;> injection erename
+  case γ.jump j _ ej ev =>
+    match j with
+    | ⟨0, lt⟩ => subst ev; exact .inl ⟨_, rfl, e⟩
+  case ret | lam | prod =>
+    subst_vars; exact .inr (.inl ⟨_, rfl, .rejoin (by constructor)⟩)
+  case join't.jump j' v j _ ej ev =>
+    match j, j' with
+    | ⟨0, _⟩, _ => simp [liftJ] at ej; cases ej
+    | ⟨j + 1, lt⟩, ⟨_, _⟩ =>
+      simp [liftJ] at ej; subst ej ev
+      have ej : Fin.mk (j + 1) lt = Fin.succ (Fin.mk j (lt_of_succ_lt_succ lt)) := by rfl
+      rw [ej] at e; subst e
+      refine .inr (.inl ⟨jump (Fin.mk j (lt_of_succ_lt_succ lt)) v, rfl, .rejoin .join't⟩)
+
+theorem Norm.wkJoin {δ} {js : J δ} {m₁ m₂ n} (r : rejoin (.join m₁ (renameJCom Fin.succ m₂)) js ⇓ₙ n) :
+  ∃ m₂', m₂ ⇒⋆ m₂' ∧ rejoin (.join m₁ (renameJCom Fin.succ m₂)) js ⇒⋆ rejoin m₂' js ∧ rejoin m₂' js ⇒⋆ n := by
+  cases r with | _ rn nfn =>
+  generalize e : rejoin (.join m₁ (renameJCom Fin.succ m₂)) js = m at rn
+  induction rn generalizing m₂
+  case refl => subst e; cases nfn.rejoin't (by simp)
+  case trans r rs ih =>
+    subst e
+    match r.wkJoin with
+    | .inl e =>
+      subst e
+      let ⟨_, r, e⟩ := r.rejoin_inv
+      refine ⟨_, .refl, ?_, rs⟩; rw [e]
+      exact .rejoin (.once r)
+    | .inr ⟨n, rn, en⟩ =>
+      subst en
+      have ⟨_, rn', rjoin, rs⟩ := ih nfn rfl
+      refine ⟨_, .trans rn rn', .trans (.rejoin (.join rn.renameJ)) rjoin, rs⟩
+
+theorem Norm.wkJoin₂ {δ} {js : J δ} {m₁ m₂ m₃ n} (r : rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) js ⇓ₙ n) :
+  (∃ (v : Val),
+    m₃ ⇒⋆ .jump 0 v ∧
+    rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) js ⇒⋆ .rejoin (.join m₁ (m₂⦃v⦄)) js ∧
+    .rejoin (.join m₁ (m₂⦃v⦄)) js ⇒⋆ n) ∨
+  (∃ m₃',
+    m₃ ⇒⋆ renameJCom Fin.succ m₃' ∧
+    rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) js ⇒⋆ .rejoin m₃' js ∧
+    .rejoin m₃' js ⇒⋆ n) := by
+  cases r with | _ rn nfn =>
+  generalize e : rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) js = m at rn
+  induction rn generalizing m₃
+  case refl => subst e; cases nfn.rejoin't (by simp)
+  case trans r rs ih =>
+    subst e
+    match r.wkJoin₂ with
+    | .inl ⟨_, ejump, e⟩ =>
+      subst ejump e; exact .inl ⟨_, .refl, .once r, rs⟩
+    | .inr (.inl ⟨_, e, r'⟩) =>
+      cases rs
+      case refl => cases nfn.stepn't r'
+      case trans r'' rs =>
+        rw [Eval.det r'' r'] at rs; subst e
+        let ⟨_, r, e⟩ := r.rejoin_inv; subst e
+        refine .inr ⟨_, .refl, .trans r (.once r'), rs⟩
+    | .inr (.inr ⟨_, rm₃, e⟩) =>
+      subst e
+      match ih nfn rfl with
+      | .inl ⟨_, rm₃', r', rs⟩ =>
+        exact .inl ⟨_, .trans rm₃ rm₃', .trans r r', rs⟩
+      | .inr ⟨_, rm₃', r', rs⟩ =>
+        exact .inr ⟨_, .trans rm₃ rm₃', .trans r r', rs⟩

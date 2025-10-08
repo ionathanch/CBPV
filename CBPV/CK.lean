@@ -1,5 +1,3 @@
-import CBPV.RTC
-import CBPV.Syntax
 import CBPV.Evaluation
 
 open Val Com

@@ -1,5 +1,4 @@
 import CBPV.Equivalence
-import CBPV.Antirenaming
 
 open Nat ValType ComType Val Com
 
