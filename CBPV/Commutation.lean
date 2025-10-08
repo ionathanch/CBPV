@@ -6,7 +6,7 @@ theorem letLet {Γ δ} {Δ : Dtxt δ} {A n m m'} {B : ComType}
   (hlet : Γ ∣ ⬝ ⊢ letin n m ∶ F A)
   (hm' : Γ ∷ A ∣ Δ ⊢ m' ∶ B) :
   Γ ∣ Δ ⊨ letin (letin n m) m' ~ letin n (letin m (renameCom (lift succ) m')) ∶ B := by
-  intro σ τ hστ js₁ js₂ hjs
+  intro σ τ hστ φ ψ hφψ
   let ⟨v₁, v₂, rv₁, rv₂, hA⟩ := (soundCom hlet hστ .nil).ret_inv
   have r₁' : letin ((letin n m)⦃σ⦄) (m'⦃⇑ σ⦄) ⇒⋆ m'⦃v₁ +: σ⦄ := by
     rw [← substUnion]; exact .trans' rv₁.letin (.once .ζ)
@@ -23,14 +23,14 @@ theorem letLet {Γ δ} {Δ : Dtxt δ} {A n m m'} {B : ComType}
       := by simp only [substCom]; rw [substUnion, renameDropSubst]
     _ ⇒⋆ letin (ret v₂) (m'⦃⇑τ⦄) := .letin (rlet.merge ⟨rv₂, ⟨⟩⟩)
     _ ⇒ m'⦃v₂ +: τ⦄ := by rw [← substUnion]; exact .ζ
-  have goal := soundCom hm' (semCtxt.cons hA hστ) hjs
+  have goal := soundCom hm' (semCtxt.cons hA hστ) hφψ
   refine ℰ.bwds (.rejoin r₁') (.rejoin r₂') goal
 
 theorem appLet {Γ δ} {Δ : Dtxt δ} {n m v A B}
   (hlet : Γ ∣ ⬝ ⊢ letin n m ∶ Arr A B)
   (hv : Γ ⊢ v ∶ A) :
   Γ ∣ Δ ⊨ app (letin n m) v ~ letin n (app m (renameVal succ v)) ∶ B := by
-  intro σ τ hστ js₁ js₂ hjs
+  intro σ τ hστ φ ψ hφψ
   let ⟨n₁, n₂, r₁, r₂, hB⟩ := (soundCom hlet hστ .nil).lam_inv
   have r₁' : app ((letin n m)⦃σ⦄) (v⦃σ⦄) ⇒⋆ n₁⦃v⦃σ⦄⦄ := by
     rw [← @weakenJCom0 (n₁⦃v⦃σ⦄⦄)]; exact .trans' r₁.app (.once .β)
@@ -57,7 +57,7 @@ theorem appLet {Γ δ} {Δ : Dtxt δ} {n m v A B}
 theorem fstLet {Γ δ} {Δ : Dtxt δ} {n m B₁ B₂}
   (hlet : Γ ∣ ⬝ ⊢ letin n m ∶ Prod B₁ B₂) :
   Γ ∣ Δ ⊨ fst (letin n m) ~ letin n (fst m) ∶ B₁ := by
-  intro σ τ hστ js₁ js₂ hjs
+  intro σ τ hστ φ ψ hφψ
   let ⟨n₁, _, n₂, _, r₁, r₂, hB₁⟩ := (soundCom hlet hστ .nil).fst
   have r₁' : fst ((letin n m)⦃σ⦄) ⇒⋆ n₁ := by
     rw [← @weakenJCom0 n₁]; exact .trans' r₁.fst (.once .π1)
@@ -82,7 +82,7 @@ theorem fstLet {Γ δ} {Δ : Dtxt δ} {n m B₁ B₂}
 theorem sndLet {Γ δ} {Δ : Dtxt δ} {n m B₁ B₂}
   (hlet : Γ ∣ ⬝ ⊢ letin n m ∶ Prod B₁ B₂) :
   Γ ∣ Δ ⊨ snd (letin n m) ~ letin n (snd m) ∶ B₂ := by
-  intro σ τ hστ js₁ js₂ hjs
+  intro σ τ hστ φ ψ hφψ
   let ⟨_, n₁, _, n₂, r₁, r₂, hB₂⟩ := (soundCom hlet hστ .nil).snd
   have r₁' : snd ((letin n m)⦃σ⦄) ⇒⋆ n₁ := by
     rw [← @weakenJCom0 n₁]; exact .trans' r₁.snd (.once .π2)
@@ -109,7 +109,7 @@ theorem letCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ n A} {B : ComType}
   (hn : Γ ∷ A ∣ Δ ⊢ n ∶ B) :
   Γ ∣ Δ ⊨ letin (case v m₁ m₂) n
     ~ case v (letin m₁ (renameCom (lift succ) n)) (letin m₂ (renameCom (lift succ) n)) ∶ B := by
-  intro σ τ hστ js₁ js₂ hjs
+  intro σ τ hστ φ ψ hφψ
   let ⟨v₁, v₂, rv₁, rv₂, hA⟩ := (soundCom hcase hστ .nil).ret_inv
   have r₁' : letin ((case v m₁ m₂)⦃σ⦄) (n⦃⇑ σ⦄) ⇒⋆ n⦃v₁ +: σ⦄ := by
     rw [← substUnion]; exact .trans' rv₁.letin (.once .ζ)
@@ -133,7 +133,7 @@ theorem letCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ n A} {B : ComType}
           := by simp only [substCom]; rw [substUnion, renameDropSubst]
         _ ⇒⋆ letin (ret v₂) (n⦃⇑ τ⦄) := ru₂.letin
         _ ⇒ n⦃v₂ +: τ⦄ := by rw [← substUnion]; exact .ζ
-    have goal := soundCom hn (semCtxt.cons hA hστ) hjs
+    have goal := soundCom hn (semCtxt.cons hA hστ) hφψ
     exact ℰ.bwds (.rejoin r₁') (.rejoin r₂') goal
   | .inr ⟨w₁, w₂, hA₂, e₁, e₂⟩ =>
     rw [e₂]; rw [e₂] at rv₂
@@ -151,14 +151,14 @@ theorem letCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ n A} {B : ComType}
           := by simp only [substCom]; rw [substUnion, renameDropSubst]
         _ ⇒⋆ letin (ret v₂) (n⦃⇑ τ⦄) := ru₂.letin
         _ ⇒ n⦃v₂ +: τ⦄ := by rw [← substUnion]; exact .ζ
-    have goal := soundCom hn (semCtxt.cons hA hστ) hjs
+    have goal := soundCom hn (semCtxt.cons hA hστ) hφψ
     exact ℰ.bwds (.rejoin r₁') (.rejoin r₂') goal
 
 theorem appCase {Γ δ} {Δ : Dtxt δ} {v w m₁ m₂ A B}
   (hcase : Γ ∣ ⬝ ⊢ case v m₁ m₂ ∶ Arr A B)
   (hw : Γ ⊢ w ∶ A) :
   Γ ∣ Δ ⊨ app (case v m₁ m₂) w ~ case v (app m₁ (renameVal succ w)) (app m₂ (renameVal succ w)) ∶ B := by
-  intro σ τ hστ js₁ js₂ hjs
+  intro σ τ hστ φ ψ hφψ
   let ⟨n₁, n₂, r₁, r₂, hB₁⟩ := (soundCom hcase hστ .nil).lam_inv
   have r₁' : app ((case v m₁ m₂)⦃σ⦄) (w⦃σ⦄) ⇒⋆ n₁⦃w⦃σ⦄⦄ := by
     rw [← @weakenJCom0 (n₁⦃w⦃σ⦄⦄)]; exact .trans' r₁.app (.once .β)
@@ -202,7 +202,7 @@ theorem appCase {Γ δ} {Δ : Dtxt δ} {v w m₁ m₂ A B}
 theorem fstCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ B₁ B₂}
   (hcase : Γ ∣ ⬝ ⊢ case v m₁ m₂ ∶ Prod B₁ B₂) :
   Γ ∣ Δ ⊨ fst (case v m₁ m₂) ~ case v (fst m₁) (fst m₂) ∶ B₁ := by
-  intro σ τ hστ js₁ js₂ hjs
+  intro σ τ hστ φ ψ hφψ
   let ⟨n₁, _, n₂, _, r₁, r₂, hB₁⟩ := (soundCom hcase hστ .nil).fst
   have r₁' : fst ((case v m₁ m₂)⦃σ⦄) ⇒⋆ n₁ := by
     rw [← @weakenJCom0 n₁]; exact .trans' r₁.fst (.once .π1)
@@ -242,7 +242,7 @@ theorem fstCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ B₁ B₂}
 theorem sndCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ B₁ B₂}
   (hcase : Γ ∣ ⬝ ⊢ case v m₁ m₂ ∶ Prod B₁ B₂) :
   Γ ∣ Δ ⊨ snd (case v m₁ m₂) ~ case v (snd m₁) (snd m₂) ∶ B₂ := by
-  intro σ τ hστ js₁ js₂ hjs
+  intro σ τ hστ φ ψ hφψ
   let ⟨_, n₁, _, n₂, r₁, r₂, hB₁⟩ := (soundCom hcase hστ .nil).snd
   have r₁' : snd ((case v m₁ m₂)⦃σ⦄) ⇒⋆ n₁ := by
     rw [← @weakenJCom0 n₁]; exact .trans' r₁.snd (.once .π2)
@@ -281,27 +281,27 @@ theorem sndCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ B₁ B₂}
 
 theorem joinJoin {Γ δ} {Δ : Dtxt δ} {n₁ n₂ m A₁ A₂ B} (hn₁ : Γ ∷ A₁ ∣ Δ ⊢ n₁ ∶ B) (hn₂ : Γ ∷ A₂ ∣ Δ ∷ A₁ ↗ B ⊢ n₂ ∶ B) (hm : Γ ∣ Δ ∷ A₂ ↗ B ⊢ m ∶ B) :
   Γ ∣ Δ ⊨ join (join (renameCom (lift succ) n₁) n₂) m ~ join n₁ (join n₂ (renameJCom (liftJ .succ) m)) ∶ B := by
-  intro σ τ hστ js₁ js₂ hjs
-  have hright := soundCom (.join hn₁ (.join hn₂ (wtRenameJ (wRenameJLift wRenameJSucc) hm))) hστ hjs
+  intro σ τ hστ φ ψ hφψ
+  have hright := soundCom (.join hn₁ (.join hn₂ (wtRenameJ (wRenameJLift wRenameJSucc) hm))) hστ hφψ
   unfold ℰ at hright
   let ⟨_, m₂, _, rm₂, _⟩ := hright
   have nfm₂ := rm₂.2
   simp [renameJSubst] at rm₂; simp [renameJSubst]
   match rm₂.wkJoin₂ with
   | .inl ⟨v, rm, rjoin, rm₂⟩ =>
-    have hleft := soundCom (.join (.join (wtRenameCom (wRenameLift wRenameSucc) hn₁) hn₂) hm) hστ hjs
+    have hleft := soundCom (.join (.join (wtRenameCom (wRenameLift wRenameSucc) hn₁) hn₂) hm) hστ hφψ
     unfold ℰ at hleft
     let ⟨_, _, rm₁, rm₂', hB⟩ := hleft
     let r : _ ⇒⋆ m₂ := by
-      calc rejoin (join ((join (renameCom (lift succ) n₁) n₂)⦃⇑ τ⦄) (m⦃τ⦄)) js₂
-      _ ⇒⋆ rejoin (join ((join (renameCom (lift succ) n₁) n₂)⦃⇑ τ⦄) (jump 0 v)) js₂ := .rejoin (.join rm)
-      _ ⇒ rejoin ((join (renameCom (lift succ) n₁) n₂)⦃⇑ τ⦄⦃v⦄) js₂ := .rejoin .γ
-      _ = rejoin (join (n₁⦃⇑ τ⦄) (n₂⦃v +: τ⦄)) js₂ := by rw [substUnion]; simp; rw [renameUpSubstConsCom]
+      calc rejoin (join ((join (renameCom (lift succ) n₁) n₂)⦃⇑ τ⦄) (m⦃τ⦄)) ψ
+      _ ⇒⋆ rejoin (join ((join (renameCom (lift succ) n₁) n₂)⦃⇑ τ⦄) (jump 0 v)) ψ := .rejoin (.join rm)
+      _ ⇒ rejoin ((join (renameCom (lift succ) n₁) n₂)⦃⇑ τ⦄⦃v⦄) ψ := .rejoin .γ
+      _ = rejoin (join (n₁⦃⇑ τ⦄) (n₂⦃v +: τ⦄)) ψ := by rw [substUnion]; simp; rw [renameUpSubstConsCom]
       _ ⇒⋆ m₂ := by rw [substUnion] at rm₂; exact rm₂
     have rn := r.merge rm₂'
     unfold ℰ; exact ⟨_, _, rm₁, ⟨.trans' rjoin (.trans' rm₂ rn), rm₂'.2⟩, hB⟩
   | .inr ⟨m', rm, rjoin, rm₂⟩ =>
-    have hleft := soundCom (.join (.join (wtRenameCom (wRenameLift wRenameSucc) hn₁) hn₂) hm) hστ hjs
+    have hleft := soundCom (.join (.join (wtRenameCom (wRenameLift wRenameSucc) hn₁) hn₂) hm) hστ hφψ
     unfold ℰ at hleft
     let ⟨_, _, rm₁, rm₂', hB⟩ := hleft
     have rn := Evals.merge (.rejoin (.join rm)) rm₂'
@@ -311,9 +311,9 @@ theorem joinJoin {Γ δ} {Δ : Dtxt δ} {n₁ n₂ m A₁ A₂ B} (hn₁ : Γ �
 
 theorem dropJoin {Γ δ} {Δ : Dtxt δ} {m₁ m₂ A B} (h₁ : Γ ∷ A ∣ Δ ⊢ m₁ ∶ B) (h₂ : Γ ∣ Δ ⊢ m₂ ∶ B) :
   Γ ∣ Δ ⊨ m₂ ~ (join m₁ (renameJCom Fin.succ m₂)) ∶ B := by
-  intro σ τ hστ js₁ js₂ hjs
+  intro σ τ hστ φ ψ hφψ
   -- get rid of join m₁
-  have hm₂ := soundCom (.join h₁ (wtWeakenJ h₂)) hστ hjs
+  have hm₂ := soundCom (.join h₁ (wtWeakenJ h₂)) hστ hφψ
   unfold ℰ at hm₂
   let ⟨_, n₂, _, rn₂, _⟩ := hm₂
   have nfn₂ := rn₂.2
@@ -321,7 +321,7 @@ theorem dropJoin {Γ δ} {Δ : Dtxt δ} {m₁ m₂ A B} (h₁ : Γ ∷ A ∣ Δ 
   let ⟨_, rm₂, rjoin, rn₂⟩ := rn₂.wkJoin
   refine ℰ.bwds .refl (.trans' rjoin rn₂) ?_
   -- merge reductions
-  have hm₂ := soundCom h₂ hστ hjs
+  have hm₂ := soundCom h₂ hστ hφψ
   unfold ℰ at hm₂
   let ⟨_, n₂', rn₁, rn₂', hB⟩ := hm₂
   have rn := Evals.merge (RTC.trans' rm₂.rejoin rn₂) rn₂'
@@ -338,7 +338,7 @@ theorem caseOfCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ m₃ m₄ B} {A₁ A₂ A
         ~ join m₁ (join (renameJCom Fin.succ m₂)
             (case v (letin m₃ (case (var 0) (jump 1 (var 0)) (jump 0 (var 0))))
                     (letin m₄ (case (var 0) (jump 1 (var 0)) (jump 0 (var 0)))))) ∶ B := by
-  intro σ τ hστ js₁ js₂ hjs
+  intro σ τ hστ φ ψ hφψ
   have hv := soundVal hv hστ; unfold 𝒱 at hv
   match hv with
   | .inl ⟨v₁, v₂, hA₃, e₁, e₂⟩ =>
@@ -357,14 +357,14 @@ theorem caseOfCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ m₃ m₄ B} {A₁ A₂ A
         (.rejoin (.trans .γ (.once .ιl)))
         (.rejoin (.trans' (Evals.join (.trans (.join .ιl) (.once (.join't (j := 0))))) (.once .γ))) ?_
       rw [substUnion, substUnion, substUnion₂, substDrop₂]; simp [up]
-      exact soundCom hm₁ (semCtxt.cons hA₁ hστ) hjs
+      exact soundCom hm₁ (semCtxt.cons hA₁ hστ) hφψ
     | .inr ⟨w₁', w₂', hA₂, e₁, e₂⟩ =>
       subst e₁ e₂
       refine ℰ.bwds
         (.rejoin (.trans .γ (.once .ιr)))
         (.rejoin (.join (.trans (.join .ιr) (.once .γ)))) ?_
       rw [substUnion, substUnion, substUnion₂, substDrop₂]; simp [up]
-      have hB := dropJoin (wtWeakenCom₂ hm₁) hm₂ (semCtxt.cons hA₂ hστ) hjs
+      have hB := dropJoin (wtWeakenCom₂ hm₁) hm₂ (semCtxt.cons hA₂ hστ) hφψ
       simp [renameUpSubstConsCom] at hB; exact hB
   | .inr ⟨v₁, v₂, hA₄, e₁, e₂⟩ =>
     simp only [substCom]; rw [e₁, e₂]
@@ -382,12 +382,12 @@ theorem caseOfCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ m₃ m₄ B} {A₁ A₂ A
         (.rejoin (.trans .γ (.once .ιl)))
         (.rejoin (.trans' (Evals.join (.trans (.join .ιl) (.once (.join't (j := 0))))) (.once .γ))) ?_
       rw [substUnion, substUnion, substUnion₂, substDrop₂]; simp [up]
-      exact soundCom hm₁ (semCtxt.cons hA₁ hστ) hjs
+      exact soundCom hm₁ (semCtxt.cons hA₁ hστ) hφψ
     | .inr ⟨w₁', w₂', hA₂, e₁, e₂⟩ =>
       subst e₁ e₂
       refine ℰ.bwds
         (.rejoin (.trans .γ (.once .ιr)))
         (.rejoin (.join (.trans (.join .ιr) (.once .γ)))) ?_
       rw [substUnion, substUnion, substUnion₂, substDrop₂]; simp [up]
-      have hB := dropJoin (wtWeakenCom₂ hm₁) hm₂ (semCtxt.cons hA₂ hστ) hjs
+      have hB := dropJoin (wtWeakenCom₂ hm₁) hm₂ (semCtxt.cons hA₂ hστ) hφψ
       simp [renameUpSubstConsCom] at hB; exact hB

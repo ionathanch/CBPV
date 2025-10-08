@@ -27,40 +27,40 @@ inductive J : Nat → Type where
 @[simp]
 def Com.rejoin {δ} (m : Com δ) : J δ → Com 0
   | .nil => m
-  | .cons n js => rejoin (join n m) js
+  | .cons n φ => rejoin (join n m) φ
 
-theorem Eval.rejoin {δ m n js} (r : m ⇒ n) : @rejoin δ m js ⇒ @rejoin δ n js := by
-  induction js
+theorem Eval.rejoin {δ m n φ} (r : m ⇒ n) : @rejoin δ m φ ⇒ @rejoin δ n φ := by
+  induction φ
   case nil => exact r
   case cons ih => simp; exact ih (.join r)
 
-theorem Eval.rejoin_inv {δ js m₁ m₂ m} (r : .rejoin (@Com.join δ m₁ m₂) js ⇒ m) :
-  ∃ m', .join m₁ m₂ ⇒ m' ∧ m = .rejoin m' js := by
-  induction js
+theorem Eval.rejoin_inv {δ φ m₁ m₂ m} (r : .rejoin (@Com.join δ m₁ m₂) φ ⇒ m) :
+  ∃ m', .join m₁ m₂ ⇒ m' ∧ m = .rejoin m' φ := by
+  induction φ
   case nil => simpa
   case cons ih =>
     let ⟨_, r, e⟩ := ih r
     cases r with | join r => exact ⟨_, r, e⟩
 
-theorem Evals.rejoin {δ m n js} (r : m ⇒⋆ n) : @rejoin δ m js ⇒⋆ @rejoin δ n js := by
+theorem Evals.rejoin {δ m n φ} (r : m ⇒⋆ n) : @rejoin δ m φ ⇒⋆ @rejoin δ n φ := by
   induction r
   case refl => rfl
   case trans r _ rs => exact .trans (r.rejoin) rs
 
-theorem nf.rejoinDrop {δ m js} : nf m → rejoin (weakenJCom δ m) js ⇒⋆ m := by
+theorem nf.rejoinDrop {δ m φ} : nf m → rejoin (weakenJCom δ m) φ ⇒⋆ m := by
   intro nfm; cases m
   all_goals simp at nfm
   case lam | ret | prod =>
-    induction δ <;> cases js <;> simp [weakenJCom, RTC.refl]
+    induction δ <;> cases φ <;> simp [weakenJCom, RTC.refl]
     case succ ih _ _ =>
       refine .trans' (Evals.rejoin (.once ?_)) ih; constructor
 
-theorem nf.rejoin't {δ m js} (nfmn't : ¬ @nf δ m) : ¬ nf (rejoin m js) := by
-  induction js
+theorem nf.rejoin't {δ m φ} (nfmn't : ¬ @nf δ m) : ¬ nf (rejoin m φ) := by
+  induction φ
   case nil => exact nfmn't
   case cons ih => apply ih; simp
 
-theorem Norm.bwdsRejoin {δ m n n' js} (r : m ⇒⋆ n) : n ⇓ₙ n' → rejoin (weakenJCom δ m) js ⇓ₙ n'
+theorem Norm.bwdsRejoin {δ m n n' φ} (r : m ⇒⋆ n) : n ⇓ₙ n' → rejoin (weakenJCom δ m) φ ⇓ₙ n'
   | ⟨r', nfn⟩ =>
     ⟨.trans' (Evals.rejoin (Evals.weakenJ (.trans' r r'))) nfn.rejoinDrop, nfn⟩
 
@@ -74,8 +74,8 @@ theorem Norm.bwdsRejoin {δ m n n' js} (r : m ⇒⋆ n) : n ⇓ₙ n' → rejoin
     or drop both joins (reducing to a terminal).
 ------------------------------------------------------------------*-/
 
-private theorem Eval.wkJoin {δ} {js : J δ} {m₁ m₂ m} (r : .rejoin (.join m₁ (renameJCom Fin.succ m₂)) js ⇒ m) :
-  (m = .rejoin m₂ js) ∨ (∃ m₂', m₂ ⇒ m₂' ∧ m = .rejoin (.join m₁ (renameJCom Fin.succ m₂')) js) := by
+private theorem Eval.wkJoin {δ} {φ : J δ} {m₁ m₂ m} (r : .rejoin (.join m₁ (renameJCom Fin.succ m₂)) φ ⇒ m) :
+  (m = .rejoin m₂ φ) ∨ (∃ m₂', m₂ ⇒ m₂' ∧ m = .rejoin (.join m₁ (renameJCom Fin.succ m₂')) φ) := by
   let ⟨_, r, e⟩ := r.rejoin_inv
   generalize erename : renameJCom Fin.succ m₂ = m₂' at r
   cases r
@@ -88,10 +88,10 @@ private theorem Eval.wkJoin {δ} {js : J δ} {m₁ m₂ m} (r : .rejoin (.join m
   case ret | lam | prod => subst_vars; exact .inl rfl
   case join't ej ev => rw [Fin.succ_inj.mp ej]; subst ev; exact .inl e
 
-private theorem Eval.wkJoin₂ {δ} {js : J δ} {m₁ m₂ m₃ m} (r : .rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) js ⇒ m) :
-  (∃ (v : Val), m₃ = .jump 0 v ∧ m = .rejoin (.join m₁ (m₂⦃v⦄)) js) ∨
-  (∃ m₃', m₃ = renameJCom Fin.succ m₃' ∧ m ⇒ .rejoin m₃' js) ∨
-  (∃ m₃', m₃ ⇒ m₃' ∧ m = .rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃'))) js) := by
+private theorem Eval.wkJoin₂ {δ} {φ : J δ} {m₁ m₂ m₃ m} (r : .rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) φ ⇒ m) :
+  (∃ (v : Val), m₃ = .jump 0 v ∧ m = .rejoin (.join m₁ (m₂⦃v⦄)) φ) ∨
+  (∃ m₃', m₃ = renameJCom Fin.succ m₃' ∧ m ⇒ .rejoin m₃' φ) ∨
+  (∃ m₃', m₃ ⇒ m₃' ∧ m = .rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃'))) φ) := by
   let ⟨_, r, e⟩ := r.rejoin_inv
   generalize erename : renameJCom (liftJ .succ) m₃ = m₃' at r
   cases r with | join r =>
@@ -115,10 +115,10 @@ private theorem Eval.wkJoin₂ {δ} {js : J δ} {m₁ m₂ m₃ m} (r : .rejoin 
       rw [ej] at e; subst e
       refine .inr (.inl ⟨jump (Fin.mk j (lt_of_succ_lt_succ lt)) v, rfl, .rejoin .join't⟩)
 
-theorem Norm.wkJoin {δ} {js : J δ} {m₁ m₂ n} (r : rejoin (.join m₁ (renameJCom Fin.succ m₂)) js ⇓ₙ n) :
-  ∃ m₂', m₂ ⇒⋆ m₂' ∧ rejoin (.join m₁ (renameJCom Fin.succ m₂)) js ⇒⋆ rejoin m₂' js ∧ rejoin m₂' js ⇒⋆ n := by
+theorem Norm.wkJoin {δ} {φ : J δ} {m₁ m₂ n} (r : rejoin (.join m₁ (renameJCom Fin.succ m₂)) φ ⇓ₙ n) :
+  ∃ m₂', m₂ ⇒⋆ m₂' ∧ rejoin (.join m₁ (renameJCom Fin.succ m₂)) φ ⇒⋆ rejoin m₂' φ ∧ rejoin m₂' φ ⇒⋆ n := by
   cases r with | _ rn nfn =>
-  generalize e : rejoin (.join m₁ (renameJCom Fin.succ m₂)) js = m at rn
+  generalize e : rejoin (.join m₁ (renameJCom Fin.succ m₂)) φ = m at rn
   induction rn generalizing m₂
   case refl => subst e; cases nfn.rejoin't (by simp)
   case trans r rs ih =>
@@ -134,17 +134,17 @@ theorem Norm.wkJoin {δ} {js : J δ} {m₁ m₂ n} (r : rejoin (.join m₁ (rena
       have ⟨_, rn', rjoin, rs⟩ := ih nfn rfl
       refine ⟨_, .trans rn rn', .trans (.rejoin (.join rn.renameJ)) rjoin, rs⟩
 
-theorem Norm.wkJoin₂ {δ} {js : J δ} {m₁ m₂ m₃ n} (r : rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) js ⇓ₙ n) :
+theorem Norm.wkJoin₂ {δ} {φ : J δ} {m₁ m₂ m₃ n} (r : rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) φ ⇓ₙ n) :
   (∃ (v : Val),
     m₃ ⇒⋆ .jump 0 v ∧
-    rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) js ⇒⋆ .rejoin (.join m₁ (m₂⦃v⦄)) js ∧
-    .rejoin (.join m₁ (m₂⦃v⦄)) js ⇒⋆ n) ∨
+    rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) φ ⇒⋆ .rejoin (.join m₁ (m₂⦃v⦄)) φ ∧
+    .rejoin (.join m₁ (m₂⦃v⦄)) φ ⇒⋆ n) ∨
   (∃ m₃',
     m₃ ⇒⋆ renameJCom Fin.succ m₃' ∧
-    rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) js ⇒⋆ .rejoin m₃' js ∧
-    .rejoin m₃' js ⇒⋆ n) := by
+    rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) φ ⇒⋆ .rejoin m₃' φ ∧
+    .rejoin m₃' φ ⇒⋆ n) := by
   cases r with | _ rn nfn =>
-  generalize e : rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) js = m at rn
+  generalize e : rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) φ = m at rn
   induction rn generalizing m₃
   case refl => subst e; cases nfn.rejoin't (by simp)
   case trans r rs ih =>

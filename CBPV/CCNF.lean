@@ -151,12 +151,12 @@ end
 
 section
 set_option hygiene false
-local notation:1023 "⟦" v "⟧ᵥ" => Aval v
-local notation:1023 "⟦" m "⟧ₘ" => Acom .nil (zero_le 0) m
-local notation:1022 "⟦" m "⟧ₘ" k "#" le => Acom k le m
+local notation:1023 "⟦" v "⟧ᵥ" => CCval v
+local notation:1023 "⟦" m "⟧ₘ" => CCcom .nil (zero_le 0) m
+local notation:1022 "⟦" m "⟧ₘ" k "#" le => CCcom k le m
 mutual
 @[simp]
-def Aval : Val → Val
+def CCval : Val → Val
   | var x => .var x
   | unit => .unit
   | inl v => .inl ⟦ v ⟧ᵥ
@@ -164,7 +164,7 @@ def Aval : Val → Val
   | thunk m => .thunk ⟦ m ⟧ₘ
 
 @[simp]
-def Acom {δ δ'} (k : K δ) (le : δ' ≤ δ) : Com δ' → Com δ
+def CCcom {δ δ'} (k : K δ) (le : δ' ≤ δ) : Com δ' → Com δ
   | force v => k [ .force ⟦ v ⟧ᵥ ]
   | ret v   => k [ .ret ⟦ v ⟧ᵥ ]
   | lam m   => k [ .lam ⟦ m ⟧ₘ ]
@@ -185,15 +185,15 @@ def Acom {δ δ'} (k : K δ) (le : δ' ≤ δ) : Com δ' → Com δ
                             (⟦ m₂ ⟧ₘ renameK succ k # .step le))
 end
 end
-notation:1023 "⟦" v "⟧ᵥ" => Aval v
-notation:1023 "⟦" m "⟧ₘ" => Acom K.nil (zero_le 0) m
-notation:1022 "⟦" m "⟧ₘ" k "#" le => Acom k le m
+notation:1023 "⟦" v "⟧ᵥ" => CCval v
+notation:1023 "⟦" m "⟧ₘ" => CCcom K.nil (zero_le 0) m
+notation:1022 "⟦" m "⟧ₘ" k "#" le => CCcom k le m
 
 /-*---------------------------------------------------
   Renaming join points commutes with the translation
 ---------------------------------------------------*-/
 
-theorem Acom.renameJ {δ δ' m m' k k' ξ} (le : δ' ≤ δ + 1) (mj : m.joinless) (e : k.jumpify = .yes k' m') :
+theorem CCcom.renameJ {δ δ' m m' k k' ξ} (le : δ' ≤ δ + 1) (mj : m.joinless) (e : k.jumpify = .yes k' m') :
   renameJCom ξ (⟦ m ⟧ₘ k # le) = ⟦ m ⟧ₘ renameJK ξ k # .step le := by
   mutual_induction m generalizing δ k k' mj ξ
   all_goals try simp [lift]; rfl
@@ -366,7 +366,7 @@ theorem isK.jumpify {δ k k'} {m : Com δ} (isk : isK k) (e : k.jumpify = .yes k
       let ⟨isk, ism⟩ := ih isk e'
       exact ⟨isk, ism⟩
 
-theorem isANF : (∀ v, isVal ⟦v⟧ᵥ) ∧
+theorem isCCNF : (∀ v, isVal ⟦v⟧ᵥ) ∧
   (∀ {δ δ'} (m : Com δ') (k : K δ) (le : δ' ≤ δ), isK k → isCfg (⟦m⟧ₘ k # le)) := by
   refine ⟨λ v ↦ ?val, λ {δ δ'} m k le ↦ ?com⟩
   mutual_induction v, m
@@ -388,8 +388,8 @@ theorem isANF : (∀ v, isVal ⟦v⟧ᵥ) ∧
       let ⟨isk, ism⟩ := isk.jumpify e
       exact ⟨ism, isc₁ _ (.step le) (isk.rename), isc₂ _ (.step le) (isk.rename)⟩
 
-def Val.ANF : ∀ v, isVal ⟦v⟧ᵥ := isANF.left
-def Com.ANF : ∀ m, isCfg ⟦m⟧ₘ := λ m ↦ isANF.right m .nil .refl ⟨⟩
+def Val.CCNF : ∀ v, isVal ⟦v⟧ᵥ := isCCNF.left
+def Com.CCNF : ∀ m, isCfg ⟦m⟧ₘ := λ m ↦ isCCNF.right m .nil .refl ⟨⟩
 
 /-*-------------------------------------------
   Type preservation of CC-normal translation
