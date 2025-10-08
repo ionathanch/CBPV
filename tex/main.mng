@@ -1130,7 +1130,7 @@ We also need an inversion lemma for continuations that end in let continuations.
   By induction on the typing derivation of $[[K]]$.
 \end{proof}
 
-\begin{lemma}[Type preservation]
+\begin{lemma}[Type preservation] \label{lem:preservation}
   Suppose $[[v]]$ and $[[m]]$ are plain CBPV terms
   (and thus have no join points or jumps).
   If $[[G ⊢ v : A]]$, then $[[G ⊢ ⟦v⟧ : A]]$,
@@ -1381,6 +1381,14 @@ well-typed terms are semantically equivalent to themselves.
   \TODO
 \end{proof}
 
+As a corollary, we have type safety and normalization:
+a closed, well-typed computation never evaluates to a stuck term,
+and moreover evaluates to a terminal.
+
+\begin{corollary}[Normalization]
+  If $[[• | • ⊢ m : B]]$, then $[[m ⇝* tm]]$ for some $[[tm]]$.
+\end{corollary}
+
 \subsection{Semantic equivalence of commuting conversions} \label{sec:proof:cc}
 
 As the translation normalizes with respect to all commuting conversions,
@@ -1599,8 +1607,79 @@ we use them together to show that plugging commutes with tail contexts.
 \begin{proof}
   By induction on the typing derivation of $[[K]]$,
   using \cref{thm:semeq,cor:semeq:plug}
-  along with derived rules \rref{case-let,case-app,case-fst,case-snd}
+  along with derived \rref{case-let,case-app,case-fst,case-snd}
   similarly to \cref{lem:plug-let}.
+\end{proof}
+
+These two lemmas suffice to prove the desired equivalence
+for a na\"ive translation that duplicates continuations instead of using join points.
+To handle join points, we need one more lemma that gives an equivalence
+between a translation that doesn't use a join point and one that does.
+
+\begin{lemma}[Jump equivalence of plugging] \label{lem:plug-jump}
+  If $[[G | D ⊢ K : B1 ⇒ B2]]$, $[[G | • ⊢ n : B1]]$,
+  and $[[K]] \equiv [[ (let x ← □ in m) [k1] - [ki] ]]$,
+  then $[[G | D ⊧ K[n] ~ join j x = m in K'[n] : B2 ]]$,
+  where $[[K']] \equiv [[ (let x ← □ in jump j x) [k1] - [ki] ]]$.
+\end{lemma}
+
+\begin{proof}
+  By induction on the typing derivation of $[[K]]$.
+  The \rref{K-let} case uses \cref{thm:semeq} on the typing derivation of $[[n]]$
+  to show it must evaluate to some $[[return v]]$;
+  then both sides evaluate to $[[m{x ↦ v}]]$,
+  and we get the equivalence from \cref{thm:semeq} on the typing derivation of $[[m]]$.
+  The remaining cases follow from the induction hypotheses.
+\end{proof}
+
+\begin{lemma}[Jump equivalence of the translation] \label{lem:plug-ccnf}
+  Suppose that $[[m]]$ contains no join points or jumps.
+  If $[[G | D ⊢ K : B1 ⇒ B2]]$, $[[G | D ⊢ m : B1]]$,
+  and $[[K]] \equiv [[ (let x ← □ in m') [k1] - [ki] ]]$,
+  then $[[G | D ⊧ ⟦m⟧K ~ join j x = m' in ⟦m⟧K' : B2 ]]$,
+  where $[[K']] \equiv [[ (let x ← □ in jump j x) [k1] - [ki] ]]$.
+\end{lemma}
+
+\begin{proof}
+  By induction on the typing derivation of $[[m]]$.
+  \begin{itemize}
+    \item \textbf{Cases} \rref*{T-force,T-fun,T-ret,T-prod}:
+      Hold directly from \cref{lem:plug-jump},
+      using \cref{lem:preservation} to type translated subterms.
+    \item \textbf{Cases} \rref*{T-app,T-fst,T-snd}:
+      Hold directly from the induction hypotheses.
+    \item \textbf{Case} \rref*{T-let}:
+      The goal is to show that $[[⟦let y ← n in m⟧K]]$
+      is semantically equivalent to $[[join j x = m' in ⟦let y ← n in m⟧K']]$,
+      which holds by the following chain of equivalences.
+      \begin{align}
+        &[[⟦let y ← n in m⟧K]] \nonumber \\
+        &= [[⟦n⟧ (let y ← □ in ⟦m⟧K)]] \tag{\textit{by definition}} \\
+        &\sim [[join j' y = ⟦m⟧K in ⟦n⟧ (let y ← □ in jump j' y)]] \tag{\textit{by IH on $[[n]]$}} \\
+        &\sim [[join j' y = (join j x = m' in ⟦m⟧K') in ⟦n⟧ (let y ← □ in jump j' y)]] \tag{\textit{by IH on $[[m]]$}} \\
+        &\sim [[join j x = m' in join j' y = ⟦m⟧K' in ⟦n⟧ (let y ← □ in jump j' y)]] \tag{\textit{by \rref*{join-join}}} \\
+        &\sim [[join j x = m' in ⟦n⟧ (let y ← □ in ⟦m⟧K')]] \tag{\textit{by IH on $[[n]]$}} \\
+        &= [[join j x = m' in ⟦let y ← n in m⟧K']] \tag{\textit{by definition}}
+      \end{align}
+    \item \textbf{Case} \rref*{T-case}:
+      Let the translated computation be $[[case v of inl y ⇒ m1; inr y ⇒ m2]]$.
+      There are two subcases depending on what $[[m']]$ is.
+      \begin{itemize}
+        \item If $[[m']] \equiv [[jump j' w]]$,
+          then by the translation, the left-hand side is
+          \[ [[case ⟦v⟧ of inl y ⇒ ⟦m1⟧K; inr y ⇒ ⟦m2⟧K]], \]
+          and the right-hand side is
+          \[ [[join j x = m' in case ⟦v⟧ of inl y ⇒ ⟦m1⟧K'; inr y ⇒ ⟦m2⟧K']]. \]
+          By \cref{thm:semeq}, we know $[[⟦v⟧]]$ reduces to either some $[[inl w]]$ or $[[inr w]]$.
+          WLOG, supposing the former, it then suffices to show that
+          $[[⟦m1⟧K {y ↦ w}]]$ is semantically equivalent to $[[join j x = m' in ⟦m1⟧K' {y ↦ w}]]$,
+          which holds by the induction hypothesis on $[[m1]]$.
+        \item Otherwise, both the left- and right-hand sides are
+          \[ [[join j x = m' in case ⟦v⟧ of inl y ⇒ ⟦m1⟧K'; inr y ⇒ ⟦m2⟧K']], \]
+          which are equivalent by \cref{thm:semeq},
+          using \cref{lem:preservation} for the translated subterms. \qedhere
+      \end{itemize}
+  \end{itemize}
 \end{proof}
 
 Finally, we have all pieces to prove the main theorem:
@@ -1621,7 +1700,53 @@ The equivalence we want follows from instantiating by the empty continuation.
 
 \begin{proof}
   By mutual induction on the typing derivations of $[[v]]$ and $[[m]]$.
-  \TODO
+  \begin{itemize}
+    \item \textbf{Case} \rref*{T-var}:
+      Holds by logical equivalence of substitution maps.
+    \item \textbf{Case} \rref*{T-unit}: Trivial.
+    \item \textbf{Cases} \rref*{T-force,T-fun,T-ret,T-prod}:
+      Hold by \cref{lem:semeq:plug} and the induction hypotheses.
+    \item \textbf{Cases} \rref*{T-left,T-right,T-thunk,T-app,T-fst,T-snd}:
+      Hold by the induction hypotheses.
+    \item \textbf{Case} \rref*{T-let}:
+      The goal is to show that $[[ K[let x ← n in m] ]]$
+      is equivalent to $[[⟦let x ← n in m⟧K]]$,
+      which holds by the following chain of equivalences.
+      \begin{align*}
+        [[ K[let x ← n in m] ]] \nonumber
+        &\sim [[ let x ← n in K[m] ]] \tag{\textit{by \cref{lem:plug-let}}} \\
+        &\sim [[ let x ← n in ⟦m⟧K ]]
+        = [[ (let x ← □ in ⟦m⟧K)[n] ]] \tag{\textit{by IH on $[[m]]$}} \\
+        &\sim [[⟦n⟧ (let x ← □ in ⟦m⟧K)]]
+        = [[⟦let x ← n in m⟧K]] \tag{\textit{by IH on $[[n]]$}}
+      \end{align*}
+    \item \textbf{Case} \rref*{T-case}:
+      The goal is to show that $[[ K[case v of inl y ⇒ m1; inr y ⇒ m2] ]]$
+      is equivalent to $[[⟦case v of inl y ⇒ m1; inr y ⇒ m2⟧K]]$.
+      By \cref{lem:plug-case}, the left-hand side is equivalent to
+      $[[ case v of inl y ⇒ K[m1]; inr y ⇒ K[m2] ]]$.
+      Furthermore, by the induction hypotheses on the subterms,
+      this is equivalent to $[[case ⟦v⟧ of inl y ⇒ ⟦m1⟧K; inr y ⇒ ⟦m2⟧K]]$.
+      It then suffices to prove this equivalent to the right-hand side.
+      There are two subcases depending on what $[[K]]$ is.
+      \begin{itemize}
+        \item If $[[K]] \equiv [[ □ [k1] - [ki] ]]$
+          or $[[K]] \equiv [[ (let x ← □ in jump j v) [k1] - [ki] ]]$,
+          then the right-hand side is
+          $[[case ⟦v⟧ of inl y ⇒ ⟦m1⟧K; inr y ⇒ ⟦m2⟧K]]$,
+          and we are done.
+        \item Otherwise, $[[K]] \equiv [[ (let x ← □ in m') [k1] - [ki] ]]$.
+          Letting $[[K']] \equiv [[ (let x ← □ in jump j x) [k1] - [ki] ]]$,
+          the right-hand side is
+          \[ [[join j x = m' in case ⟦v⟧ of inl y ⇒ ⟦m1⟧K'; inr y ⇒ ⟦m2⟧K' ]]. \]
+          By \cref{thm:semeq}, we know $[[⟦v⟧]]$ reduces to either some $[[inl w]]$ or $[[inr w]]$.
+          WLOG, supposing the former, it then suffices to show that
+          $[[⟦m1⟧K {y ↦ w}]]$ is equivalent to $[[join j x = m' in ⟦m1⟧K' {y ↦ w}]]$.
+          Extending the substitution map with $[[y ↦ w]]$
+          (noting that $[[y]]$ is only free in $[[m1]]$),
+          this equivalence holds by \cref{lem:plug-ccnf}. \qedhere
+      \end{itemize}
+  \end{itemize}
 \end{proof}
 
 \begin{corollary} \label{cor:semeq-ccnf}

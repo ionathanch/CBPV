@@ -18,6 +18,8 @@
         "subexpressions",
         "subterm",
         "subterms",
+        "subcase",
+        "subcases",
         "scrutinee",
         "scrutinees",
         "unnest",
