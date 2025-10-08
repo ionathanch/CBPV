@@ -376,3 +376,8 @@ theorem soundness {Γ} :
 
 def soundVal {Γ v} {A : ValType} : Γ ⊢ v ∶ A → Γ ⊨ v ~ v ∶ A := soundness.left v A
 def soundCom {Γ δ} {Δ : Dtxt δ} {m} {B : ComType} : Γ ∣ Δ ⊢ m ∶ B → Γ ∣ Δ ⊨ m ~ m ∶ B := soundness.right m B
+
+theorem safety {m B} (h : ⬝ ∣ ⬝ ⊢ m ∶ B) : ∃ n, m ⇓ₙ n := by
+  have hB := soundCom h semCtxt.nil semDtxt.nil
+  rw [substComId] at hB; simp at hB; unfold ℰ at hB
+  let ⟨_, _, nfm, _, _⟩ := hB; exact ⟨_, nfm⟩
