@@ -189,7 +189,10 @@ notation:1023 "⟦" v "⟧ᵥ" => Aval v
 notation:1023 "⟦" m "⟧ₘ" => Acom K.nil (zero_le 0) m
 notation:1022 "⟦" m "⟧ₘ" k "#" le => Acom k le m
 
-/-* Renaming join points commutes with the translation *-/
+/-*---------------------------------------------------
+  Renaming join points commutes with the translation
+---------------------------------------------------*-/
+
 theorem Acom.renameJ {δ δ' m m' k k' ξ} (le : δ' ≤ δ + 1) (mj : m.joinless) (e : k.jumpify = .yes k' m') :
   renameJCom ξ (⟦ m ⟧ₘ k # le) = ⟦ m ⟧ₘ renameJK ξ k # .step le := by
   mutual_induction m generalizing δ k k' mj ξ
@@ -219,9 +222,9 @@ theorem Acom.renameJ {δ δ' m m' k k' ξ} (le : δ' ≤ δ + 1) (mj : m.joinles
       case _ eyes =>
         rw [Jump.renameJ e] at eyes; cases eyes
         have ⟨_, e⟩ := Jump.repeat e
-        simp; rw [← renameRenameJK]; constructor
-        . apply ih₁ (.step le) mj₁ (Jump.rename e)
-        . apply ih₂ (.step le) mj₂ (Jump.rename e)
+        simp; rw [← renameRenameJK]
+        exact ⟨ih₁ (.step le) mj₁ (Jump.rename e),
+               ih₂ (.step le) mj₂ (Jump.rename e)⟩
   case join | jump => cases mj
 
 /-*-----------------------------------------------------------------
@@ -644,39 +647,50 @@ theorem semJumpA {Γ δ δ'} {Δ : Dtxt δ} {Δ' : Dtxt δ'} {k k' m m' B₁ B�
     have goal := ih (k' := .snd k') (m' := m') (zero_le δ) mj (.snd hk)
     simp only [K.jumpify, e] at goal; exact goal ⟨⟩
   -- configuration cases
-  case letin Γ _ n m A B hn hm ihn ihm =>
+  case letin Γ _ n m A _ hn hm ihn ihm =>
     intro hστ js₁ js₂ hjs; simp
     let ⟨nj, mj⟩ := mj
     have ⟨A', hk', hm'⟩ := wtK.jumpify hk e
     have ahm := ComWt.preservation le mj hk.weaken hm
+    have ahm' := ComWt.preservation (.step le) mj (wtK.rename wRenameSucc hk') hm
     have ahn := ComWt.preservation (Δ := Δ ∷ A ↗ B₂) (zero_le (δ + 1)) nj (.letin (.jump .here (.var .here))) hn
     have aihm : Γ ∷ A ∣ Δ ⊨ (⟦ m ⟧ₘ renameK succ k # le) ~ join (renameCom (lift succ) m') (⟦ m ⟧ₘ renameK succ k' # .step le) ∶ B₂ :=
       λ {σ τ} ↦ ihm le mj hk.weaken (Jump.rename e) (σ := σ) (τ := τ)
     have hττ : Γ ⊨ τ ~ τ := semCtxt.trans hστ.sym hστ
     have hjs₂₂ : Δ ⊨ js₂ ~ js₂ := semDtxt.trans hjs.sym hjs
-    have hmk' : Γ ∷ A ∣ Δ ∷ A' ↗ B₂ ⊢ (⟦ m ⟧ₘ renameK succ k' # .step le) ∶ B₂ :=
-      ComWt.preservation (.step le) mj (wtK.rename wRenameSucc hk') hm
     apply ℰ.trans (ihn (zero_le δ) nj (wtK.letin ahm) rfl hστ hjs)
     apply ℰ.trans (semCom.join aihm (soundCom ahn) hττ hjs₂₂)
-    apply ℰ.trans (joinJoin hm' hmk' ahn hττ hjs₂₂); simp
+    apply ℰ.trans (joinJoin hm' ahm' ahn hττ hjs₂₂); simp
     rw [← rejoin.eq_2 _ (m'⦃⇑ τ⦄), ← rejoin.eq_2 _ (m'⦃⇑ τ⦄)]
     rw [Acom.renameJ (zero_le (δ + 1)) nj rfl]; simp
-    apply ℰ.sym (ihn (zero_le (δ + 1)) nj (.letin hmk') rfl hττ
-      (semDtxt.cons (m := m'⦃⇑ τ⦄) (n := m'⦃⇑ τ⦄) (B := B₂) hjs₂₂ (λ hvw ↦ ?cons)))
-    case cons =>
-      rw [substUnion, substUnion]
-      refine soundCom hm' (semCtxt.cons hvw hττ) hjs₂₂
+    apply ℰ.sym (ihn (zero_le (δ + 1)) nj (.letin ahm') rfl hττ
+      (semDtxt.cons (m := m'⦃⇑ τ⦄) (n := m'⦃⇑ τ⦄) (B := B₂) hjs₂₂ (λ hvw ↦ ?_)))
+    rw [substUnion, substUnion]
+    exact soundCom hm' (semCtxt.cons hvw hττ) hjs₂₂
   case case hv hm₁ hm₂ ih₁ ih₂ =>
     intro hστ js₁ js₂ hjs; simp; rw [e]
     let ⟨vj, mj₁, mj₂⟩ := mj
     split; contradiction
     case _ eyes =>
       cases eyes
-      let ⟨k'', e'⟩ := Jump.repeat e; rw [e']
-      simp
-      let h₁ v w := ih₁ (σ := v +: σ) (τ := w +: τ) le mj₁ (wtK.weaken hk) (Jump.rename e)
-      let h₂ v w := ih₂ (σ := v +: σ) (τ := w +: τ) le mj₂ (wtK.weaken hk) (Jump.rename e)
-      sorry
+      let ⟨k'', e'⟩ := Jump.repeat e; rw [e']; simp
+      have h₁ v w := ih₁ (σ := v +: σ) (τ := w +: τ) le mj₁ (wtK.weaken hk) (Jump.rename e)
+      have h₂ v w := ih₂ (σ := v +: σ) (τ := w +: τ) le mj₂ (wtK.weaken hk) (Jump.rename e)
+      let ihv := soundVal (ValWt.preservation vj hv) hστ
+      unfold 𝒱 at ihv
+      match ihv with
+      | .inl ⟨v, w, hA, e₁, e₂⟩ =>
+        rw [e₁, e₂]
+        refine ℰ.bwd (.rejoin .ιl) (.rejoin (.join .ιl)) ?_
+        rw [substUnion, substUnion]
+        have hB₂ := h₁ v w (semCtxt.cons hA hστ) hjs
+        simp at hB₂; rw [renameUpSubstConsVal] at hB₂; exact hB₂
+      | .inr ⟨v, w, hA, e₁, e₂⟩ =>
+        rw [e₁, e₂]
+        refine ℰ.bwd (.rejoin .ιr) (.rejoin (.join .ιr)) ?_
+        rw [substUnion, substUnion]
+        have hB₂ := h₂ v w (semCtxt.cons hA hστ) hjs
+        simp at hB₂; rw [renameUpSubstConsVal] at hB₂; exact hB₂
     case _ eyes =>
       cases eyes; split
       case _ eno =>
@@ -752,7 +766,7 @@ theorem soundA {Γ} :
           semJumpA (zero_le δ) mj₁ wtk₂.weaken hm₁ (Jump.rename e)
             (semCtxt.trans (semCtxt.sym (semCtxt.cons hA₁ hστ)) (semCtxt.cons hA₁ hστ))
             (semDtxt.trans (semDtxt.sym hjs) hjs)
-        simp [renameUpSubstCons] at goal; exact goal
+        simp [renameUpSubstConsCom] at goal; exact goal
     | .inr ⟨v, w, hA₂, ev, ew⟩ =>
       have hB₂ := ihm₂ rfl mj₂ wtk₁.weaken wtk₂.weaken hk.weaken (semCtxt.cons hA₂ hστ) hjs
       simp; split <;> simp [ev, ew]
@@ -769,7 +783,7 @@ theorem soundA {Γ} :
           semJumpA (zero_le δ) mj₂ wtk₂.weaken hm₂ (Jump.rename e)
             (semCtxt.trans (semCtxt.sym (semCtxt.cons hA₂ hστ)) (semCtxt.cons hA₂ hστ))
             (semDtxt.trans (semDtxt.sym hjs) hjs)
-        simp [renameUpSubstCons] at goal; exact goal
+        simp [renameUpSubstConsCom] at goal; exact goal
   case prod ihn₁ ihn₂ _ =>
     let ⟨nj₁, nj₂⟩ := mj
     refine hk.plug (λ hστ js₁ js₂ _ ↦ ?_)

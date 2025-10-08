@@ -498,10 +498,15 @@ theorem renameUpUpSubst {δ} σ (m : Com δ) : substCom (⇑ ⇑ σ) (renameCom 
     _ = substCom (renameVal (lift succ) ∘ (⇑ σ)) m := by rw [substComExt _ _ (upUpSucc σ)]
     _ = renameCom (lift succ) (substCom (⇑ σ) m)   := by rw [renameSubstCom]
 
-theorem renameUpSubstCons {δ} σ v (m : Com δ) : substCom (⇑ (v +: σ)) (renameCom (lift succ) m) = substCom (⇑ σ) m := by
+theorem renameUpSubstConsCom {δ} σ v (m : Com δ) : substCom (⇑ (v +: σ)) (renameCom (lift succ) m) = substCom (⇑ σ) m := by
   calc substCom (⇑ (v +: σ)) (renameCom (lift succ) m)
     _ = substCom (⇑ (v +: σ) ∘ lift succ) m := by rw [substRenameCom]
     _ = substCom (⇑ σ) m                    := by rw [substComExt]; intro n; cases n <;> rfl
+
+theorem renameUpSubstConsVal σ v w : substVal (⇑ (v +: σ)) (renameVal (lift succ) w) = substVal (⇑ σ) w := by
+  calc substVal (⇑ (v +: σ)) (renameVal (lift succ) w)
+    _ = substVal (⇑ (v +: σ) ∘ lift succ) w := by rw [substRenameVal]
+    _ = substVal (⇑ σ) w                    := by rw [substValExt]; intro n; cases n <;> rfl
 
 /-* Terrible name but extremely specific lemma for Equivalence.letLet/.letCase I will never use again *-/
 

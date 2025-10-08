@@ -297,7 +297,7 @@ theorem joinJoin {Γ δ} {Δ : Dtxt δ} {n₁ n₂ m A₁ A₂ B} (hn₁ : Γ �
       calc rejoin (join ((join (renameCom (lift succ) n₁) n₂)⦃⇑ τ⦄) (m⦃τ⦄)) js₂
       _ ⇒⋆ rejoin (join ((join (renameCom (lift succ) n₁) n₂)⦃⇑ τ⦄) (jump 0 v)) js₂ := .rejoin (.join rm)
       _ ⇒ rejoin ((join (renameCom (lift succ) n₁) n₂)⦃⇑ τ⦄⦃v⦄) js₂ := .rejoin .γ
-      _ = rejoin (join (n₁⦃⇑ τ⦄) (n₂⦃v +: τ⦄)) js₂ := by rw [substUnion]; simp; rw [renameUpSubstCons]
+      _ = rejoin (join (n₁⦃⇑ τ⦄) (n₂⦃v +: τ⦄)) js₂ := by rw [substUnion]; simp; rw [renameUpSubstConsCom]
       _ ⇒⋆ m₂ := by rw [substUnion] at rm₂; exact rm₂
     have rn := r.merge rm₂'
     unfold ℰ; exact ⟨_, _, rm₁, ⟨.trans' rjoin (.trans' rm₂ rn), rm₂'.2⟩, hB⟩
@@ -366,7 +366,7 @@ theorem caseOfCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ m₃ m₄ B} {A₁ A₂ A
         (.rejoin (.join (.trans (.join .ιr) (.once .γ)))) ?_
       rw [substUnion, substUnion, substUnion₂, substDrop₂]; simp [up]
       have hB := dropJoin (wtWeakenCom₂ hm₁) hm₂ (semCtxt.cons hA₂ hστ) hjs
-      simp [renameUpSubstCons] at hB; exact hB
+      simp [renameUpSubstConsCom] at hB; exact hB
   | .inr ⟨v₁, v₂, hA₄, e₁, e₂⟩ =>
     simp only [substCom]; rw [e₁, e₂]
     refine ℰ.bwd (.rejoin (.join .ιr)) (.rejoin (.join (.join .ιr))) ?_
@@ -391,4 +391,4 @@ theorem caseOfCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ m₃ m₄ B} {A₁ A₂ A
         (.rejoin (.join (.trans (.join .ιr) (.once .γ)))) ?_
       rw [substUnion, substUnion, substUnion₂, substDrop₂]; simp [up]
       have hB := dropJoin (wtWeakenCom₂ hm₁) hm₂ (semCtxt.cons hA₂ hστ) hjs
-      simp [renameUpSubstCons] at hB; exact hB
+      simp [renameUpSubstConsCom] at hB; exact hB
