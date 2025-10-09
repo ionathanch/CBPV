@@ -104,7 +104,8 @@
 
         "\\TODO": "dummy",
         "\\kw{}": "ignore",
-        "\\opcit": "dummy"
+        "\\opcit": "dummy",
+        "\\thmref{}{}": "dummy"
       },
       "environments": {
         "CCSXML": "ignore",

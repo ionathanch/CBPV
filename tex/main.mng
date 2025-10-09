@@ -21,12 +21,14 @@
 \let\renewlist\relax
 \usepackage{thmtools} % fix cref lemma/corollary names; load BEFORE cleveref
 \usepackage[capitalize,nameinlink,noabbrev]{cleveref}
+\usepackage[format=plain,justification=centering]{caption}
 \usepackage{enumitem,booktabs,subcaption,xspace,doi}
 \usepackage{mathpartir,stmaryrd,colonequals}
 \usepackage[bottom,flushmargin,multiple,para]{footmisc} % para spacing is weird and ugly
 
-\newcommand{\repo}{https://github.com/ionathanch/CBPV/tree/join}
-\newcommand{\lang}{CBPV$_{\mathrm{j}}$\@\xspace}
+%\newcommand{\repo}{https://github.com/ionathanch/CBPV/tree/join}
+\newcommand{\repo}{https://github.com/anonymous/CBPV/tree/join}
+\newcommand{\thmref}[2]{\textnormal{[\texttt{\href{\repo/CBPV/#1.lean}{#1}:#2}]}}
 \newcommand{\titlebreak}{\texorpdfstring{\\}{}}
 \newcommand{\TODO}{\textcolor{red}{\textbf{\textsf{TODO}}}\@\xspace}
 \newcommand{\ie}{\textit{i.e.}\@\xspace}
@@ -46,10 +48,6 @@
 \newcommand{\crude}{crude-\hspace{0pt}but-\hspace{0pt}effective\@\xspace}
 \newcommand{\Acom}{tail-free computation\@\xspace}
 \newcommand{\highlight}[1]{\colorbox{pink}{#1}}
-
-\newcommand{\thmref}[2]{%
-  $\langle$\textnormal{\texttt{\href{\repo/tree/main/src/#1}{#1}:#2}}$\rangle$%
-}
 
 \newtheorem{fail}{Falsehood}[section]
 \newtheorem{prop}{Proposition}[section]
@@ -496,7 +494,7 @@ for the equivalence to have the properties of an equivalence relation.
     &\mid [[let x ← n in m]] \mid [[case v of inl x ⇒ m ; inr y ⇒ m]] \nonumber \\
     &\mid \highlight{$[[join j x = m in m]]$} \mid \highlight{$[[jump j v]]$} \nonumber
   \end{align}
-  \caption{Syntax of value, computations, and their types}
+  \caption{Syntax of value, computations, and their types \thmref{Syntax}{ValType,ComType,Val,Com}}
   \Description[]{}
   \label{fig:syntax-full}
 \end{figure}
@@ -546,7 +544,7 @@ The names of the rules involving join points and jumps not found in plain CBPV a
     \tag{evaluation contexts}   [[E]]  &\dblcolon= [[let x ← □ in m]] \mid [[□ v]] \mid [[fst □]] \mid [[snd □]] \\
     \tag{terminal computations} [[tm]] &\dblcolon= [[λx. m]] \mid [[return v]] \mid [[⟨m, m⟩]]
   \end{align}
-  \caption{Evaluation rules for computations}
+  \caption{Evaluation rules for computations \thmref{Evaluation}{Eval,nf}}
   \Description[]{}
   \label{fig:eval}
 \end{figure}
@@ -591,23 +589,23 @@ We won't consider strong normalization, so we simply call it normalization.}
 then normalization is deterministic as well,
 and multi-step evaluations always evaluate to the same terminal.
 
-\begin{lemma}[Determinism of evaluation]
+\begin{lemma}[Determinism of evaluation] \thmref{Evaluation}{Eval.det} \leavevmode \\
   If $[[m ⇝ m1]]$ and $[[m ⇝ m2]]$,
   then $[[m1]] = [[m2]]$.
 \end{lemma}
 
-\begin{definition}[Normalization]
+\begin{definition}[Normalization] \thmref{Evaluation}{Norm} \leavevmode \\
   $[[m]]$ normalizes to $[[tm]]$,
   written as \fbox{$[[m ⇓ tm]]$},
   if $[[m ⇝* tm]]$.
 \end{definition}
 
-\begin{corollary}[Determinism of normalization] \label{lem:norm:det}
+\begin{corollary}[Determinism of normalization] \label{lem:norm:det} \thmref{Evaluation}{Norm.join} \leavevmode \\
   If $[[m ⇓ tm1]]$ and $[[m ⇓ tm2]]$,
   then $[[tm1]] = [[tm2]]$.
 \end{corollary}
 
-\begin{corollary}[Merging] \label{lem:eval:merging}
+\begin{corollary}[Merging] \label{lem:eval:merging} \thmref{Evaluation}{Evals.merge}
   If $[[m ⇓ tm]]$ and $[[m ⇝* m']]$,
   then $[[m' ⇓ tm]]$.
 \end{corollary}
@@ -709,7 +707,7 @@ $[[D]] \dblcolon= [[•]] \mid [[D, j : A ↗ B]]$ for jump contexts.
       %------------------------%
       {[[G | D ⊢ jump j v : B]]}
   \end{mathpar}
-  \caption{Typing rules for values and computations}
+  \caption{Typing rules for values and computations \thmref{Typing}{ValWt,ComWt}}
   \Description[]{}
   \label{fig:typing}
 \end{figure}
@@ -769,12 +767,13 @@ The important typing lemmas that we need are weakening lemmas for both value and
 In the mechanization, they are proven by induction on the typing derivation via renaming lemmas;
 for now, we ignore issues of renaming de Bruijn indices, as they are standard.
 
-\begin{lemma}[Weakening (value contexts)] \label{lem:wk:val} \leavevmode \\
-  Suppose $[[x]]$ is not free in $[[m]]$.
-  If $[[G1, G2 | D ⊢ m : B]]$, then $[[G1, x : A, G2 | D ⊢ m : B]]$.
+\begin{lemma}[Weakening (value contexts)] \label{lem:wk:val} \thmref{Typing}{wtWeakenVal,wtWeakenCom} \leavevmode \\
+  Suppose $[[x]]$ is not free in $[[v]]$, $[[m]]$.
+  If $[[G1, G2 ⊢ v : A]]$, then $[[G1, x : A', G2 ⊢ v : A]]$,
+  and if $[[G1, G2 | D ⊢ m : B]]$, then $[[G1, x : A, G2 | D ⊢ m : B]]$.
 \end{lemma}
 
-\begin{lemma}[Weakening (jump contexts)] \label{lem:wk:jump} \leavevmode \\
+\begin{lemma}[Weakening (jump contexts)] \label{lem:wk:jump} \thmref{Typing}{wtWeakenJ} \leavevmode \\
   Suppose $[[j]]$ is not free in $[[m]]$.
   If $[[G | D1, D2 ⊢ m : B]]$, then $[[G | D1, j : A ↗ B', D2 ⊢ m : B]]$.
 
@@ -817,7 +816,7 @@ and therefore there must be no more commuting conversions to do.
     [[m]] &\dblcolon= n \mid [[let x ← n in m]] \mid [[case v of inl x ⇒ m1 ; inr y ⇒ m2]] \tag{configurations} \\
           &\mid [[join j x = m1 in m2]] \mid [[jump j v]] \nonumber
   \end{align}
-  \caption{Commuting conversion normal form with join points}
+  \caption{Commuting conversion normal form with join points \thmref{CCNF}{isVal,isCom,isCfg}}
   \Description[]{}
   \label{fig:ccnf-join}
 \end{figure}
@@ -835,7 +834,7 @@ then binding its result to $[[x]]$, and finally continuing on with a configurati
     [[K]] &\dblcolon= [[□]] \mid [[let x ← □ in m]] \mid [[ K[k] ]] &
     [[k]] &\dblcolon= [[□ v]] \mid [[fst □]] \mid [[snd □]]
   \end{align*}
-  \caption{Commuting conversion normalization continuations}
+  \caption{Commuting conversion normalization continuations \thmref{CCNF}{K}}
   \Description[]{}
   \label{fig:kont}
 \end{figure}
@@ -860,7 +859,7 @@ we delay the translation of case expressions for the moment.
       [[⟦{m}⟧]] &\coloneqq [[{⟦m⟧□}]]
     \end{align*}
     \vspace{-\baselineskip}
-    \caption{Translation of values}
+    \caption{Translation of values \thmref{CCNF}{CCval}}
     \label{fig:CC-norm-val}
   \end{subfigure}
   %
@@ -877,7 +876,7 @@ we delay the translation of case expressions for the moment.
       [[⟦let x ← m1 in m2⟧ K]] &\coloneqq [[⟦m1⟧ (let x ← □ in ⟦m2⟧K)]]
     \end{align*}
     \vspace{-\baselineskip}
-    \caption{Translation of computations}
+    \caption{Translation of computations \thmref{CCNF}{CCval}}
     \label{fig:CC-norm-com}
   \end{subfigure}
 
@@ -901,7 +900,7 @@ since there's no computation left to do inside the thunk.
     [[ (K[□ v])[n] ]] &\coloneqq [[ K[n v] ]]
     & [[ (K[snd □])[n] ]] &\coloneqq [[ K[snd n] ]]
   \end{align*}
-  \caption{Plugging a computation in a continuation}
+  \caption{Plugging a computation in a continuation \thmref{CCNF}{plug}}
   \Description[]{}
   \label{fig:plug}
 \end{figure}
@@ -991,7 +990,7 @@ rather than another extraneous join point $[[j' x = jump j x]]$ in the outer fal
     \\
     \textit{where} ~{}~ [[K']] \coloneqq [[(let x ← □ in jump j x) [k1] - [ki] ]]
   \end{multline*}
-  \caption{Translation of case expressions to CCNF with join points}
+  \caption{Translation of case expressions to CCNF with join points \thmref{CCNF}{CCcom,K.jumpify}}
   \Description[]{}
   \label{fig:CC-norm-case}
 \end{figure}
@@ -1004,12 +1003,12 @@ over CBPV terms (without join points) to CBPV terms (with join points).
 We need to explicitly prove that the translation indeed produces terms in CCNF,
 which holds by inspection, \ie mutual induction over the syntax.
 
-\begin{lemma}[Plugging preserves CCNF] \leavevmode \\
+\begin{lemma}[Plugging preserves CCNF] \thmref{CCNF}{isK.plug} \leavevmode \\
   If the subterms of $[[K]]$ are in CCNF and $[[n]]$ is in CCNF,
   then $[[ K[n] ]]$ is in CCNF.
 \end{lemma}
 
-\begin{lemma}[CCNF preservation] \label{lem:ccnf-preservation} \leavevmode \\
+\begin{lemma}[CCNF preservation] \label{lem:ccnf-preservation} \thmref{CCNF}{isCCNF,isK.jumpify} \leavevmode \\
   If the subterms of $[[K]]$ are in CCNF,
   then $[[⟦v⟧]]$ and $[[⟦m⟧ K]]$ are in CCNF.
 \end{lemma}
@@ -1052,7 +1051,7 @@ a translated term must behave like the same kind of term as the original term.
     \inferrule[\ottdrulename{K-hole}]{~}
       {[[G | D ⊢ □ : B ⇒ B]]}
   \end{mathpar}
-  \caption{Typing rules for continuations}
+  \caption{Typing rules for continuations \thmref{CCNF}{wtK}}
   \Description[]{}
   \label{fig:typing-K}
 \end{figure}
@@ -1066,7 +1065,7 @@ Consequently, we can show that plugging preserves typing,
 which is used in the proof of type preservation.
 We also need an inversion lemma for continuations that end in let continuations.
 
-\begin{lemma}[Plugging preserves typing] \label{lem:preservation:plug} \leavevmode \\
+\begin{lemma}[Plugging preserves typing] \label{lem:preservation:plug} \thmref{CCNF}{wtK.plug} \leavevmode \\
   If $[[G | D ⊢ K : B1 ⇒ B2]]$ and $[[G | • ⊢ n : B1]]$,
   then $[[G | D ⊢ K[n] : B2]]$.
 \end{lemma}
@@ -1076,7 +1075,7 @@ We also need an inversion lemma for continuations that end in let continuations.
   using \cref{lem:wk:jump} in the \rref*{K-hole} case.
 \end{proof}
 
-\begin{lemma}[Let continuation inversion] \label{lem:k-let:inv}
+\begin{lemma}[Let continuation inversion] \label{lem:k-let:inv} \thmref{CCNF}{wtK.jumpify}
   If $[[K]] = [[(let x ← □ in m)]][ [[k1]] ] \dots [ [[ki]] ]$
   and $[[G | D ⊢ K : B1 ⇒ B2]]$,
   then there exists some $[[A]]$ such that
@@ -1089,7 +1088,7 @@ We also need an inversion lemma for continuations that end in let continuations.
   By induction on the typing derivation of $[[K]]$.
 \end{proof}
 
-\begin{lemma}[Type preservation] \label{lem:preservation}
+\begin{lemma}[Type preservation] \label{lem:preservation} \thmref{CCNF}{preservation}
   Suppose $[[v]]$ and $[[m]]$ are plain CBPV terms
   (and thus have no join points or jumps).
   If $[[G ⊢ v : A]]$, then $[[G ⊢ ⟦v⟧ : A]]$,
@@ -1183,7 +1182,7 @@ and \cref{sec:proof:end} covers \cref{item:end}.
     [[(⟨m1, m2⟩, ⟨n1, n2⟩) ∈ B1 & B2]] &\textit{ iff } [[(m1, n1) ∈* B1]] \wedge [[(m2, n2) ∈* B2]] \\
     [[(m, n) ∈* B]]                    &\textit{ iff } \exists [[tm1]], [[tm2]] \mathpunct{.} ([[m ⇓ tm1]]) \wedge ([[n ⇓ tm2]]) \wedge [[(tm1, tm2) ∈ B]]
   \end{align*}
-  \caption{Logical equivalence of terms over CBPV types}
+  \caption{Logical equivalence of terms over CBPV types \thmref{Equivalence}{$\mathcal{V},\mathcal{C},\mathcal{E}$}}
   \Description[]{}
   \label{fig:logeq}
 \end{figure}
@@ -1206,12 +1205,12 @@ The first property we need of logical equivalence is backward closure under eval
 which holds by unfolding its definition and transitivity of evaluation.
 A helpful corollary adds congruence under join points.
 
-\begin{lemma}[Backward closure] \label{lem:logeq:bwds} \leavevmode \\
+\begin{lemma}[Backward closure] \label{lem:logeq:bwds} \thmref{Equivalence}{bwds} \leavevmode \\
   If $[[m1 ⇝* m2]]$ and $[[n1 ⇝* n2]]$ and $[[(m2, n2) ∈* B]]$,
   then $[[(m1, n1) ∈* B]]$.
 \end{lemma}
 
-\begin{lemma}[Backward closure under join points] \label{lem:logeq:bwds-joins}
+\begin{lemma}[Backward closure under join points] \label{lem:logeq:bwds-joins} \thmref{Equivalence}{bwdsRejoin} \leavevmode \\
   If $[[m1 ⇝* m2]]$ and $[[n1 ⇝* n2]]$ and $[[(m2, n2) ∈* B]]$,
   then $[[(join j x = m' in m1, join j x = n' in m2) ∈* B]]$,
   using \rref{E-join,E-drop}.
@@ -1223,12 +1222,12 @@ These lemmas are proven by induction over the type and unfolding definitions.
 
 \begin{lemma}[Symmetry and transitivity (logical equivalence)] \label{lem:logeq:PER} \leavevmode
   \begin{itemize}
-    \item If $[[(v, w) ∈ A]]$ then $[[(w, v) ∈ A]]$,
-    \item If $[[(m, n) ∈ B]]$ then $[[(n, m) ∈ B]]$.
-    \item If $[[(m, n) ∈* B]]$ then $[[(n, m) ∈* B]]$.
-    \item If $[[(v1, v2) ∈ A]]$ and $[[(v2, v3) ∈ A]]$ then $[[(v1, v3) ∈ A]]$,
-    \item If $[[(m1, m2) ∈ B]]$ and $[[(m2, m3) ∈ B]]$ then $[[(m1, m3) ∈ B]]$.
-    \item If $[[(m1, m2) ∈* B]]$ and $[[(m2, m3) ∈* B]]$ then $[[(m1, m3) ∈* B]]$.
+    \item If $[[(v, w) ∈ A]]$ then $[[(w, v) ∈ A]]$. \thmref{Equivalence}{$\mathcal{V}$.sym}
+    \item If $[[(m, n) ∈ B]]$ then $[[(n, m) ∈ B]]$. \thmref{Equivalence}{$\mathcal{C}$.sym}
+    \item If $[[(m, n) ∈* B]]$ then $[[(n, m) ∈* B]]$. \thmref{Equivalence}{$\mathcal{E}$.sym}
+    \item If $[[(v1, v2) ∈ A]]$ and $[[(v2, v3) ∈ A]]$ then $[[(v1, v3) ∈ A]]$. \thmref{Equivalence}{$\mathcal{V}$.trans}
+    \item If $[[(m1, m2) ∈ B]]$ and $[[(m2, m3) ∈ B]]$ then $[[(m1, m3) ∈ B]]$. \thmref{Equivalence}{$\mathcal{C}$.trans}
+    \item If $[[(m1, m2) ∈* B]]$ and $[[(m2, m3) ∈* B]]$ then $[[(m1, m3) ∈* B]]$. \thmref{Equivalence}{$\mathcal{E}$.trans}
   \end{itemize}
 \end{lemma}
 
@@ -1237,7 +1236,7 @@ These lemmas are proven by induction over the type and unfolding definitions.
     [[s]], [[t]] &\dblcolon= [[•]] \mid [[s, x ↦ v]] &
     [[p]], [[q]] &\dblcolon= [[•]] \mid [[p, j x = m]]
   \end{align*}
-  \caption{Substitution maps and join stacks}
+  \caption{Substitution maps and join stacks \thmref{Rejoin}{J}}
   \Description[]{}
   \label{fig:ctxt-subst}
 \end{figure}
@@ -1273,7 +1272,7 @@ corresponding to the term $[[join j1 x1 = m1 in _]] \dots [[join ji xi = mi in m
       %-----------------------------------------------%
       {[[((p, j x = m), (q, j x = n)) ∈ D, j : A ↗ B]]}
   \end{mathpar}
-  \caption{Logical equivalence of substitution maps and join stacks}
+  \caption{Logical equivalence of substitution maps and join stacks \thmref{Equivalence}{semCtxt,semDtxt}}
   \Description[]{}
   \label{fig:logeq-subst}
 \end{figure}
@@ -1293,10 +1292,10 @@ by induction on their derivations.
 
 \begin{lemma}[Symmetry and transitivity (logical equivalence at contexts)] \label{lem:logeq-subst:PER} \leavevmode
   \begin{itemize}
-    \item If $[[(s, t) ∈ G]]$ then $[[(t, s) ∈ G]]$.
-    \item If $[[(p, q) ∈ D]]$ then $[[(p, q) ∈ D]]$.
-    \item If $[[(s1, s2) ∈ G]]$ and $[[(s2, s3) ∈ G]]$ then $[[(s1, s3) ∈ G]]$.
-    \item If $[[(p1, p2) ∈ D]]$ and $[[(p2, p3) ∈ D]]$ then $[[(p1, p3) ∈ D]]$.
+    \item If $[[(s, t) ∈ G]]$ then $[[(t, s) ∈ G]]$. \thmref{Equivalence}{semCtxt.sym}
+    \item If $[[(p, q) ∈ D]]$ then $[[(p, q) ∈ D]]$. \thmref{Equivalence}{semDtxt.sym}
+    \item If $[[(s1, s2) ∈ G]]$ and $[[(s2, s3) ∈ G]]$ then $[[(s1, s3) ∈ G]]$. \thmref{Equivalence}{semCtxt.trans}
+    \item If $[[(p1, p2) ∈ D]]$ and $[[(p2, p3) ∈ D]]$ then $[[(p1, p3) ∈ D]]$. \thmref{Equivalence}{semDtxt.trans}
   \end{itemize}
 \end{lemma}
 
@@ -1305,14 +1304,14 @@ They are also partial equivalence relations,
 which follows from \cref{lem:logeq:PER,lem:logeq-subst:PER}.
 In all proofs that follow, we freely use symmetry and transitivity without explicit reference.
 
-\begin{definition}[Semantic equivalence of values]
+\begin{definition}[Semantic equivalence of values] \thmref{Equivalence}{semVal} \leavevmode \\
   Values $[[v]]$ and $[[w]]$ are semantically equivalent under context $[[G]]$ at type $[[A]]$,
   written \fbox{$[[G ⊧ v ~ w : A]]$},
   when for all substitution maps $[[(s, t) ∈ G]]$,
   $[[(v{s}, w{t}) ∈ A]]$ holds.
 \end{definition}
 
-\begin{definition}[Semantic equivalence of computations]
+\begin{definition}[Semantic equivalence of computations] \thmref{Equivalence}{semCom} \leavevmode \\
   Computations $[[m]]$ and $[[n]]$ are semantically equivalent under contexts $[[G]]$ and $[[D]]$ at type $[[B]]$,
   written \fbox{$[[G | D ⊧ m ~ n : B]]$},
   when for all substitution maps $[[(s, t) ∈ G]]$ and join stacks $[[(p, q) ∈ D]]$,
@@ -1321,17 +1320,17 @@ In all proofs that follow, we freely use symmetry and transitivity without expli
 
 \begin{lemma}[Symmetry and transitivity (semantic equivalence)] \leavevmode
   \begin{itemize}
-    \item If $[[G ⊧ v ~ w : A]]$ then $[[G ⊧ w ~ v : A]]$.
-    \item If $[[G | D ⊧ m ~ n : B]]$ then $[[G | D ⊧ n ~ m : B]]$.
-    \item If $[[G ⊧ v1 ~ v2 : A]]$ and $[[G ⊧ v2 ~ v3 : A]]$ then $[[G ⊧ v1 ~ v3 : A]]$.
-    \item If $[[G | D ⊧ m1 ~ m2 : B]]$ and $[[G | D ⊧ m2 ~ m3 : B]]$ then $[[G | D ⊧ m1 ~ m3 : B]]$.
+    \item If $[[G ⊧ v ~ w : A]]$ then $[[G ⊧ w ~ v : A]]$. \thmref{Equivalence}{semVal.sym}
+    \item If $[[G | D ⊧ m ~ n : B]]$ then $[[G | D ⊧ n ~ m : B]]$. \thmref{Equivalence}{semCom.sym}
+    \item If $[[G ⊧ v1 ~ v2 : A]]$ and $[[G ⊧ v2 ~ v3 : A]]$ then $[[G ⊧ v1 ~ v3 : A]]$. \thmref{Equivalence}{semVal.trans}
+    \item If $[[G | D ⊧ m1 ~ m2 : B]]$ and $[[G | D ⊧ m2 ~ m3 : B]]$ then $[[G | D ⊧ m1 ~ m3 : B]]$. \thmref{Equivalence}{semCom.trans}
   \end{itemize}
 \end{lemma}
 
 Finally, we show the fundamental theorem of semantic equivalence:
 well-typed terms are semantically equivalent to themselves.
 
-\begin{theorem}[Fundamental theorem of semantic equivalence] \label{thm:semeq}
+\begin{theorem}[Fundamental theorem of semantic equivalence] \label{thm:semeq} \thmref{Equivalence}{soundness} \leavevmode \\
   If $[[G ⊢ v : A]]$ then $[[G ⊧ v ~ v : A]]$,
   and if $[[G | D ⊢ m : B]]$ then $[[G | D ⊧ m ~ m : B]]$.
 \end{theorem}
@@ -1375,7 +1374,7 @@ As a corollary, we have type safety and normalization:
 a closed, well-typed computation never evaluates to a stuck term,
 and moreover evaluates to a terminal.
 
-\begin{corollary}[Normalization]
+\begin{corollary}[Normalization] \thmref{Equivalence}{safety} \leavevmode \\
   If $[[• | • ⊢ m : B]]$, then $[[m ⇝* tm]]$ for some $[[tm]]$.
 \end{corollary}
 
@@ -1436,7 +1435,8 @@ We present them as derivable rules in \cref{fig:semeq:cc} for legibility.
       %------------------------------------------------------%
       {[[G | D ⊧ snd (case v of inl x ⇒ m1; inr y ⇒ m2) \\ ~ case v of inl x ⇒ (snd m1); inr y ⇒ (snd m2) : B2]]}
   \end{mathpar}
-  \caption{Semantic equivalence of commuting conversions}
+  \caption{Semantic equivalence of commuting conversions \\
+    \thmref{Commutation}{letLet,appLet,fstLet,sndLet,letCase,appCase,fstCase,sndCase}}
   \Description[]{}
   \label{fig:semeq:cc}
 \end{figure}
@@ -1501,7 +1501,7 @@ stated in \cref{fig:semeq:join-join}.
        [[G | D, j2 : A2 ↗ B ⊢ m : B]]}
       {[[G | D ⊧ join j2 x2 = (join j1 x1 = m1 in m2) in m ~ join j1 x1 = m1 in join j2 x2 = m2 in m : B]]}
   \end{mathpar}
-  \caption{Semantic equivalence of commuting join points}
+  \caption{Semantic equivalence of commuting join points \thmref{Commutation}{joinJoin}}
   \Description[]{}
   \label{fig:semeq:join-join}
 \end{figure}
@@ -1525,9 +1525,9 @@ we directly define semantic equivalence in a way that incorporates plugging.
 Here, $[[K{s}]]$ denotes applying the substitution map $[[s]]$
 to all value and computation subterms of $[[K]]$.
 
-\begin{definition}[Semantic equivalence of continuations]
+\begin{definition}[Semantic equivalence of continuations] \thmref{Soundness}{semK} \leavevmode \\
   Continuations $[[K1]]$ and $[[K2]]$ are semantically equivalent
-  under contexts $[[G]]$ and $[[D]]$ at type $[[B1 ⇒ B2]]$,
+  under $[[G]]$ and $[[D]]$ at type $[[B1 ⇒ B2]]$,
   written \fbox{$[[G | D ⊧ K1 ~ K2 : B1 ⇒ B2]]$},
   when for all substitution maps $[[(s, t) ∈ G]]$, join stacks $[[(p, q) ∈ D]]$,
   and computations $[[(n1, n2) ∈* B1]]$,
@@ -1538,13 +1538,13 @@ A fundamental theorem for semantic equivalence of continuations holds as well,
 which relies on the corresponding theorem for terms,
 as well as congruence of evaluating under plugging.
 
-\begin{lemma}[\textsc{E-plug}] \label{lem:E-plug}
+\begin{lemma}[\textsc{E-plug}] \label{lem:E-plug} \thmref{CCNF}{Evals.plug} \leavevmode \\
   If $[[n1 ⇝* n2]]$, then $[[ K[n1] ⇝* K[n2] ]]$,
   by induction on the structure of $[[K]]$.
 \end{lemma}
 
 \begin{theorem}[Fundamental theorem of semantic equivalence of continuations] \label{thm:semeq:K} \leavevmode \\
-  If $[[G | D ⊢ K : B1 ⇒ B2]]$ then $[[G | D ⊧ K ~ K : B1 ⇒ B2]]$.
+  If $[[G | D ⊢ K : B1 ⇒ B2]]$ then $[[G | D ⊧ K ~ K : B1 ⇒ B2]]$. \thmref{Soundness}{soundK}
 \end{theorem}
 
 \begin{proof}
@@ -1560,18 +1560,18 @@ the same continuation and equivalent continuations
 then yield equivalent computations
 as long as substitution commutes with plugging.
 
-\begin{lemma}[Substitution commutes with plugging] \label{lem:subst-plug} \leavevmode \\
+\begin{lemma}[Substitution commutes with plugging] \label{lem:subst-plug} \thmref{CCNF}{substPlug} \leavevmode \\
   $[[(K[n]){s}]] = [[(K{s})[n{s}] ]]$,
   by induction on the structure of $[[K]]$.
 \end{lemma}
 
-\begin{lemma}[Semantic equivalence of plugging] \label{lem:semeq:plug}
+\begin{lemma}[Semantic equivalence of plugging] \label{lem:semeq:plug} \thmref{Soundness}{semK.plug} \leavevmode \\
   If $[[G | D ⊧ K1 ~ K2 : B1 ⇒ B2]]$ and $[[G | • ⊧ n1 ~ n2 : B1]]$,
-  then $[[G | D ⊧ K1[n1] ~ K2[n2] : B2]]$,
+  then $[[G | D ⊧ K1[n1] ~ K2[n2] : B2]]$, \linebreak[0]
   trivially after rewriting by \cref{lem:subst-plug}.
 \end{lemma}
 
-\begin{corollary} \label{cor:semeq:plug}
+\begin{corollary} \label{cor:semeq:plug} \thmref{Soundness}{semPlug}
   If $[[G | D ⊢ K : B1 ⇒ B2]]$ and $[[G | • ⊧ n1 ~ n2 : B1]]$,
   then $[[G | D ⊧ K[n1] ~ K[n2] : B2]]$,
   using \cref{lem:semeq:plug} and \cref{thm:semeq:K}.
@@ -1582,7 +1582,7 @@ as long as substitution commutes with plugging.
 Now that we have both semantic equivalence of commuting conversions and of plugging,
 we use them together to show that plugging commutes with tail contexts.
 
-\begin{lemma}[Semantic equivalence of plugging let expressions] \label{lem:plug-let} \leavevmode \\
+\begin{lemma}[Semantic equivalence of plugging let expressions] \label{lem:plug-let} \thmref{Soundness}{semKletin} \leavevmode \\
   If $[[G | D ⊢ K : B1 ⇒ B2]]$ and $[[G | • ⊢ let x ← n in m : B1]]$, \\
   then $[[G | D ⊧ K[let x ← n in m] ~ let x ← n in K[m] : B2]]$.
 \end{lemma}
@@ -1601,7 +1601,7 @@ we use them together to show that plugging commutes with tail contexts.
   then use the induction hypothesis to transitively connect to the right-hand side.
 \end{proof}
 
-\begin{lemma}[Semantic equivalence of plugging case expressions] \label{lem:plug-case} \leavevmode \\
+\begin{lemma}[Semantic equivalence of plugging case expressions] \label{lem:plug-case} \thmref{Soundness}{semKcase} \leavevmode \\
   If $[[G | D ⊢ K : B1 ⇒ B2]]$ and $[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : B1]]$, \\
   then $[[G | D ⊧ K[case v of inl x ⇒ m1; inr y ⇒ m2] ~ case v of inl x ⇒ K[m1]; inr y ⇒ K[m2] : B2]]$.
 \end{lemma}
@@ -1618,7 +1618,7 @@ for a na\"ive translation that duplicates continuations instead of using join po
 To handle join points, we need one more lemma that gives an equivalence
 between a translation that doesn't use a join point and one that does.
 
-\begin{lemma}[Jump equivalence of plugging] \label{lem:plug-jump}
+\begin{lemma}[Jump equivalence of plugging] \label{lem:plug-jump} \thmref{Soundness}{semKjoin} \leavevmode \\
   If $[[G | D ⊢ K : B1 ⇒ B2]]$, $[[G | • ⊢ n : B1]]$,
   and $[[K]] \equiv [[ (let x ← □ in m) [k1] - [ki] ]]$,
   then $[[G | D ⊧ K[n] ~ join j x = m in K'[n] : B2 ]]$,
@@ -1634,7 +1634,7 @@ between a translation that doesn't use a join point and one that does.
   The remaining cases follow from the induction hypotheses.
 \end{proof}
 
-\begin{lemma}[Jump equivalence of the translation] \label{lem:plug-ccnf}
+\begin{lemma}[Jump equivalence of the translation] \label{lem:plug-ccnf} \thmref{Soundness}{soundCCjoin} \leavevmode \\
   Suppose that $[[m]]$ contains no join points or jumps.
   If $[[G | D ⊢ K : B1 ⇒ B2]]$, $[[G | D ⊢ m : B1]]$,
   and $[[K]] \equiv [[ (let x ← □ in m') [k1] - [ki] ]]$,
@@ -1688,7 +1688,7 @@ Finally, we have all pieces to prove the main theorem:
 the translation under continuation $[[K]]$ is semantically equivalent to plugging into $[[K]]$.
 The equivalence we want follows from instantiating by the empty continuation.
 
-\begin{theorem}
+\begin{theorem} \thmref{Soundness}{soundCC}
   Suppose that $[[v]]$ and $[[m]]$ are terms containing no join points and jumps,
   and $[[K1]], [[K2]]$ are continuations that may contain join points and jumps.
   \begin{itemize}
@@ -1751,7 +1751,7 @@ The equivalence we want follows from instantiating by the empty continuation.
   \end{itemize}
 \end{proof}
 
-\begin{corollary} \label{cor:semeq-ccnf}
+\begin{corollary} \label{cor:semeq-ccnf} \thmref{Soundness}{soundCCnil}
   Suppose $[[m]]$ contains no join points and jumps. \\
   If \mbox{$[[G | • ⊢ m : B]]$} then \mbox{$[[G | • ⊧ m ~ ⟦m⟧ □ : B]]$}.
 \end{corollary}
@@ -1759,12 +1759,12 @@ The equivalence we want follows from instantiating by the empty continuation.
 At last we are able to prove \cref{thm:ground-run}, restated below,
 with one more minor lemma.
 
-\begin{lemma}[Equivalent ground values are equal] \label{lem:logeq:gval} \leavevmode \\
+\begin{lemma}[Equivalent ground values are equal] \label{lem:logeq:gval} \thmref{Soundness}{$\mathcal{V}$.ground} \leavevmode \\
   If $[[(v, w) ∈ T]]$ then $[[v]] = [[w]]$,
   proven by induction on $[[T]]$.
 \end{lemma}
 
-\begin{theorem}
+\begin{theorem} \thmref{Soundness}{retGround} \leavevmode \\
   Given $[[m]]$ such that $[[• | • ⊢ m : F T]]$,
   if $[[m ⇓ return v]]$, then $[[⟦ m ⟧ □ ⇓ return v]]$.
 \end{theorem}
@@ -1847,7 +1847,7 @@ generalizing to case expressions.
 Consequently, a transformation from the former to the latter is valid,
 and we recover the desired case-of-case transformation.
 
-\begin{lemma}[Case-of-case]
+\begin{lemma}[Case-of-case] \thmref{Commutation}{caseCase}
   Suppose the following hold:
   \begin{itemize}
     \item $[[G ⊢ v : A3 + A4]]$
