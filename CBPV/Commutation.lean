@@ -327,7 +327,7 @@ theorem dropJoin {Γ δ} {Δ : Dtxt δ} {m₁ m₂ A B} (h₁ : Γ ∷ A ∣ Δ 
   have rn := Evals.merge (RTC.trans' rm₂.rejoin rn₂) rn₂'
   unfold ℰ; exact ⟨_, _, rn₁, ⟨rn, rn₂'.2⟩, hB⟩
 
-theorem caseOfCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ m₃ m₄ B} {A₁ A₂ A₃ A₄ : ValType}
+theorem caseCase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ m₃ m₄ B} {A₁ A₂ A₃ A₄ : ValType}
   (hv : Γ ⊢ v ∶ Sum A₃ A₄)
   (hm₁ : Γ ∷ A₁ ∣ Δ ⊢ m₁ ∶ B)
   (hm₂ : Γ ∷ A₂ ∣ Δ ⊢ m₂ ∶ B)

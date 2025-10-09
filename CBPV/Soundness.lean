@@ -109,7 +109,7 @@ theorem semKcase {Γ δ} {Δ : Dtxt δ} {v m₁ m₂ k B₁ B₂} (hk : Γ ∣ �
   Jumpification preserves semantic equivalence
 ---------------------------------------------*-/
 
-theorem semJumpPlug {Γ δ} {Δ : Dtxt δ} {k k' m n B₁ B₂} (hk : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂) (hn : Γ ∣ ⬝ ⊢ n ∶ B₁) (e : k.jumpify = .yes k' m) :
+theorem semKjoin {Γ δ} {Δ : Dtxt δ} {k k' m n B₁ B₂} (hk : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂) (hn : Γ ∣ ⬝ ⊢ n ∶ B₁) (e : k.jumpify = .yes k' m) :
   Γ ∣ Δ ⊨ (k [ n ]) ~ join m (k' [ n ]) ∶ B₂ := by
   induction hk generalizing n
   case nil => cases e
@@ -126,19 +126,19 @@ theorem semJumpPlug {Γ δ} {Δ : Dtxt δ} {k k' m n B₁ B₂} (hk : Γ ∣ Δ 
     rename _ = _ => e
     refine ih ?_ e; constructor <;> assumption
 
-theorem semJumpCC {Γ δ δ'} {Δ : Dtxt δ} {Δ' : Dtxt δ'} {k k' m m' B₁ B₂} (le : δ' ≤ δ) (mj : m.joinless) (hk : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂) (hm : Γ ∣ Δ' ⊢ m ∶ B₁) (e : k.jumpify = .yes k' m') :
+theorem soundCCjoin {Γ δ δ'} {Δ : Dtxt δ} {Δ' : Dtxt δ'} {k k' m m' B₁ B₂} (le : δ' ≤ δ) (mj : m.joinless) (hk : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂) (hm : Γ ∣ Δ' ⊢ m ∶ B₁) (e : k.jumpify = .yes k' m') :
   Γ ∣ Δ ⊨ ⟦m⟧ₘ k # le ~ join m' (⟦m⟧ₘ k' # .step le) ∶ B₂ := by
   mutual_induction hm generalizing δ Δ k k' m' mj
   all_goals intro σ τ
   -- impossible
   case join | jump => cases mj
   -- plugging cases
-  case force hv => exact semJumpPlug hk (.force (.preservation mj hv)) e
-  case lam hm _ => simp at mj; exact semJumpPlug hk (.lam (.preservation .refl mj .nil hm)) e
-  case ret hv => exact semJumpPlug hk (.ret (.preservation mj hv)) e
+  case force hv => exact semKjoin hk (.force (.preservation mj hv)) e
+  case lam hm _ => simp at mj; exact semKjoin hk (.lam (.preservation .refl mj .nil hm)) e
+  case ret hv => exact semKjoin hk (.ret (.preservation mj hv)) e
   case prod hm₁ hm₂ _ _ =>
     let ⟨mj₁, mj₂⟩ := mj
-    exact semJumpPlug hk (.prod (.preservation _ mj₁ .nil hm₁) (.preservation _ mj₂ .nil hm₂)) e
+    exact semKjoin hk (.prod (.preservation _ mj₁ .nil hm₁) (.preservation _ mj₂ .nil hm₂)) e
   -- extended continuation cases
   case app v _ _ _ hv ih =>
     let ⟨mj, vj⟩ := mj
@@ -214,7 +214,7 @@ theorem semJumpCC {Γ δ δ'} {Δ : Dtxt δ} {Δ' : Dtxt δ'} {k k' m m' B₁ B�
   Soundness of CC-normal translation wrt semantic equivalence
 ------------------------------------------------------------*-/
 
-theorem soundA {Γ} :
+theorem soundCC {Γ} :
   (∀ {v} {A : ValType}, v.joinless → Γ ⊢ v ∶ A → Γ ⊨ v ~ ⟦v⟧ᵥ ∶ A) ∧
   (∀ {δ δ'} {Δ : Dtxt δ} {Δ' : Dtxt δ'} {m k₁ k₂} {B₁ B₂ : ComType} (eq : δ' = 0), m.joinless →
     Γ ∣ Δ' ⊢ m ∶ B₁ → Γ ∣ Δ ⊢ k₁ ∶ B₁ ⇒ B₂ → Γ ∣ Δ ⊢ k₂ ∶ B₁ ⇒ B₂ →
@@ -267,7 +267,7 @@ theorem soundA {Γ} :
         rw [substUnion, substUnion]
         refine ℰ.trans hB₂ ?_
         have goal :=
-          semJumpCC (zero_le δ) mj₁ wtk₂.weaken hm₁ (Jump.rename e)
+          soundCCjoin (zero_le δ) mj₁ wtk₂.weaken hm₁ (Jump.rename e)
             (semCtxt.trans (semCtxt.sym (semCtxt.cons hA₁ hστ)) (semCtxt.cons hA₁ hστ))
             (semDtxt.trans (semDtxt.sym hφψ) hφψ)
         simp [renameUpSubstConsCom] at goal; exact goal
@@ -284,7 +284,7 @@ theorem soundA {Γ} :
         rw [substUnion, substUnion]
         refine ℰ.trans hB₂ ?_
         have goal :=
-          semJumpCC (zero_le δ) mj₂ wtk₂.weaken hm₂ (Jump.rename e)
+          soundCCjoin (zero_le δ) mj₂ wtk₂.weaken hm₂ (Jump.rename e)
             (semCtxt.trans (semCtxt.sym (semCtxt.cons hA₂ hστ)) (semCtxt.cons hA₂ hστ))
             (semDtxt.trans (semDtxt.sym hφψ) hφψ)
         simp [renameUpSubstConsCom] at goal; exact goal
@@ -308,9 +308,9 @@ theorem soundA {Γ} :
     have goal := ih rfl vj .nil .nil (soundK .nil) hστ .nil
     simp [weakenJCom0] at goal; exact 𝒱.thunk goal
 
-theorem soundAnil {Γ m B} (mj : m.joinless) (h : Γ ∣ ⬝ ⊢ m ∶ B) : Γ ∣ ⬝ ⊨ m ~ ⟦m⟧ₘ ∶ B := by
+theorem soundCCnil {Γ m B} (mj : m.joinless) (h : Γ ∣ ⬝ ⊢ m ∶ B) : Γ ∣ ⬝ ⊨ m ~ ⟦m⟧ₘ ∶ B := by
   intro σ τ hστ φ ψ hφψ
-  have goal := soundA.right rfl mj h .nil .nil semK.nil hστ hφψ
+  have goal := soundCC.right rfl mj h .nil .nil semK.nil hστ hφψ
   simp at goal; rw [weakenJCom0] at goal; exact goal
 
 /-*-------------------------------------------------------------
@@ -335,7 +335,7 @@ theorem 𝒱.ground {v w A} (h : (v, w) ∈ ⟦A⟧ᵛ) (g : isGround A) : v = w
 
 theorem retGround {m n A} (mj : m.joinless) (h : ⬝ ∣ ⬝ ⊢ m ∶ F A) (g : isGround A) (nm : m ⇓ₙ n) : ⟦m⟧ₘ ⇒⋆ n := by
   let ⟨r, nfm⟩ := nm
-  let hm := soundAnil mj h semCtxt.nil .nil
+  let hm := soundCCnil mj h semCtxt.nil .nil
   rw [substComId, substComId] at hm
   unfold ℰ 𝒞 at hm
   let ⟨_, _, ⟨r', _⟩, ⟨ra', _⟩, ⟨v₁, v₂, hA, eret₁, eret₂⟩⟩ := hm
