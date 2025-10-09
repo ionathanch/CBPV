@@ -1266,12 +1266,12 @@ which holds by unfolding its definition and transitivity of evaluation.
 A helpful corollary adds congruence under join points.
 
 \begin{lemma}[Backward closure] \label{lem:logeq:bwds} \leavevmode \\
-  If $[[m1 ⇝ m2]]$ and $[[n1 ⇝ n2]]$ and $[[(m2, n2) ∈* B]]$,
-  then $[[(m1, n1) ∈* B]]$
+  If $[[m1 ⇝* m2]]$ and $[[n1 ⇝* n2]]$ and $[[(m2, n2) ∈* B]]$,
+  then $[[(m1, n1) ∈* B]]$.
 \end{lemma}
 
 \begin{lemma}[Backward closure under join points] \label{lem:logeq:bwds-joins}
-  If $[[m1 ⇝ m2]]$ and $[[n1 ⇝ n2]]$ and $[[(m2, n2) ∈* B]]$,
+  If $[[m1 ⇝* m2]]$ and $[[n1 ⇝* n2]]$ and $[[(m2, n2) ∈* B]]$,
   then $[[(join j x = m' in m1, join j x = n' in m2) ∈* B]]$,
   using \rref{E-join,E-drop}.
 \end{lemma}
@@ -1396,7 +1396,38 @@ well-typed terms are semantically equivalent to themselves.
 \end{theorem}
 
 \begin{proof}
-  \TODO
+  By induction on the typing derivations of $[[v]]$ and $[[m]]$.
+  Letting $[[(s, t) ∈ G]]$ and $[[(p, q) ∈ D]]$,
+  the goal is to show that $[[(v{s}, v{t}) ∈ A]]$
+  and $[[(joins p in m{s}, joins q in m{t}) ∈* B]]$ hold.
+  \begin{itemize}
+    \item \textbf{Case} \rref*{T-var}: Holds by $[[(s, t) ∈ G]]$ on the variable.
+    \item \textbf{Cases} \rref*{T-unit,T-left,T-right,T-thunk}:
+      Hold by definition of the logical relation,
+      using the induction hypotheses on any subterms.
+    \item \textbf{Cases} \rref*{T-fun,T-ret,T-prod}:
+      Hold by \cref{lem:logeq:bwds-joins} with no reduction,
+      using the induction hypotheses on subterms.
+    \item \textbf{Cases} \rref*{T-app,T-fst,T-snd}:
+      By the induction hypotheses on the scrutinee premises,
+      they must reduce to related functions, related first pair projections,
+      or related second pair projections, respectively.
+      Then the goal holds by \cref{lem:logeq:bwds-joins} on these relations,
+      reducing by \rref*{E-app}, \rref*{E-fst}, or \rref*{E-snd}, respectively.
+    \item \textbf{Cases} \rref*{T-let,T-case}:
+      By the induction hypotheses on the scrutinee premises,
+      they must reduce to related returns, related left injections,
+      or related right injections, respectively.
+      Then the goal holds by \cref{lem:logeq:bwds} on these relations,
+      reducing by \rref*{E-ret}, \rref*{E-left}, or \rref*{E-right}, respectively.
+    \item \textbf{Case} \rref*{T-join}:
+      Holds by the induction hypothesis on the join expression body,
+      extending semantic equivalence of join stacks
+      using the induction hypothesis on the join points.
+    \item \textbf{Case} \rref*{T-jump}:
+      Holds by $[[(p, q) ∈ D]]$ on the jump variable,
+      instantiating the join point by the induction hypothesis on related values. \qedhere
+  \end{itemize}
 \end{proof}
 
 As a corollary, we have type safety and normalization:
