@@ -518,7 +518,7 @@ alongside rules for the usual CBPV constructs.
 We write \fbox{$[[m ⇝* m']]$} for their reflexive, transitive closure.
 The names of the rules involving join points and jumps not found in plain CBPV are highlighted in salmon.
 
-\begin{figure}[h]
+\begin{figure}
   \setlength{\fboxsep}{3pt}
   \begin{align}
     \boxed{[[m ⇝ m]]}                        \nonumber \\
@@ -620,7 +620,7 @@ As the bindings have different types, we use two different typing contexts:
 $[[G]] \dblcolon= [[•]] \mid [[G, x : A]]$ for value contexts, and
 $[[D]] \dblcolon= [[•]] \mid [[D, j : A ↗ B]]$ for jump contexts.
 
-\begin{figure}[h]
+\begin{figure}
   \begin{mathpar}
     \fbox{$[[G ⊢ v : A]]$} \qquad \fbox{$[[G | D ⊢ m : B]]$} \hfill \\
     \inferrule[\ottdrulename{T-var}]
@@ -783,20 +783,15 @@ for now, we ignore issues of renaming de Bruijn indices, as they are standard.
 
 In \cref{sec:overview}, we listed four examples of commuting conversions as \crefrange{eq:let-if}{eq:app-if}.
 The general formulation commutes evaluation contexts with \emph{tail contexts},
-listed in \cref{fig:tail}, which are elimination forms with holes where computations continue,
+given below, which are elimination forms with holes where computations continue,
 which in our case are the bodies of let expressions and the branches of case expressions.
 We can think of computations with a tail as those that have a ``next step''.
 As with evaluation contexts, we exclude join point expressions from tail contexts
 because our source language is plain CBPV with no join points or jumps.
-
-\begin{figure}[h]
-  \begin{align}
-    \tag{tail contexts} [[L]] &\dblcolon= [[let x ← n in □]] \mid [[case v of inl x ⇒ □ ; inr y ⇒ □]]
-  \end{align}
-  \caption{Tail contexts}
-  \Description[]{}
-  \label{fig:tail}
-\end{figure}
+%
+\begin{equation}
+  [[L]] \dblcolon= [[let x ← n in □]] \mid [[case v of inl x ⇒ □ ; inr y ⇒ □]] \tag{tail contexts}
+\end{equation}
 
 The commuting conversions we consider can then be stated as $[[ E[ L[m] ] ]] \Rightarrow [[ L[ E[ m] ] ]]$.
 Informally, they unnest code because they move evaluation contexts into the ``next step'',
@@ -809,7 +804,7 @@ and configurations $[[m]]$ are all computations that don't contain tail contexts
 By inspection, CCNF is indeed normal with respect to commuting conversions because no $[[m]]$s appear in $[[n]]$s,
 and therefore there must be no more commuting conversions to do.
 
-\begin{figure}[h]
+\begin{figure}
   \begin{align}
     [[v]] &\dblcolon= [[x]] \mid [[()]] \mid [[inl v]] \mid [[inr v]] \mid [[{m}]] \tag{values} \\
     [[n]] &\dblcolon= [[v!]] \mid [[λx. m]] \mid [[n v]] \mid [[return v]] \mid [[⟨m, m⟩]] \mid [[fst n]] \mid [[snd n]] \tag{\Acom{}s} \\
@@ -823,21 +818,17 @@ and therefore there must be no more commuting conversions to do.
 
 To transform a plain CBPV program to one in CCNF,
 we follow \citet{ANF} and define a compiler using a continuation $[[K]]$,
-whose forms are given in \cref{fig:kont}.
+whose forms are given below.
 As usual, it can be the empty continuation $[[□]]$,
 or it can be the let continuation $[[let x ← □ in m]]$:
 a let expression is compiled by first translating the let-bound expression,
 then binding its result to $[[x]]$, and finally continuing on with a configuration $[[m]]$.
-
-\begin{figure}[h]
-  \begin{align*}
-    [[K]] &\dblcolon= [[□]] \mid [[let x ← □ in m]] \mid [[ K[k] ]] &
-    [[k]] &\dblcolon= [[□ v]] \mid [[fst □]] \mid [[snd □]]
-  \end{align*}
-  \caption{Commuting conversion normalization continuations \thmref{CCNF}{K}}
-  \Description[]{}
-  \label{fig:kont}
-\end{figure}
+%
+\begin{align*}
+  [[K]] &\dblcolon= [[□]] \mid [[let x ← □ in m]] \mid [[ K[k] ]] &
+  [[k]] &\dblcolon= [[□ v]] \mid [[fst □]] \mid [[snd □]]
+        &\thmref{CCNF}{K}
+\end{align*}
 
 However, we have three more continuation forms corresponding to each of the remaining three evaluation contexts:
 application, first projection, and second projection.
@@ -848,7 +839,7 @@ The mutual definitions of the translation of values \fbox{$[[⟦v⟧]]$} and com
 in \cref{fig:CC-norm} show how they are used;
 we delay the translation of case expressions for the moment.
 
-\begin{figure}[h]
+\begin{figure}[b]
   \begin{subfigure}{0.35\textwidth}
     \begin{align*}
       % \mathclap{\fbox{$[[⟦v⟧]] \coloneqq v$} \hfill} \\
@@ -933,7 +924,7 @@ we can look at how they act on the left-hand side
 of the commuting conversions in \cref{eq:let-let,eq:app-let},
 assuming that $[[n]]$ is already in CCNF,
 and using the fact that $[[⟦n⟧ K]] = [[ K[n] ]]$.
-
+%
 \begin{align}
   &  [[⟦let x ← (let y ← n in return v) in m⟧ □]]             \tag{\cref{eq:let-let}} \\
   &= [[⟦let x ← n in return v⟧ (let y ← □ in ⟦m⟧ □)]]         \tag{\textit{let}} \\
@@ -976,7 +967,7 @@ For example, from $[[let x ← (if v then n1 else (if w then n2 else n3)) in m]]
 %
 rather than another extraneous join point $[[j' x = jump j x]]$ in the outer false branch.
 
-\begin{figure}[h]
+\begin{figure}
   \begin{multline*}
     [[⟦case v of inl x ⇒ m1 ; inr y ⇒ m2⟧ K]] \coloneqq \\
     \begin{cases}
@@ -1231,27 +1222,23 @@ These lemmas are proven by induction over the type and unfolding definitions.
   \end{itemize}
 \end{lemma}
 
-\begin{figure}[h]
-  \begin{align*}
-    [[s]], [[t]] &\dblcolon= [[•]] \mid [[s, x ↦ v]] &
-    [[p]], [[q]] &\dblcolon= [[•]] \mid [[p, j x = m]]
-  \end{align*}
-  \caption{Substitution maps and join stacks \thmref{Rejoin}{J}}
-  \Description[]{}
-  \label{fig:ctxt-subst}
-\end{figure}
-
 To work with equivalence of well-typed terms,
 which may be open with respect to value and jump contexts,
 we need close over value and jump variables
 using substitution maps $[[s]]$ and join stacks $[[p]]$,
-defined in \cref{fig:ctxt-subst}.
+defined below.
 Applying a substitution map $[[v{s}]]$, $[[m{s}]]$
 corresponds to simultaneous substitution (so order doesn't matter in $[[s]]$).
 Given a join stack $[[p]] \equiv [[j1 x1 = m1]], \dots, [[ji xi = mi]]$,
 the computation $[[joins p in m]]$ represents wrapping $[[m]]$ in join points outward in,
 corresponding to the term $[[join j1 x1 = m1 in _]] \dots [[join ji xi = mi in m]]$
 (so order \emph{does} matter in $[[p]]$).
+%
+\begin{align*}
+  [[s]], [[t]] &\dblcolon= [[•]] \mid [[s, x ↦ v]] &
+  [[p]], [[q]] &\dblcolon= [[•]] \mid [[p, j x = m]]
+               &\thmref{Rejoin}{J}
+\end{align*}
 
 \begin{figure}
   \begin{mathpar}
@@ -1374,8 +1361,8 @@ As a corollary, we have type safety and normalization:
 a closed, well-typed computation never evaluates to a stuck term,
 and moreover evaluates to a terminal.
 
-\begin{corollary}[Normalization] \thmref{Equivalence}{safety} \leavevmode \\
-  If $[[• | • ⊢ m : B]]$, then $[[m ⇝* tm]]$ for some $[[tm]]$.
+\begin{corollary}[Normalization] \thmref{Equivalence}{safety}
+  If $[[• | • ⊢ m : B]]$ then $\exists [[tm]], [[m ⇝* tm]]$.
 \end{corollary}
 
 \subsection{Semantic equivalence of commuting conversions} \label{sec:proof:cc}
@@ -1388,7 +1375,7 @@ there are eight total commuting conversions to handle,
 each assuming well-typedness of various subterms.
 We present them as derivable rules in \cref{fig:semeq:cc} for legibility.
 
-\begin{figure}[h]
+\begin{figure}
   \begin{mathpar}
     \mprset{fraction={{-~} {~-~} {~-}}}
     \infer*[Right=\ottdrulename{let-let}]
