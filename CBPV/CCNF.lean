@@ -132,6 +132,17 @@ theorem Jump.repeat {δ k' m'} {k : K δ} (e : k.jumpify = yes k' m') : ∃ k'',
   CC-normal translation of CBPV
 ------------------------------*-/
 
+@[reducible]
+def Fin.raiseLE {δ δ'} (le : δ ≤ δ') (j : Fin δ) : Fin δ' :=
+  cast (congrArg Fin (add_sub_of_le le)) (j.addNat (δ' - δ))
+
+theorem Fin.raiseLE1 {δ} (le : δ ≤ δ + 1) (j : Fin δ) : j.raiseLE le = Fin.succ j :=
+  castFin j where
+  castFin {δ} (j : Fin δ) : ∀ {e}, cast e (Fin.addNat j (δ + 1 - δ)) = Fin.succ j := by
+    have e1 : δ + 1 - δ = 1 := by omega
+    generalize eδ' : δ + 1 - δ = δ'
+    rw [e1] at eδ'; subst eδ'; simp
+
 mutual
 @[simp]
 def Val.joinless : Val → Prop
@@ -175,7 +186,7 @@ def CCcom {δ δ'} (k : K δ) (le : δ' ≤ δ) : Com δ' → Com δ
   | snd n => ⟦ n ⟧ₘ .snd k # zero_le δ
   | join n m => join (⟦ n ⟧ₘ renameK succ k # le)
                      (⟦ m ⟧ₘ renameJK Fin.succ k # succ_le_succ le)
-  | jump j v => jump (Fin.castLE le j) (⟦ v ⟧ᵥ)
+  | jump j v => jump (j.raiseLE le) (⟦ v ⟧ᵥ)
   | case v m₁ m₂ =>
     match k.jumpify with
     | .no | .yes _ (jump _ _) =>
