@@ -165,10 +165,6 @@
 
 \section{Introduction}
 
-% CBPV separates functions from closures
-% join points aren't closures, we can guarantee they're won't be closures if only thunks are
-% discussion: binding variables to computations
-
 Call-by-push-value (CBPV) \citep{CBPV} is a programming language paradigm
 that syntactically distinguishes \emph{values} from \emph{computations}.
 Explicit constructs between values and computations encode evaluation order
@@ -307,15 +303,6 @@ In the CBV translation, the function and the argument are evaluated in order
 before carrying out the function application,
 using let bindings to express the explicit sequencing.
 First $f$ is evaluated, followed by $g$, then $a$, before the final application occurs.
-
-% The distinction between the strategies has implications for performance.
-% Passing thunks explicitly to functions in CBN may needlessly duplicate code execution
-% if those arguments are used multiple times.
-% Conversely, evaluating arguments before passing them to functions in CBV
-% may needlessly execute code if those arguments are not used at all.
-% Choosing one evaluation strategy over another is choosing between these tradeoffs,
-% and CBPV provides a uniform interface for manipulating code once the decision is made
-% without introducing behaviour that violates the expected strategy.
 
 To seriously consider CBPV as an IR, we need to think about what happens \emph{after} compiling to CBPV.
 At a high level, a compiler IR may undergo some optimization passes,
@@ -488,43 +475,6 @@ so we only need join points and jumps that take a single argument.
   [[case' v of inl y1 ⇒ (let x ← m1 in jump j x) ; inr y2 ⇒ (let x ← m2 in jump j x)]]
 \end{align}
 \usetagform{default}
-
-\iffalse
-Unfortunately, even with join points,
-the case-in-case optimizations highlighted in \opcit are not performed,
-as the translation to CBPV has already obscured these opportunities.
-Case-in-case optimizations deal with case expressions in lambda calculus
-whose scrutinees are themselves case expressions,
-where a commuting conversion followed by an inlining simplifies away an inner case analysis.
-Consider the following example in lambda calculus with conditionals,
-where the left-hand side would be optimized with join points to the right-hand side.
-%
-\usetagform{brack}
-\begin{align}
-  &[[:concrete: if (if v then false else w) then m_1 else m_2]] \nonumber \\
-  \Longrightarrow \ &[[join j z = m2 in (if v then jump j () else (if w then m1 else jump j ()))]]
-\end{align}
-\usetagform{default}
-
-If we translate the left-hand side for both CBN and CBV to CBPV,
-the inner conditional is bound in an intermediate let expression,
-making its case-in-case nature difficult to identify.%
-\footnote{\Citet{ANF-dead} also highlights this difficulty in the context of MNF.}
-Further sequentialization (and inlining) with join points prevents duplication of $[[m1]]$ and $[[m2]]$,
-but contains an extra conditional inside the join point,
-which is unnecessary in the branch where $[[v]]$ is $[[true]]$
-and we know the next computation to execute must be $[[m2]]$.
-%
-\begin{align}
-  & {\color{gray} [[:concrete: if (if v then false else w) then m_1 else m_2]]} \nonumber \\
-  \Longrightarrow \ & [[let x ← (if v then return false else return w) in (if x then m1 else m2)]] \tag{\textit{CBPV}} \\
-  \Longrightarrow \ & [[join j x = (if x then m1 else m2) in _]] \tag{\textit{commute, inline}} \\
-  & \phantom{\kw{join} \gap} [[(if v then jump j false else jump j w)]] \nonumber
-\end{align}
-
-Even so, join points still successfully solve the problem of preventing
-duplication of $[[m1]]$ and $[[m2]]$ without creating a new thunk.
-\fi
 
 \section{CBPV with Join Points} \label{sec:cbpv}
 
@@ -898,15 +848,6 @@ so they can't be let-bound, and their elimination forms can take arbitrary \Acom
 The mutual definitions of the translation of values \fbox{$[[⟦v⟧]]$} and computations \fbox{$[[⟦m⟧ K]]$}
 in \cref{fig:CC-norm} show how they are used;
 we delay the translation of case expressions for the moment.
-
-% As an example, $[[(fst ⟨λx. return x, return w⟩) v]]$ is also valid CCNF.
-% During the translation of this term, as we'll see shortly,
-% we need to handle the inner computation $[[⟨λx. return x, return w⟩]]$
-% using the sequence of continuations $[[ (□[□ v])[ fst □ ] ]]$.
-% As shorthand, we also write this sequence as $[[(fst □) v]]$,
-% plugging whatever is in brackets into the $[[□]]$ of the preceding continuation.
-% We define the plugging operation \fbox{$[[ K[m] ]]$} in the same manner,
-% so that $[[ ((fst □) v)[⟨λx. return x, return w⟩] ]]$ yields the original term.
 
 \begin{figure}[h]
   \begin{subfigure}{0.35\textwidth}
@@ -1532,7 +1473,19 @@ to the respective sides of the extracted logical equivalence.
 We step through only the proof of \rref*{let-app} as a representative case.
 
 \begin{proof}
-  \TODO
+  Because substitution maps and join stacks don't play much of a role,
+  we mostly ignore them here.
+  The goal is then to show that $[[(let x ← n in m) v]]$
+  is equivalent to $[[let x ← n in (m v)]]$,
+  knowing that all subterms are well typed.
+  By \cref{thm:semeq}, we have that $[[n]]$ reduces to some $[[return w]]$,
+  and that $[[m{x ↦ w}]]$ reduces to some $[[λy. m']]$.
+  Then we know that the right-hand side reduces by \rref*{E-ret,E-app}
+  to $[[m'{y ↦ v}]]$.
+  We also have that $[[let x ← n in m]]$ reduces to $[[m{x ↦ w}]]$ by \rref*{E-ret}.
+  Then we know that the left-hand side reduces by \rref*{E-app} also to $[[m'{y ↦ v}]]$.
+  Therefore, by \cref{lem:logeq:bwds-joins},
+  the left- and right-hand sides are equivalent.
 \end{proof}
 
 Although our translation doesn't involve commuting join points,
@@ -2014,10 +1967,6 @@ to permit creating join points from the components and jumping from within pairs
 Going right to left, the pair equations only apply when the projections both eliminate exactly the same thing.
 Either way, they are sensitive to slight syntactic variation, \eg permuted let bindings.
 Furthermore, neither direction appears to reveal optimization opportunities.
-% Taking the first equation as example,
-% transforming left to right exposes the same function reduction opportunity
-% as would pushing an application into the let expression,
-% while transforming right to left destroys it and creates more work for us.
 
 \subsection{Extensions and future work} \label{sec:future}
 
