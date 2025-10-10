@@ -227,7 +227,10 @@ This work presents a normal form for CBPV with respect to commuting conversions,
 and a single-pass transformation into this normal form using join points.
 We prove that this transformation is type-preserving and evaluation-preserving:
 it does not change the meaning of CBPV programs.
-These proofs are mechanized in Lean 4 \citep{lean}, and the proof development is provided in the supplementary materials.
+These proofs are mechanized in Lean 4 \citep{lean}, v4.23.0-rc1.
+The proof development is provided in the supplementary materials;
+definitions and theorems in this paper are accompanied
+by their corresponding file in the \texttt{CBPV} directory and name in the file within brackets.
 In the next section, we give an overview of the language, the transformation, and its motivation,
 leading to the following contributions.
 
