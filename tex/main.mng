@@ -2041,7 +2041,8 @@ while our jumps are always in tail position
 and fixed to the return type of the join point they jump to.
 
 Their work on join points is in contrast to earlier work by \citet{continued},
-who argues for CPS instead of direct-style using second-class continuations.
+who argues for CPS instead of direct-style using second-class continuations,
+and from whom we borrow the terminology \emph{CC-normalization}.
 \Citet{wowo} combine ideas from both using control operators
 that bind second-class continuations, using them as join points.
 Their system allows for both direct style and continuation-passing style optimizations;
