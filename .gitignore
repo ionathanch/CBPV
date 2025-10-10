@@ -1,3 +1,6 @@
 .lake/
 tex/latex.out/
 tex/*.tex
+*.lst
+*.tar
+*.zip
