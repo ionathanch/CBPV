@@ -374,8 +374,8 @@ Translations from the lambda calculus to CBPV already bind intermediate computat
 so what remains is to sequentialize them via commuting conversions.
 Rather than performing commuting conversions one by one,
 which examines the whole program each time,
-we present a one-pass transformation into commuting conversion normal form (CCNF) in \cref{sec:ccnf}
-that resembles the usual one-pass transformation into ANF.
+we present a single-pass transformation into commuting conversion normal form (CCNF) in \cref{sec:ccnf}
+that resembles the usual single-pass transformation into ANF.
 %
 \begin{figure}[h]
   \begin{align}
@@ -751,7 +751,7 @@ and \rref{T-jump} indicates that jumping to the join point at $[[j]]$
 with a value of type $[[A]]$ indeed has the same $[[B]]$.
 We can then, for example, jump to a join point in only one branch of a case expression
 so long as the join point has the same type as the other branch,
-as in the following derivable judgement, which we typset with a dashed bar.
+as in the following derivable judgement, which we typeset with a dashed bar.
 %
 \begin{mathpar}
   \mprset{fraction={{-~} {~-~} {~-}}}
@@ -2053,7 +2053,18 @@ The Zydeco project is ongoing work implementing a compiler from CBPV to stack-pa
 
 \section{Conclusion} \label{sec:conclusion}
 
-\TODO
+In this paper, we looked at commuting conversions for call-by-push-value,
+which are syntactic transformations that preserve evaluation.
+By commuting evaluation contexts into tail positions,
+we unnest computations and expose inlining opportunities.
+We have identified a commuting conversion normal form for CBPV
+and presented a single-pass transformation into CCNF.
+To avoid code duplication without incurring additional closures,
+we used a separate join point construct that avoids creating new thunks.
+We have shown that the translation preserves not just typing but also evaluation,
+using a logical equivalence to prove that
+the translation of a term is equivalent to itself.
+Our results are entirely mechanized in Lean 4.
 
 \bibliography{main}
 
