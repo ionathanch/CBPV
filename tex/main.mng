@@ -2066,6 +2066,11 @@ using a logical equivalence to prove that
 the translation of a term is equivalent to itself.
 Our results are entirely mechanized in Lean 4.
 
+\section{Data-Availability Statement}
+
+We will submit an artifact for evaluation consisting of our Lean 4 proof development,
+provided as supplementary materials for the paper submission.
+
 \bibliography{main}
 
 \end{document}
