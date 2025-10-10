@@ -168,7 +168,7 @@ that syntactically distinguishes \emph{values} from \emph{computations}.
 Explicit constructs between values and computations encode evaluation order
 by marking where and when computations are suspended and resumed;
 as a result, CBPV subsumes call-by-name (CBN) and call-by-value (CBV) evaluation strategies.
-\Citep{CBPV} also extends CBPV with various effects, isolating them to the computation fragment.
+\Citeauthor{CBPV} also extends CBPV with various effects, isolating them to the computation fragment.
 
 CBPV's distinction of pure values from effectful computations
 makes it a suitable compiler intermediate representation (IR)
@@ -245,8 +245,8 @@ leading to the following contributions.
     proven straightforwardly by induction.
     $\hookrightarrow$~\cref{sec:ccnf}
   \item We show that the transformation preserves evaluation behaviour:
-    a closed term of value type with no thunks
-    and its transformation must evaluate to the same terminal value.
+    a closed term returning a value with no thunks
+    and its transformation must return the same terminal value.
     This is proven via a logical equivalence on terms,
     and requires showing that commuting conversions are logically equivalent.
     $\hookrightarrow$~\cref{sec:proof}
@@ -430,9 +430,9 @@ Similarly, in CBPV, we can bind a thunked function to be forced and applied.
 \end{align}
 \usetagform{default}
 
-To the next compiler passes that sees this code,
+To the next compiler passes that see this code,
 the thunk is a value that may capture variables and escape its scope,
-so somewhere along the pipeline, the thunk will be converted into a closure and lifted out,
+so somewhere along the pipeline the thunk will be converted into a closure and lifted out,
 and $[[z! x]]$ will correspond to a function call.
 However, we know from the commuting conversion that the thunk will never escape its scope,
 since it's never passed to a function or stored in another thunk;
@@ -557,7 +557,7 @@ and case analysis on the left or right injections
 reduce to the left or right branches, respectively.
 \Rref{E-cong} states that evaluation may occur under evaluation contexts $[[E]]$,
 which are elimination forms with holes in scrutinee position.
-We exclude join expressions from evaluation contexts $[[E]]$
+We exclude join expressions from evaluation contexts
 because we later use $[[E]]$ to define our set of commuting conversions,
 which don't commute into join expressions.
 
@@ -722,7 +722,7 @@ The computation inside of a thunk in \rref{T-thunk}
 needs to be closed with respect to jump variables
 to prevent jumps from escaping their local scopes.
 
-Furthermore, we restrict jumps to tail positions, in contrast to \citet{join},
+Furthermore, we restrict jumps to tail positions in contrast to \citet{join},
 who allow jumps in scrutinee positions.
 They require type polymorphism to assign arbitrary types to jumps
 so that type safety isn't violated.
@@ -751,7 +751,7 @@ and \rref{T-jump} indicates that jumping to the join point at $[[j]]$
 with a value of type $[[A]]$ indeed has the same $[[B]]$.
 We can then, for example, jump to a join point in only one branch of a case expression
 so long as the join point has the same type as the other branch,
-as in the following derivable judgement.
+as in the following derivable judgement, which we typset with a dashed bar.
 %
 \begin{mathpar}
   \mprset{fraction={{-~} {~-~} {~-}}}
@@ -797,7 +797,7 @@ The commuting conversions we consider can then be stated as $[[ E[ L[m] ] ]] \Ri
 Informally, they unnest code because they move evaluation contexts into the ``next step'',
 and they expose inlining opportunities because these evaluation contexts are no longer
 blocked by tail contexts that still have a ``first step'' to compute.
-The shape of commuting conversions inform the shape of its normal form of computations,
+The shape of commuting conversions inform the shape of the normal form of computations,
 reproduced in \cref{fig:ccnf-join}, where \Acom{}s $[[n]]$ are computations that don't contain tail contexts,
 and configurations $[[m]]$ are all computations that don't contain tail contexts in scrutinee positions,
 \ie where holes appear in evaluation contexts.
@@ -834,7 +834,7 @@ However, we have three more continuation forms corresponding to each of the rema
 application, first projection, and second projection.
 They are needed because in contrast to ANF for the lambda calculus,
 functions and computation pairs are \emph{computations} and not \emph{values},
-so they can't be let-bound, and their elimination forms can take arbitrary \Acom{}s.
+so they can't be let-bound and their elimination forms can take arbitrary \Acom{}s.
 The mutual definitions of the translation of values \fbox{$[[⟦v⟧]]$} and computations \fbox{$[[⟦m⟧ K]]$}
 in \cref{fig:CC-norm} show how they are used;
 we delay the translation of case expressions for the moment.
@@ -938,9 +938,8 @@ and using the fact that $[[⟦n⟧ K]] = [[ K[n] ]]$.
   &= [[let x ← n in (λy. ⟦m⟧ □) ⟦v⟧]]                         \tag{\textit{plug}}
 \end{align}
 
-\hfill
-
-The na\"ive translation of conditional expressions duplicates the continuation:
+\paragraph{Branching and join points}
+The na\"ive translation of conditionals duplicates the continuation:
 $$[[⟦if v then m1 else m2⟧K]] = [[if ⟦v⟧ then ⟦m1⟧ K else ⟦m2⟧ K]].$$
 If $[[K]]$ only contains application and projection continuations,
 this is the desired translation.
@@ -974,7 +973,7 @@ rather than another extraneous join point $[[j' x = jump j x]]$ in the outer fal
       \: [[case ⟦v⟧ of inl y ⇒ ⟦m1⟧ K ; inr z ⇒ ⟦m2⟧ K]]
       &\textit{if} ~{}~ [[K]] \equiv [[ □ [k1] - [ki] ]] \\
       &\textit{or} ~{}~ [[K]] \equiv [[(let x ← □ in jump j x) [k1] - [ki] ]] \\
-      \: [[join j x = m in _]] &\textit{if} ~{}~ [[K]] \equiv [[ (let x ← □ in m) [k1] - [ki] ]] \\
+      \: [[join j x = m in _]] &\textit{if} ~{}~ [[K]] \equiv [[ (let x ← □ in m) [k1] - [ki] ]] \\[1.2\baselineskip]
       \: \quad [[case ⟦v⟧ of inl y ⇒ ⟦m1⟧ K' ; inr z ⇒ ⟦m2⟧ K']]
       &\textit{and} ~{}~ [[m]] \not\equiv [[jump j x]]
     \end{cases}
@@ -1143,7 +1142,7 @@ The proof of \cref{thm:ground-run} then proceeds by:
 \begin{enumerate}
   \item \label{item:logrel} Defining a standard logical equivalence over CBPV types;
   \item \label{item:semeq} Closing over term and join point contexts with a semantic equivalence;
-  \item \label{item:fundamental} Proving the fundamental theorem this equivalence,
+  \item \label{item:fundamental} Proving the fundamental theorem of this equivalence,
     namely that well-typed terms are semantically equivalent to themselves;
   \item \label{item:cc} Showing that well-typed commuting conversions are in the semantic equivalence;
   \item \label{item:kont} Defining semantic equivalence of continuations
@@ -1269,7 +1268,7 @@ relating two of them at a particular context.
 \Cref{fig:logeq-subst} gives inductive rules for these logical equivalences.
 \Rref{S-nil,S-cons} are equivalent to stating that
 $[[(s, t) ∈ G]]$ holds when for all $[[x : A ∈ G]]$, $[[(s(x), t(x)) ∈ A]]$ holds.
-\Rref{S-cons} states that we can extend a pair of related join stacks $[[p]]$ and $[[q]]$
+\Rref{J-cons} states that we can extend a pair of related join stacks $[[p]]$ and $[[q]]$
 by join points $[[m]]$ and $[[n]]$ of type $[[A ↗ B]]$
 when the join points themselves are related at $[[B]]$ given arguments related at $[[A]]$
 \emph{and} closed over by $[[p]]$ and $[[q]]$.
@@ -1544,7 +1543,7 @@ as well as congruence of evaluating under plugging.
 
 Plugging semantically equivalent computations into both
 the same continuation and equivalent continuations
-then yield equivalent computations
+then yields equivalent computations
 as long as substitution commutes with plugging.
 
 \begin{lemma}[Substitution commutes with plugging] \label{lem:subst-plug} \thmref{CCNF}{substPlug} \leavevmode \\
@@ -1578,8 +1577,8 @@ we use them together to show that plugging commutes with tail contexts.
   By induction on the typing derivation of $[[K]]$.
   In the \rref*{K-nil} case, this holds by \cref{thm:semeq}.
   In all other cases, the left-hand side involves a subterm of the form
-  $[[let y ← (let x ← n in m) in m']]$,
-  $[[(let x ← n in m) v]]$,
+  $[[let y ← (let x ← n in m) in m']]$, or
+  $[[(let x ← n in m) v]]$, or
   $[[fst (let x ← n in m)]]$, or
   $[[snd (let x ← n in m)]]$,
   so we use derived \rref{let-let,let-app,let-fst,let-snd} respectively to commute them.
