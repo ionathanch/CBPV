@@ -54,7 +54,7 @@ theorem 𝒱.thunk {m n B} (h : (m, n) ∈ ⟦B⟧ᵉ) : (thunk m, thunk n) ∈ 
 namespace ℰ
 
 theorem ret {δ v w A} (h : (v, w) ∈ ⟦A⟧ᵛ) : (@ret δ v, @ret δ w) ∈ ⟦F A⟧ᵉ := by
-  apply 𝒞ℰ; simp [ℰ, 𝒞, h]
+  apply 𝒞ℰ; simp [𝒞, h]
 
 theorem lam {δ m n A B} (h : ∀ v w, (v, w) ∈ ⟦A⟧ᵛ → (m⦃v⦄, n⦃w⦄) ∈ ⟦B⟧ᵉ) : (@lam δ m, @lam δ n) ∈ ⟦Arr A B⟧ᵉ := by
   apply 𝒞ℰ; simp [ℰ, 𝒞] at *; exact h

@@ -207,7 +207,6 @@ notation:1022 "⟦" m "⟧ₘ" k "#" le => CCcom k le m
 theorem CCcom.renameJ {δ δ' m m' k k' ξ} (le : δ' ≤ δ + 1) (mj : m.joinless) (e : k.jumpify = .yes k' m') :
   renameJCom ξ (⟦ m ⟧ₘ k # le) = ⟦ m ⟧ₘ renameJK ξ k # .step le := by
   mutual_induction m generalizing δ k k' mj ξ
-  all_goals try simp [lift]; rfl
   case force | ret | lam | prod => exact renameJKPlug
   case app ih | fst ih | snd ih =>
     apply ih; simp at mj; simp [mj]; simp; rw [e]
