@@ -132,10 +132,14 @@ m, n :: 'com_' ::= {{ com computations }}
   | join j x = m1 in m2 :: :: Join
     (+ bind x in m1 +)
     {{ tex \kw{join} \gap [[j]] \gap [[x]] \mathrel{=} [[m1]] \mathrel{ \kw{in} } [[m2]] }}
+  | join j = m1 in m2 :: M :: JoinNoArg
+    {{ tex \kw{join} \gap [[j]] \mathrel{=} [[m1]] \mathrel{ \kw{in} } [[m2]] }}
   | joins p in m :: M :: Joins
     {{ tex \kw{joins} \gap [[p]] \mathrel{ \kw{in} } [[m]] }}
   | jump j v :: :: Jump
     {{ tex \kw{jump} \gap [[j]] \mathrel{ \kw{with} } [[v]] }}
+  | jump j :: M :: JumpNoArg
+    {{ tex \kw{jump} \gap [[j]] }}
   % plugging metafunctions
   | K [ n ] :: :: Plug
     {{ com plugging into a continuation }}

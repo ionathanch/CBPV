@@ -1771,9 +1771,9 @@ with one more minor lemma.
 
 \subsection{Case-of-case} \label{sec:discuss:case-case}
 
-In the lambda calculus with, for instance, conditional expressions,
+In the lambda calculus with conditional expressions,
 the \emph{case-of-case} transformation commutes
-a conditional whose condition is another conditional.
+a conditional whose scrutinee is another conditional.
 The na\"ive transformation directly moves the outer conditional into the branches of the inner,
 duplicating the code in its branches.
 %
@@ -1823,9 +1823,9 @@ similar to the right-hand side of \cref{eq:let-if-if}.
 %
 \usetagform{brack}
 \begin{align}
-  &[[let x ← m1 in join j4 z = m4 in join j5 z = m5 in _]] \nonumber \\
-  &\quad [[if x then (let y ← m2 in if y then jump j4 () else jump j5 ()) _]] \nonumber \\
-  &\quad \phantom{[[if x _]]} [[else (let y ← m3 in if y then jump j4 () else jump j5 ())]] \label{eq:CC2-if-if}
+  &[[let x ← m1 in join j4 = m4 in join j5 = m5 in _]] \nonumber \\
+  &\quad [[if x then (let y ← m2 in if y then jump j4 else jump j5) _]] \nonumber \\
+  &\quad \phantom{[[if x _]]} [[else (let y ← m3 in if y then jump j4 else jump j5)]] \label{eq:CC2-if-if}
 \end{align}
 \usetagform{default}
 
@@ -1834,7 +1834,7 @@ generalizing to case expressions.
 Consequently, a transformation from the former to the latter is valid,
 and we recover the desired case-of-case transformation.
 
-\begin{lemma}[Case-of-case] \thmref{Commutation}{caseCase}
+\begin{lemma}[Case-of-case] \label{lem:case-case} \thmref{Commutation}{caseCase}
   Suppose the following hold:
   \begin{itemize}
     \item $[[G ⊢ v : A3 + A4]]$
@@ -1855,6 +1855,12 @@ and we recover the desired case-of-case transformation.
                         inr y4 ⇒ (let x ← m4 in case x of inl y1 ⇒ jump j1 y1; inr y2 ⇒ jump j2 y2)]]
   \end{align*}
 \end{lemma}
+
+This transformation applies generally to case-of-case-of-case and so forth.
+The translation to CBPV gives join points that contain join points
+that contain case expressions and so forth.
+Unnesting these join points with \rref*{join-join}
+followed by \cref{lem:case-case} yields the desired transformation.
 
 \subsection{Inlining and CCNF}
 
@@ -1897,17 +1903,8 @@ which amounts to proving strong normalization, so we're not doing that.
 \fi
 
 Recall that new opportunities for inlining revealed by CC-normalization preserve CCNF,
-since they only occur in tail positions,
-so even if inlining reduces tail-free computations to configurations,
-the whole term is still in CCNF, such as the following.
-%
-\begin{align}
-  &[[let x ← n in (λx. let y ← return x in m) v]] \nonumber \\
-  &\Longrightarrow [[let x ← n in let y ← return v in m]] \tag{\rref*{E-app}} \\
-  &\Longrightarrow [[let x ← n in m{y ↦ v}]] \tag{\rref*{E-ret}}
-\end{align}
-
-However, subsequent inlinings that involve forcing direct thunks may violate CCNF.
+since they only occur in tail positions.
+However, subsequent inlinings that force direct thunks may violate CCNF.
 Consider the following sequence of a commuting conversion,
 followed by an inlining that reduces a function,
 followed by an inlining that forces a thunk.
@@ -1919,7 +1916,8 @@ followed by an inlining that forces a thunk.
   &\Longrightarrow [[let x ← n1 in (let y ← (let z ← n2 in m2) in m1)]] \tag{\rref*{E-force}}
 \end{align}
 
-The resulting term after commuting and inlining once is in CCNF, but if we force the thunk,
+The resulting term after commuting and inlining once is still in CCNF.
+But if we force the thunk,
 we end up with a nested let expression, which isn't in CCNF.
 Therefore, renormalization may be required only after forcing thunks
 that appear in $[[n]]$ positions as a result of inlining.
@@ -1959,26 +1957,27 @@ Furthermore, neither direction appears to reveal optimization opportunities.
 
 \paragraph{Effects}
 Like \citet{CBPV-Coq}, the CBPV we consider doesn't include effects.
-By inspection, we can see that commuting conversions would be effect safe.
+However, by inspection, we can see that commuting conversions are effect safe.
 For instance, considering $[[let y ← (let x ← n1 in n2) in m]]$,
 if $[[n1]]$, $[[n2]]$, and $[[m]]$ contained effects,
 they would be executed in that very order according to the evaluation semantics
 both before and after commutation.
 
-However, not all semantically equivalent computations necessarily preserve effect order.
+Not all semantically equivalent computations preserve effect order.
 Given $[[n1]]$ and $[[n2]]$ where neither $[[x]]$ nor $[[y]]$ are free,
 $[[let x ← n1 in let y ← n2 in m]]$ is semantically equivalent to
-$[[let y ← n2 in let x ← n1 in m]]$, but would swap the order of effects in $[[n1]]$ and $[[n2]]$.
-Therefore, formally proving that CC-normalization is effect safe
-would require incorporating effects into the logical relation to rule out such equivalences.
+$[[let y ← n2 in let x ← n1 in m]]$,
+but would swap the order of effects in $[[n1]]$ and $[[n2]]$.
+We believe that CC-normalization doesn't perform extraneous reordering transformations,
+but rigorously proving it effect safe requires incorporating effects into the logical relation.
 
 \paragraph{Stack usage}
 Commuting conversions optimize stack usage.
 For the CBV lambda calculus, where the A-reductions of ANF are commuting conversions,
 \citet{ANF-dead} views ANF as the A-normalization of monadic normal form (MNF),
 the syntactic form of the monadic meta-language by \citet{MNF}
-that binds intermediate computations,
-and shows that first taking A-reduction steps from MNF to ANF
+that binds intermediate computations.
+He shows that first taking A-reduction steps from MNF to ANF
 optimizes stack usage in comparison to evaluating the original MNF term
 under stack machine semantics.
 
@@ -2041,16 +2040,16 @@ which they implement using type polymorphism,
 while our jumps are always in tail position
 and fixed to the return type of the join point they jump to.
 
-Instead of specialized join and jump constructs,
-\citet{wowo} use control operators that bind second-class continuations,
-along with a type system that distinguishes between first- and second-class values.
+Their work on join points is in contrast to earlier work by \citet{continued},
+who argues for CPS instead of direct-style using second-class continuations.
+\Citet{wowo} combine ideas from both using control operators
+that bind second-class continuations, using them as join points.
 Their system allows for both direct style and continuation-passing style optimizations;
 this is not directly applicable to CBPV, which is already in direct style
 by virtue of binding intermediate computations.
 However, the corresponding dual of CBPV is stack-passing style \citep{compiling},
-and it would be interesting to see whether a similar technique could be applied using second-class stacks.
-
-% \url{https://github.com/zydeco-lang/zydeco}
+and it would be interesting to see whether a similar technique could be applied.
+The Zydeco project is ongoing work implementing a compiler from CBPV to stack-passing style \citep{zydeco}.
 
 \section{Conclusion} \label{sec:conclusion}
 
