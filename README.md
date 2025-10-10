@@ -67,7 +67,17 @@ We can also translate *into* CBPV, but these aren't related to CCNF.
 * CBV.lean, CBN.lean: Translations from STLC with fine-grained CBV and CBN semantics,
   along with proofs that they preserve well-typedness and CK machine semantics.
 
-![Dependency graph of proof files](dependency.png)
+```
+    RTC          Syntax
+     ┢────────────╯ ╽
+ Evaluation    ╭╴Typing
+     ╽   │     │    │
+  Rejoin ╰─────│────┤
+     ╽         │    ╽
+Equivalence ╾──╯  CCNF
+     ╽              ╽
+Commutation ──╼ Soundness
+```
 
 ## When to `@[simp]` and `@[reducible]`
 
