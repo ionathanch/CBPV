@@ -207,17 +207,17 @@ Such transformations are key to compilation and
 form part of well-known passes such as A-normalization \citep{ANF},
 which unnest computations so that control flow is syntactically explicit,
 making code easier to compile further.
-Moreover, they can expose new opportunities for further program inlining and simplification.
-An issue with na\"ively applying commuting conversions,
+Moreover, these transformations can expose new opportunities for further program inlining and simplification.
+A known issue with na\"ively applying commuting conversions,
 in particular in the presence of branching computations,
 is that code may be duplicated;
 applying many commuting conversions can then cause exponential code bloat.
 \Citet{join} resolve this with explicit join point constructs.
 
-Therefore, in this work, we look at a source-to-source transformation that applies commuting conversions to CBPV,
+Therefore, we look at a source-to-source transformation that applies commuting conversions to CBPV,
 adapting its syntax and type system to accommodate explicit join points.
 Introducing separate constructs rather than using existing ones
-allows us to restrict their usage to only where they are needed,
+allows us to restrict them to only where they are needed,
 which can lead to more efficient, specialized compilation later on.
 In particular, because closures are represented by thunks,
 adding join points to CBPV reinforces the intent that
@@ -259,8 +259,8 @@ and compare with related work in \cref{sec:related}.
 
 The core ideas of this paper begin with the thesis that CBPV \citep{CBPV}
 is suitable as a compiler IR because it represents control flow explicitly.
-In particular, it subsumes both CBN and CBV semantics of the lambda calculus:
-compiling a lambda calculus term with the CBN or CBV compilation strategy yields different CBPV terms
+In particular, it subsumes both CBN and CBV semantics:
+compiling the same lambda calculus term with the CBN or CBV compilation strategy yields different CBPV terms
 whose execution mirrors that of the original evaluation strategy.
 
 \begin{figure}[h]
@@ -277,7 +277,7 @@ whose execution mirrors that of the original evaluation strategy.
 CBPV syntactically distinguishes values and computations, listed in \cref{fig:syntax},
 using explicit thunks to turn suspended computations into values
 and explicit returns to embed values into computations,
-which the CBN and CBV translations use in different ways to enforce when computation occurs.
+The CBN and CBV translations use thunks in different ways to enforce when computation occurs.
 Alongside the thunk and return constructs,
 we include the unit value, value sums, functions, and computation pairs.%
 \footnote{For simplicity, we omit value pairs, which are present in Levy's original CBPV;
@@ -298,28 +298,27 @@ which translates to the following two CBPV terms.
 
 While both terms evaluate to the same final value $[[z]]$,
 their evaluation sequences are different.
-In the CBN translation, function arguments are thunked and passed wholesale,
-then forced as they are needed.
+In the CBN translation, function arguments are thunked ($[[{λx. return x}]]$) and passed wholesale,
+then forced ($[[f!]]$) as they are needed.
 In the CBV translation, the function and the argument are evaluated in order
 before carrying out the function application,
 using let bindings to express the explicit sequencing.
 First $f$ is evaluated, followed by $g$, then $a$, before the final application occurs.
 
-To seriously consider CBPV as an IR, we need to think about what happens \emph{after} compiling to CBPV.
-At a high level, a compiler IR may undergo some optimization passes,
-then be compiled to lower-level IRs.
-In this paper, we look at passes that affect control flow,
-and in particular at commuting conversions.
+Even though translating to CBPV has made control flow explicit,
+computations may still be arbitrarily nested,
+while hides some compiler optimizations.
+We look at commuting conversions next to handle such computations.
 
 \subsection{Commuting conversions}
 
 Commuting conversions are syntactic transformations
-pushing evaluation contexts into tail positions of eliminators
-that preserve evaluation order.
+that swap nested eliminators while preserving evaluation order.
 An important benefit of performing commuting conversions is that it exposes inlining opportunities ---
-that is, subexpressions that can be reduced to simplify code.
-(We refer to all subexpression $\beta$-reduction as inlining.)
-For instance, we can commute a let-bound conditional to reveal direct bindings of returned values.
+that is, subexpressions that can be $\beta$-reduced to simplify code.
+For instance, we can commute a let-bound conditional
+by pushing the outer let expression into the inner conditional
+to reveal direct bindings of returned values.
 %
 \usetagform{brack}
 \begin{align}
@@ -335,8 +334,7 @@ and simplify the then branch.
 We may also choose \emph{not} to inline $[[w]]$ in the else branch
 if it happens that $[[w]]$ is a particularly large value we don't want to duplicate.
 The inlining optimization wouldn't have been possible without the commutation,
-and is a well-known technique \citep{join};
-this particular commutation is part of \emph{case-floating}.
+and is a well-known technique \citep{join}.
 
 Following \citet{join}, we define commuting conversions as all transformations
 that push elimination forms inside of tail positions,
@@ -368,12 +366,16 @@ In contrast, the right-hand side makes it explicit that we first evaluate the $[
 then the $[[x]]$ binding, then the body.
 
 This sequential nature of commuting conversions resembles
-the A-normalization compiler pass into A-normal form (ANF)
+the A-normalization compiler pass for the lambda calculus into A-normal form (ANF)
 because commuting conversions are part of the A-reductions that characterize ANF \citep{ANF}.
-For the lambda calculus, A-normalization makes control flow syntactically explicit by doing two things:
-it binds intermediate computations, and it sequentializes computations.
+A-normalization makes control flow syntactically explicit
+by binding intermediate computations and by sequentializing computations.
 Translations from the lambda calculus to CBPV already bind intermediate computations,
-so all that's left to do is to sequentialize them via commuting conversions.%
+so what remains is to sequentialize them via commuting conversions.
+Rather than performing commuting conversions one by one,
+which examines the whole program each time,
+we present a one-pass transformation into commuting conversion normal form (CCNF) in \cref{sec:ccnf}
+that resembles the usual one-pass transformation into ANF.
 %
 \begin{figure}[h]
   \begin{align}
@@ -385,16 +387,12 @@ so all that's left to do is to sequentialize them via commuting conversions.%
   \label{fig:ccnf}
 \end{figure}
 
-Rather than performing commuting conversions one by one,
-we present a one-pass transformation into commuting conversion normal form (CCNF) in \cref{sec:ccnf}
-% \footnote{Compiling with Continuations, Continued also calls them cc-normal form.}
-that resembles the usual one-pass transformation into ANF \citep{ANF}.
 In ANF, terms are divided into values, computations, and configurations,
 where computations are a subset of configurations that don't include
 let expressions and conditionals (or case expressions generally).
 \Cref{fig:ccnf} makes the same distinction for CBPV, where values remain unchanged;
-to avoid confusion, we also call $[[m]]$s \emph{configurations},
-while we call $[[n]]$s \emph{\Acom{}s},
+to avoid confusion, we also call the latter \emph{configurations},
+while we call the former \emph{\Acom{}s},
 which are both subsets of CBPV \emph{computations}.
 Because commuting conversions push computations only into tail positions,
 \emph{new} opportunities for inlining only occur in $[[m]]$ positions,
@@ -485,8 +483,7 @@ in our mechanization (and thus our technical presentation here),
 we use a single unified syntax and treat CC-normalization as a source-to-source translation,
 showing \aposteriori in \cref{sec:ccnf} that the output of the translation satisfies \cref{fig:ccnf,fig:join}.
 In \cref{sec:proof}, we reason about equivalence between a CBPV term and its translation,
-which requires both sides of the equivalence to belong to the same syntactic category
-for the equivalence to have the properties of an equivalence relation.
+which requires both sides of the equivalence to belong to the same syntactic category.
 
 \begin{figure}[h]
   \begin{align}
@@ -518,7 +515,7 @@ and freely use jump well-scopedness throughout the proofs.
 The purpose of join points is best explained by what they do;
 their single-step evaluation rules are listed in \cref{fig:eval},
 alongside rules for the usual CBPV constructs.
-We write \fbox{$[[m ⇝* m']]$} for their reflexive, transitive closure.
+We write \fbox{$[[m ⇝* m']]$} for the reflexive, transitive closure of evaluation.
 The names of the rules involving join points and jumps not found in plain CBPV are highlighted in salmon.
 
 \begin{figure}
