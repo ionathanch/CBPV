@@ -1111,7 +1111,7 @@ but aren't necessarily syntactically equal.
 \end{theorem}
 
 We prove this property as a corollary of a logical equivalence between a computation and its translation.
-This machinery is required because the simpler method using a simulation argument,
+This machinery is required because the simpler of method using a simulation argument,
 such as the following statement, unfortunately doesn't work.
 
 \begin{fail}[Simulation]
