@@ -104,10 +104,10 @@ theorem sym𝒞ℰ {B} (𝒞sym : ∀ {m n}, (m, n) ∈ ⟦B⟧ᶜ → (n, m) �
   let ⟨_, _, nm, nn, hB⟩ := h
   exact ⟨_, _, nn, nm, 𝒞sym hB⟩
 
-theorem sym𝒱𝒞 :
-  (∀ {v w A}, (v, w) ∈ ⟦A⟧ᵛ → (w, v) ∈ ⟦A⟧ᵛ) ∧
-  (∀ {m n B}, (m, n) ∈ ⟦B⟧ᶜ → (n, m) ∈ ⟦B⟧ᶜ) := by
-  refine ⟨λ {v w A} h ↦ ?val, λ {m n B} h ↦ ?com⟩
+joint
+  theorem 𝒱.sym {v w A} (h : (v, w) ∈ ⟦A⟧ᵛ) : (w, v) ∈ ⟦A⟧ᵛ
+  theorem 𝒞.sym {m n B} (h : (m, n) ∈ ⟦B⟧ᶜ) : (n, m) ∈ ⟦B⟧ᶜ
+by
   mutual_induction A, B
   case Unit => unfold 𝒱 at *; simp [h]
   case Sum ihA₁ ihA₂ =>
@@ -132,8 +132,6 @@ theorem sym𝒱𝒞 :
     let ⟨_, _, _, _, hB₁, hB₂, em, en⟩ := h
     exact ⟨_, _, _, _, sym𝒞ℰ ihB₁ hB₁, sym𝒞ℰ ihB₂ hB₂, en, em⟩
 
-def 𝒱.sym := @sym𝒱𝒞.left
-def 𝒞.sym := @sym𝒱𝒞.right
 def ℰ.sym {B} := @sym𝒞ℰ B 𝒞.sym
 
 theorem trans𝒞ℰ {B} (𝒞trans : ∀ {m₁ m₂ m₃}, (m₁, m₂) ∈ ⟦B⟧ᶜ → (m₂, m₃) ∈ ⟦B⟧ᶜ → (m₁, m₃) ∈ ⟦B⟧ᶜ) :
@@ -145,10 +143,10 @@ theorem trans𝒞ℰ {B} (𝒞trans : ∀ {m₁ m₂ m₃}, (m₁, m₂) ∈ ⟦
   rw [Norm.join nm' nn'] at hB₁₂
   exact ⟨m, n, nm, nn, 𝒞trans hB₁₂ hB₂₃⟩
 
-theorem trans𝒱𝒞 :
-  (∀ {v₁ v₂ v₃ A}, (v₁, v₂) ∈ ⟦A⟧ᵛ → (v₂, v₃) ∈ ⟦A⟧ᵛ → (v₁, v₃) ∈ ⟦A⟧ᵛ) ∧
-  (∀ {m₁ m₂ m₃ B}, (m₁, m₂) ∈ ⟦B⟧ᶜ → (m₂, m₃) ∈ ⟦B⟧ᶜ → (m₁, m₃) ∈ ⟦B⟧ᶜ) := by
-  refine ⟨λ {v₁ v₂ v₃ A} h₁₂ h₂₃ ↦ ?val, λ {m₁ m₂ m₃ B} h₁₂ h₂₃ ↦ ?com⟩
+joint
+  theorem 𝒱.trans {v₁ v₂ v₃ A} (h₁₂ : (v₁, v₂) ∈ ⟦A⟧ᵛ) (h₂₃ : (v₂, v₃) ∈ ⟦A⟧ᵛ) : (v₁, v₃) ∈ ⟦A⟧ᵛ
+  theorem 𝒞.trans {m₁ m₂ m₃ B} (h₁₂ : (m₁, m₂) ∈ ⟦B⟧ᶜ) (h₂₃ : (m₂, m₃) ∈ ⟦B⟧ᶜ) : (m₁, m₃) ∈ ⟦B⟧ᶜ
+by
   mutual_induction A, B
   case Unit =>
     unfold 𝒱 at *
@@ -192,8 +190,6 @@ theorem trans𝒱𝒞 :
     subst el₁ el₂ er₂; injection er₁ with e₁ e₂; subst e₁ e₂
     refine ⟨_, _, _, _, trans𝒞ℰ ihB₁ hA₁₁ hA₂₁, trans𝒞ℰ ihB₂ hA₁₂ hA₂₂, rfl, rfl⟩
 
-def 𝒱.trans := @trans𝒱𝒞.left
-def 𝒞.trans := @trans𝒱𝒞.right
 def ℰ.trans {B} := @trans𝒞ℰ B 𝒞.trans
 
 /-*-----------------------------
@@ -258,10 +254,10 @@ theorem semCom.trans {Γ m₁ m₂ m₃} {B : ComType} (h₁₂ : Γ ⊨ m₁ ~ 
   of syntactic typing wrt semantic equivalence
 ---------------------------------------------*-/
 
-theorem soundness {Γ} :
-  (∀ (v : Val) A, Γ ⊢ v ∶ A → Γ ⊨ v ~ v ∶ A) ∧
-  (∀ (m : Com) B, Γ ⊢ m ∶ B → Γ ⊨ m ~ m ∶ B) := by
-  refine ⟨λ v A h ↦ ?val, λ m B h ↦ ?com⟩
+joint {Γ : Ctxt}
+  theorem soundVal {v} {A : ValType} (h : Γ ⊢ v ∶ A) : Γ ⊨ v ~ v ∶ A
+  theorem soundCom {m} {B : ComType} (h : Γ ⊢ m ∶ B) : Γ ⊨ m ~ m ∶ B
+by
   mutual_induction h, h
   all_goals intro σ τ hστ
   case var mem => exact hστ mem
@@ -306,9 +302,6 @@ theorem soundness {Γ} :
   case snd ih =>
     let ⟨_, _, _, _, r₁, r₂, hB₂⟩ := (ih σ τ hστ).snd
     exact ℰ.bwds (.trans' (Evals.snd r₁) (.once .π2)) (.trans' (Evals.snd r₂) (.once .π2)) hB₂
-
-def soundVal {Γ v} {A : ValType} : Γ ⊢ v ∶ A → Γ ⊨ v ~ v ∶ A := soundness.left v A
-def soundCom {Γ m} {B : ComType} : Γ ⊢ m ∶ B → Γ ⊨ m ~ m ∶ B := soundness.right m B
 
 -- Type safety: computations are strongly normalizing
 theorem safety {m} {B : ComType} (h : ⬝ ⊢ m ∶ B) : SN m := by

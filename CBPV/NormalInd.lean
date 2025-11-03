@@ -96,87 +96,87 @@ theorem SRs.red {m n : Com} (r : m ⤳⋆ n) (h : SNCom n) : SNCom m := by
   Antirenaming and extensionality
 --------------------------------*-/
 
-theorem antirenaming {ξ} :
-  (∀ {m}, SNeCom (renameCom ξ m) → SNeCom m) ∧
-  (∀ {v}, SNVal  (renameVal ξ v) → SNVal v)  ∧
-  (∀ {m}, SNCom  (renameCom ξ m) → SNCom m)  ∧
-  (∀ {m n}, renameCom ξ m ⤳ n → ∃ n', n = renameCom ξ n' ∧ m ⤳ n') := by
-  refine ⟨λ snem ↦ ?snecom, λ snv ↦ ?snval, λ snm ↦ ?sncom, λ r ↦ ?srcom⟩
-  case' srcom  => generalize e : renameCom ξ _ = m' at r
-  case' sncom  => generalize e : renameCom ξ _ = m' at snm
-  case' snval  => generalize e : renameVal ξ _ = v' at snv
-  case' snecom => generalize e : renameCom ξ _ = m' at snem
+joint {ξ : Nat → Nat}
+  theorem SNeCom.antirenaming {m} (snem : SNeCom (renameCom ξ m)) : SNeCom m
+  theorem SNVal.antirenaming {v} (snv : SNVal (renameVal ξ v)) : SNVal v
+  theorem SNCom.antirenaming {m} (snm : SNCom (renameCom ξ m)) : SNCom m
+  theorem SR.antirenaming {m n} (r : renameCom ξ m ⤳ n) : ∃ n', n = renameCom ξ n' ∧ m ⤳ n'
+by
+  case' SR  => generalize e : renameCom ξ _ = m' at r
+  case' SNCom  => generalize e : renameCom ξ _ = m' at snm
+  case' SNVal  => generalize e : renameVal ξ _ = v' at snv
+  case' SNeCom => generalize e : renameCom ξ _ = m' at snem
   mutual_induction snem, snv, snm, r generalizing ξ
-  case snecom.force ih m =>
+  case force ih =>
     cases m <;> try contradiction
     injection e with e
     case force v =>
     let ⟨_, e⟩ := ih; subst e
     cases v <;> try contradiction
     exact .force .var
-  case snecom.app ihm ihv m =>
+  case app ihm ihv =>
     cases m <;> try contradiction
     injection e with em ev
     exact .app (ihm em) (ihv ev)
-  case snecom.letin ihm ihn m =>
+  case letin ihm ihn =>
     cases m <;> try contradiction
     injection e with em en
     exact .letin (ihm em) (ihn en)
-  case snecom.case snev _ ihv ihm ihn m =>
+  case case snev _ ihv ihm ihn =>
     cases m <;> try contradiction
     injection e with ev em en
     case case v _ _ =>
     let ⟨_, e⟩ := snev; subst e
     cases v <;> try contradiction
     refine .case .var (ihm em) (ihn en)
-  case snecom.fst ih m =>
+  case fst ih =>
     cases m <;> try contradiction
     injection e with e
     exact .fst (ih e)
-  case snecom.snd ih m =>
+  case snd ih =>
     cases m <;> try contradiction
     injection e with e
     exact .snd (ih e)
-  case snval.var ih v =>
+  case var ih =>
     cases v <;> try contradiction
     exact .var
-  case snval.unit v => cases v <;> injection e; constructor
-  case snval.inl ih v =>
+  case unit => cases v <;> injection e; constructor
+  case inl ih =>
     cases v <;> try contradiction
     injection e with e
     exact .inl (ih e)
-  case snval.inr ih v =>
+  case inr ih =>
     cases v <;> try contradiction
     injection e with e
     exact .inr (ih e)
-  case snval.thunk ih v =>
+  case thunk ih =>
     cases v <;> try contradiction
     injection e with e
     exact .thunk (ih e)
-  case sncom.lam ih m =>
+  case lam ih =>
     cases m <;> try contradiction
     injection e with e
     exact .lam (ih e)
-  case sncom.ret ih m =>
+  case ret ih =>
     cases m <;> try contradiction
     injection e with e
     exact .ret (ih e)
-  case sncom.prod ihm ihn m =>
+  case prod ihm ihn =>
     cases m <;> try contradiction
     injection e with em en
     exact .prod (ihm em) (ihn en)
-  case sncom.ne ih _ => exact .ne (ih e)
-  case sncom.red ihr ihm _ =>
+  case ne ih => exact .ne (ih e)
+  case red ihr ihm =>
     let ⟨_, e, r⟩ := ihr e
     exact .red r (ihm (.symm e))
-  case srcom.π ih m =>
+  case π ih =>
     cases m <;> try contradiction
     injection e with e
     case force v =>
     cases v <;> try contradiction
     injection e with e
     exact ⟨_, .symm e, .π⟩
-  case srcom.β ih m =>
+  case β ih =>
     cases m <;> try contradiction
     injection e with em ev
     case app m _ =>
@@ -184,7 +184,7 @@ theorem antirenaming {ξ} :
     injection em with em
     subst ev em; rw [renameDist]
     exact ⟨_, rfl, .β (ih rfl)⟩
-  case srcom.ζ ih m =>
+  case ζ ih =>
     cases m <;> try contradiction
     injection e with ev em
     case letin m _ =>
@@ -192,7 +192,7 @@ theorem antirenaming {ξ} :
     injection ev with ev
     subst ev em; rw [renameDist]
     exact ⟨_, rfl, .ζ (ih rfl)⟩
-  case srcom.ι1 ihv ihn m =>
+  case ι1 ihv ihn =>
     cases m <;> try contradiction
     injection e with ev em en
     rename Val => v
@@ -200,7 +200,7 @@ theorem antirenaming {ξ} :
     injection ev with ev
     subst ev em en; rw [renameDist]
     exact ⟨_, rfl, .ι1 (ihv rfl) (ihn rfl)⟩
-  case srcom.ι2 ihv ihm m =>
+  case ι2 ihv ihm =>
     cases m <;> try contradiction
     injection e with ev em en
     rename Val => v
@@ -208,42 +208,40 @@ theorem antirenaming {ξ} :
     injection ev with ev
     subst ev em en; rw [renameDist]
     exact ⟨_, rfl, .ι2 (ihv rfl) (ihm rfl)⟩
-  case srcom.π1 ihm m =>
+  case π1 ihm =>
     cases m <;> try contradiction
     injection e with e
     rename Com => m
     cases m <;> try contradiction
     injection e with em en
     exact ⟨_, .symm em, .π1 (ihm en)⟩
-  case srcom.π2 ihm m =>
+  case π2 ihm =>
     cases m <;> try contradiction
     injection e with e
     rename Com => m
     cases m <;> try contradiction
     injection e with em en
     exact ⟨_, .symm en, .π2 (ihm em)⟩
-  case srcom.app ihv ihm m =>
+  case app ihv ihm =>
     cases m <;> try contradiction
     injection e with em ev
     let ⟨_, em, r⟩ := ihm em; subst em ev
     exact ⟨.app _ _, rfl, .app r⟩
-  case srcom.letin ihm m =>
+  case letin ihm =>
     cases m <;> try contradiction
     injection e with em ev
     let ⟨_, em, r⟩ := ihm em; subst em ev
     exact ⟨.letin _ _, rfl, .letin r⟩
-  case srcom.fst ihm m =>
+  case fst ihm =>
     cases m <;> try contradiction
     injection e with e
     let ⟨_, e, r⟩ := ihm e; subst e
     exact ⟨.fst _, rfl, .fst r⟩
-  case srcom.snd ihm m =>
+  case snd ihm =>
     cases m <;> try contradiction
     injection e with e
     let ⟨_, e, r⟩ := ihm e; subst e
     exact ⟨.snd _, rfl, .snd r⟩
-
-def SNCom.antirenaming {ξ m} := @(@_root_.antirenaming ξ).right.right.left m
 
 theorem extensionality {m x} (h : SNCom (app m (var x))) : SNCom m := by
   generalize e : app m (var x) = m' at h

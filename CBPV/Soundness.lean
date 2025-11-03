@@ -35,10 +35,10 @@ theorem SNup {Γ σ A B} {m : Com}
   rw [substVar] at qm
   exact (hB.snCom qm).antirenaming
 
-theorem soundness {Γ} :
-  (∀ (v : Val) A, Γ ⊢ v ∶ A → Γ ⊨ v ∶ A) ∧
-  (∀ (m : Com) B, Γ ⊢ m ∶ B → Γ ⊨ m ∶ B) := by
-  refine ⟨λ v A h ↦ ?val, λ m B h ↦ ?com⟩
+joint {Γ : Ctxt}
+  theorem soundVal (v : Val) (A : ValType) (h : Γ ⊢ v ∶ A) : Γ ⊨ v ∶ A
+  theorem soundCom (m : Com) (B : ComType) (h : Γ ⊢ m ∶ B) : Γ ⊨ m ∶ B
+by
   mutual_induction h, h
   all_goals intro σ hσ
   case var A mem =>
@@ -139,7 +139,7 @@ theorem soundness {Γ} :
         calc fst (m⦃σ⦄)
           _ ⤳⋆ fst (prod n₁ n₂) := .fst r
           _ ⤳⋆ n₁                := .once (.π1 (hB₂.snCom pn₂))
-      refine ⟨_, hB₁, hB₁.closure r' pn₁⟩
+      exact ⟨_, hB₁, hB₁.closure r' pn₁⟩
   case snd m _ _ _ ihm =>
     let ⟨_, hProd, pm⟩ := ihm σ hσ
     cases hProd with | Prod hB₁ hB₂ =>
@@ -150,4 +150,4 @@ theorem soundness {Γ} :
         calc snd (m⦃σ⦄)
           _ ⤳⋆ snd (prod n₁ n₂) := .snd r
           _ ⤳⋆ n₂                := .once (.π2 (hB₁.snCom pn₁))
-      refine ⟨_, hB₂, hB₂.closure r' pn₂⟩
+      exact ⟨_, hB₂, hB₂.closure r' pn₂⟩

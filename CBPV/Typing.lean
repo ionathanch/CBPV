@@ -79,20 +79,12 @@ notation:40 Γ:41 "⊢" m:41 "∶" B:41 => ComWt Γ m B
   Renaming and weakening lemmas
 ------------------------------*-/
 
-theorem wtRename {ξ} {Γ Δ : Ctxt} (hξ : Δ ⊢ ξ ∶ Γ) :
-  (∀ {v} {A : ValType}, Γ ⊢ v ∶ A → Δ ⊢ renameVal ξ v ∶ A) ∧
-  (∀ {m} {B : ComType}, Γ ⊢ m ∶ B → Δ ⊢ renameCom ξ m ∶ B) := by
-  refine ⟨λ h ↦ ?wtv, λ h ↦ ?wtm⟩
+joint {ξ : Nat → Nat} {Γ Δ : Ctxt} (hξ : Δ ⊢ ξ ∶ Γ)
+  theorem wtRenameVal {v} {A : ValType} (h : Γ ⊢ v ∶ A) : Δ ⊢ renameVal ξ v ∶ A
+  theorem wtRenameCom {m} {B : ComType} (h : Γ ⊢ m ∶ B) : Δ ⊢ renameCom ξ m ∶ B
+by
   mutual_induction h, h generalizing ξ Δ
   all_goals constructor <;> apply_rules [wRenameLift]
-
-theorem wtRenameVal {ξ} {Γ Δ : Ctxt} {v} {A : ValType} :
-  Δ ⊢ ξ ∶ Γ → Γ ⊢ v ∶ A → Δ ⊢ renameVal ξ v ∶ A :=
-  λ hξ ↦ (wtRename hξ).left
-
-theorem wtRenameCom {ξ} {Γ Δ : Ctxt} {m} {B : ComType} :
-  Δ ⊢ ξ ∶ Γ → Γ ⊢ m ∶ B → Δ ⊢ renameCom ξ m ∶ B :=
-  λ hξ ↦ (wtRename hξ).right
 
 theorem wtWeakenVal {Γ A₁ A₂} {v : Val} :
   Γ ⊢ v ∶ A₂ → Γ ∷ A₁ ⊢ renameVal succ v ∶ A₂ :=

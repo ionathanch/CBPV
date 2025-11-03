@@ -281,10 +281,11 @@ notation:40 "⟦" k:41 "⟧ᴷ" => transK k
 theorem presIn {x A Γ} (h : CBV.In x A Γ) : (⟦ Γ ⟧ᶜ) ∋ x ∶ (⟦ A ⟧ᵀ) := by
   induction h <;> constructor; assumption
 
-theorem preservation {Γ A} :
-  (∀ {v}, Γ ⊢ᵥ v ∶ A → (⟦ Γ ⟧ᶜ) ⊢ (⟦ v ⟧ᵛ) ∶ (⟦ A ⟧ᵀ)) ∧
-  (∀ {t}, Γ ⊢ₛ t ∶ A → (⟦ Γ ⟧ᶜ) ⊢ (⟦ t ⟧ᵗ) ∶ .F (⟦ A ⟧ᵀ)) := by
-  refine ⟨λ h ↦ ?val, λ h ↦ ?term⟩
+namespace CBV
+joint {Γ : Ctxt} {A : VType}
+  theorem WtVal.preservation {v} (h : Γ ⊢ᵥ v ∶ A) : (⟦ Γ ⟧ᶜ) ⊢ (⟦ v ⟧ᵛ) ∶ (⟦ A ⟧ᵀ)
+  theorem Wt.preservation    {t} (h : Γ ⊢ₛ t ∶ A) : (⟦ Γ ⟧ᶜ) ⊢ (⟦ t ⟧ᵗ) ∶ .F (⟦ A ⟧ᵀ)
+by
   mutual_induction h, h
   case var ih => exact .var (presIn ih)
   case unit => exact .unit
@@ -301,13 +302,14 @@ theorem preservation {Γ A} :
     exact .letin ihs (.case (.var .here) (wtWeakenCom₂ iht) (wtWeakenCom₂ ihu))
   case fst ih => exact .letin ih (.fst (.force (.var .here)))
   case snd ih => exact .letin ih (.snd (.force (.var .here)))
+end CBV
 
 /-* Translation commutes with renaming and substitution *-/
 
-theorem transRename {ξ} :
-  (∀ {v}, renameVal ξ (⟦ v ⟧ᵛ) = (⟦ CBV.renameVal ξ v ⟧ᵛ)) ∧
-  (∀ {t}, renameCom ξ (⟦ t ⟧ᵗ) = (⟦ CBV.rename ξ t ⟧ᵗ)) := by
-  refine ⟨λ {v} ↦ ?val, λ {t} ↦ ?term⟩
+joint {ξ : Nat → Nat}
+  theorem transRenameVal {v} : renameVal ξ (⟦ v ⟧ᵛ) = (⟦ CBV.renameVal ξ v ⟧ᵛ)
+  theorem transRenameCom {t} : renameCom ξ (⟦ t ⟧ᵗ) = (⟦ CBV.rename ξ t ⟧ᵗ)
+by
   mutual_induction v, t generalizing ξ
   case var n => cases n <;> rfl
   case unit => rfl
@@ -317,16 +319,13 @@ theorem transRename {ξ} :
   case case ihs iht ihu =>
     simp [ihs, ← iht, ← ihu, renameLiftLiftRename]; rfl
 
-def transRenameVal {ξ v} := (transRename (ξ := ξ)).left (v := v)
-def transRenameCom {ξ t} := (transRename (ξ := ξ)).right (t := t)
-
 theorem transUp {σ m} : substCom (⇑ (⟦ σ ⟧ˢ)) m = substCom (⟦ ⇑ σ ⟧ˢ) m := by
   apply substComExt; intro n; cases n <;> simp [up, transRenameVal] <;> rfl
 
-theorem transSubst {σ} :
-  (∀ {v}, ((⟦ v ⟧ᵛ) ⦃ ⟦ σ ⟧ˢ ⦄) = (⟦ CBV.substVal σ v ⟧ᵛ)) ∧
-  (∀ {t}, ((⟦ t ⟧ᵗ) ⦃ ⟦ σ ⟧ˢ ⦄) = (⟦ CBV.subst σ t ⟧ᵗ)) := by
-  refine ⟨λ {v} ↦ ?val, λ {t} ↦ ?term⟩
+joint {σ : Nat → CBV.Value}
+  theorem transSubstVal {v} : ((⟦ v ⟧ᵛ) ⦃ ⟦ σ ⟧ˢ ⦄) = (⟦ CBV.substVal σ v ⟧ᵛ)
+  theorem transSubstCom {t} : ((⟦ t ⟧ᵗ) ⦃ ⟦ σ ⟧ˢ ⦄) = (⟦ CBV.subst σ t ⟧ᵗ)
+by
   mutual_induction v, t generalizing σ
   case var n => cases n <;> simp
   case unit => rfl
@@ -337,9 +336,6 @@ theorem transSubst {σ} :
   case case ihs iht ihu =>
     simp [ihs, ← iht, ← ihu]; repeat' constructor
     all_goals rw [← transUp, ← renameUpLiftSubst]
-
-def transSubstVal {σ v} := (transSubst (σ := σ)).left (v := v)
-def transSubstCom {σ t} := (transSubst (σ := σ)).right (t := t)
 
 /-* Translation preserves machine semantics *-/
 

@@ -47,10 +47,10 @@ end
 notation:40 "⟦" A:41 "⟧ᵛ" "↘" P:41 => 𝒱 A P
 notation:40 "⟦" B:41 "⟧ᶜ" "↘" P:41 => 𝒞 B P
 
-theorem interp :
-  (∀ A, ∃ P, ⟦ A ⟧ᵛ ↘ P) ∧
-  (∀ B, ∃ P, ⟦ B ⟧ᶜ ↘ P) := by
-  refine ⟨λ A ↦ ?val, λ B ↦ ?com⟩
+joint
+  theorem ValType.interp A : ∃ P, ⟦ A ⟧ᵛ ↘ P
+  theorem ComType.interp B : ∃ P, ⟦ B ⟧ᶜ ↘ P
+by
   mutual_induction A, B
   case Unit => exact ⟨_, .Unit⟩
   case Sum ihA ihB =>
@@ -68,9 +68,6 @@ theorem interp :
     let ⟨_, hB⟩ := ihB
     exact ⟨_, .Prod hA hB⟩
 
-def ValType.interp : ∀ A, ∃ P, ⟦ A ⟧ᵛ ↘ P := _root_.interp.left
-def ComType.interp : ∀ B, ∃ P, ⟦ B ⟧ᶜ ↘ P := _root_.interp.right
-
 /-*-----------------------------------------------------
   Properties of the logical relation:
   * Interpretation of a type is deterministic
@@ -79,10 +76,10 @@ def ComType.interp : ∀ B, ∃ P, ⟦ B ⟧ᶜ ↘ P := _root_.interp.right
   * Terms in interpretations are strongly normalizing
 -----------------------------------------------------*-/
 
-theorem determinism :
-  (∀ {A P Q}, ⟦ A ⟧ᵛ ↘ P → ⟦ A ⟧ᵛ ↘ Q → P = Q) ∧
-  (∀ {B P Q}, ⟦ B ⟧ᶜ ↘ P → ⟦ B ⟧ᶜ ↘ Q → P = Q) := by
-  refine ⟨λ {A P Q} h ↦ ?val, λ {B P Q} h ↦ ?com⟩
+joint
+  theorem 𝒱.det {A P Q} (h : ⟦ A ⟧ᵛ ↘ P) : ⟦ A ⟧ᵛ ↘ Q → P = Q
+  theorem 𝒞.det {B P Q} (h : ⟦ B ⟧ᶜ ↘ P) : ⟦ B ⟧ᶜ ↘ Q → P = Q
+by
   mutual_induction h, h
   case Unit => intro h; cases h; rfl
   case Sum ihA ihB =>
@@ -96,12 +93,8 @@ theorem determinism :
   case Prod ihA ihB =>
     intro h; cases h with | Prod hA hB => rw [ihA hA, ihB hB]
 
-def 𝒱.det : ∀ {A P Q}, ⟦ A ⟧ᵛ ↘ P → ⟦ A ⟧ᵛ ↘ Q → P = Q := determinism.left
-def 𝒞.det : ∀ {B P Q}, ⟦ B ⟧ᶜ ↘ P → ⟦ B ⟧ᶜ ↘ Q → P = Q := determinism.right
-
 theorem 𝒞.closure {B P} {m n : Com} (h : ⟦ B ⟧ᶜ ↘ P) (r : m ⤳⋆ n) : P n → P m := by
-  mutual_induction h generalizing m n
-  all_goals intro p
+  mutual_induction h generalizing m n <;> intro p
   case F =>
     match p with
     | .inl ⟨_, r', sne⟩ => exact .inl ⟨_, .trans' r r', sne⟩
@@ -112,38 +105,38 @@ theorem 𝒞.closure {B P} {m n : Com} (h : ⟦ B ⟧ᶜ ↘ P) (r : m ⤳⋆ n)
     | .inl ⟨_, r', sne⟩ => exact .inl ⟨_, .trans' r r', sne⟩
     | .inr ⟨_, _, r', pm, pn⟩ => exact .inr ⟨_, _, .trans' r r', pm, pn⟩
 
-theorem adequacy :
-  (∀ {A P} {v : Val}, ⟦ A ⟧ᵛ ↘ P → (SNeVal v → P v) ∧ (P v → SNVal v)) ∧
-  (∀ {B P} {m : Com}, ⟦ B ⟧ᶜ ↘ P → (SNeCom m → P m) ∧ (P m → SNCom m)) := by
-  refine ⟨λ h ↦ ?val, λ h ↦ ?com⟩
+joint
+  theorem 𝒱.adequacy {A P} {v : Val} (h : ⟦ A ⟧ᵛ ↘ P) : (SNeVal v → P v) ∧ (P v → SNVal v)
+  theorem 𝒞.adequacy {B P} {m : Com} (h : ⟦ B ⟧ᶜ ↘ P) : (SNeCom m → P m) ∧ (P m → SNCom m)
+by
   mutual_induction h, h
   case Unit =>
     refine ⟨λ sne ↦ Or.inl sne, λ sn ↦ ?_⟩
     cases sn
     case inl sne => let ⟨_, e⟩ := sne; subst e; exact .var
     case inr e => subst e; constructor
-  case Sum ihl ihr v =>
+  case Sum ihl ihr =>
     refine ⟨λ sne ↦ Or.inl sne, λ sne ↦ ?_⟩
     match sne with
     | .inl h => let ⟨_, e⟩ := h; subst e; exact .var
     | .inr (.inl ⟨_, e, pv⟩) => subst e; exact .inl (ihl.right pv)
     | .inr (.inr ⟨_, e, qv⟩) => subst e; exact .inr (ihr.right qv)
-  case U ih v =>
+  case U ih =>
     let ⟨sneval, snval⟩ := @ih (force v)
     exact ⟨λ sne ↦ sneval (.force sne),
            λ sn ↦ (snval sn).force_inv⟩
-  case F ih m =>
+  case F ih =>
     refine ⟨λ sne ↦ Or.inl ⟨_, .refl, sne⟩, λ sn ↦ ?_⟩
     match sn with
     | .inl ⟨_, r, sne⟩ => exact r.red (.ne sne)
     | .inr ⟨_, r, pv⟩  => exact r.red (.ret (ih.right pv))
-  case Arr ihv ihm _ =>
+  case Arr ihv ihm =>
     refine ⟨λ sne ↦ ?sne, λ sn ↦ ?sn⟩
-    case sne m =>
+    case sne =>
       exact λ v pv ↦ ihm.left (.app sne (ihv.right pv))
     case sn =>
       exact extensionality (ihm.right (sn (var 0) (ihv.left .var)))
-  case Prod ihm ihn _ =>
+  case Prod ihm ihn =>
     refine ⟨λ sne ↦ ?sne, λ sn ↦ ?sn⟩
     case sne m => exact .inl ⟨_, .refl, sne⟩
     case sn =>
@@ -151,7 +144,7 @@ theorem adequacy :
       | .inl ⟨_, r, sne⟩ => refine r.red (.ne sne)
       | .inr ⟨_, _, r, pm, pn⟩ => exact r.red (.prod (ihm.right pm) (ihn.right pn))
 
-def 𝒱.sneVal {A P v} (h : ⟦ A ⟧ᵛ ↘ P) : SNeVal v → P v := (adequacy.left h).left
-def 𝒞.sneCom {B P m} (h : ⟦ B ⟧ᶜ ↘ P) : SNeCom m → P m := (adequacy.right h).left
-def 𝒱.snVal {A P v} (h : ⟦ A ⟧ᵛ ↘ P) : P v → SNVal v := (adequacy.left h).right
-def 𝒞.snCom {B P m} (h : ⟦ B ⟧ᶜ ↘ P) : P m → SNCom m := (adequacy.right h).right
+def 𝒱.sneVal {A P v} (h : ⟦ A ⟧ᵛ ↘ P) : SNeVal v → P v := h.adequacy.left
+def 𝒞.sneCom {B P m} (h : ⟦ B ⟧ᶜ ↘ P) : SNeCom m → P m := h.adequacy.left
+def 𝒱.snVal {A P v} (h : ⟦ A ⟧ᵛ ↘ P) : P v → SNVal v := h.adequacy.right
+def 𝒞.snCom {B P m} (h : ⟦ B ⟧ᶜ ↘ P) : P m → SNCom m := h.adequacy.right

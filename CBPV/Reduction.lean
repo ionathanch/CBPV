@@ -89,29 +89,23 @@ infix:40 "⤳⋆ᶜ" => StepComs
   on single-step reduction
 ---------------------------------*-/
 
-theorem stepRenaming ξ :
-  (∀ {v w}, v ⤳ᵛ w → renameVal ξ v ⤳ᵛ renameVal ξ w) ∧
-  (∀ {m n}, m ⤳ᶜ n → renameCom ξ m ⤳ᶜ renameCom ξ n) := by
-  refine ⟨λ r ↦ ?val, λ r ↦ ?com⟩
+joint (ξ : Nat → Nat)
+  theorem StepVal.rename {v w} (r : v ⤳ᵛ w) : renameVal ξ v ⤳ᵛ renameVal ξ w
+  theorem StepCom.rename {m n} (r : m ⤳ᶜ n) : renameCom ξ m ⤳ᶜ renameCom ξ n
+by
   mutual_induction r, r generalizing ξ
   all_goals try rw [← renameDist]
   all_goals constructor
   all_goals apply_assumption
 
-def StepVal.rename {v w} ξ := @(stepRenaming ξ).left v w
-def StepCom.rename {m n} ξ := @(stepRenaming ξ).right m n
-
-theorem stepSubstitution σ :
-  (∀ {v w}, v ⤳ᵛ w → v⦃σ⦄ ⤳ᵛ w⦃σ⦄) ∧
-  (∀ {m n}, m ⤳ᶜ n → m⦃σ⦄ ⤳ᶜ n⦃σ⦄) := by
-  refine ⟨λ r ↦ ?val, λ r ↦ ?com⟩
+joint (σ : Nat → Val)
+  theorem StepVal.subst {v w} (r : v ⤳ᵛ w) : v⦃σ⦄ ⤳ᵛ w⦃σ⦄
+  theorem StepCom.subst {m n} (r : m ⤳ᶜ n) : m⦃σ⦄ ⤳ᶜ n⦃σ⦄
+by
   mutual_induction r, r generalizing σ
   all_goals try rw [← substDist]
   all_goals constructor
   all_goals apply_assumption
-
-def StepVal.subst {v w} σ := @(stepSubstitution σ).left v w
-def StepCom.subst {m n} σ := @(stepSubstitution σ).right m n
 
 /-*-----------------------------------------
   Congruence rules on multi-step reduction
@@ -243,10 +237,10 @@ theorem StepVals.lift {σ τ} (h : ∀ x, σ x ⤳⋆ᵛ τ x) : ∀ x, (⇑ σ)
   case zero => exact .refl
   case succ n => exact .rename Nat.succ (h n)
 
-theorem stepReplace {σ τ} (h : ∀ x, σ x ⤳⋆ᵛ τ x):
-  (∀ {v}, v⦃σ⦄ ⤳⋆ᵛ v⦃τ⦄) ∧
-  (∀ {m}, m⦃σ⦄ ⤳⋆ᶜ m⦃τ⦄) := by
-  refine ⟨λ {v} ↦ ?val, λ {m} ↦ ?com⟩
+joint {σ τ : Nat → Val} (h : ∀ x, σ x ⤳⋆ᵛ τ x)
+  private theorem StepVal.replace' {v} : v⦃σ⦄ ⤳⋆ᵛ v⦃τ⦄
+  private theorem StepCom.replace' {m} : m⦃σ⦄ ⤳⋆ᶜ m⦃τ⦄
+by
   mutual_induction v, m generalizing σ τ
   case var => apply h
   case unit => exact .refl
@@ -264,7 +258,7 @@ theorem stepReplace {σ τ} (h : ∀ x, σ x ⤳⋆ᵛ τ x):
   case snd ih => exact .snd (ih h)
 
 theorem StepVal.replace {m : Com} {v w : Val} (r : v ⤳ᵛ w) : m⦃v⦄ ⤳⋆ᶜ m⦃w⦄ := by
-  refine @(stepReplace ?ext).right m
+  refine StepCom.replace' ?ext (m := m)
   intro n; cases n
   case zero => exact .once r
   case succ => simp; exact .refl

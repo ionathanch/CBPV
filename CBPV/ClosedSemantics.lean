@@ -83,10 +83,10 @@ notation:40 Γ:41 "⊨" m:41 "∶" B:41 => semCom Γ m B
   of syntactic typing wrt semantic typing
 ----------------------------------------*-/
 
-theorem soundness {Γ} :
-  (∀ (v : Val) A, Γ ⊢ v ∶ A → Γ ⊨ v ∶ A) ∧
-  (∀ (m : Com) B, Γ ⊢ m ∶ B → Γ ⊨ m ∶ B) := by
-  refine ⟨λ v A h ↦ ?val, λ m B h ↦ ?com⟩
+joint {Γ : Ctxt}
+  theorem soundVal {v} {A : ValType} (h : Γ ⊢ v ∶ A) : Γ ⊨ v ∶ A
+  theorem soundCom {m} {B : ComType} (h : Γ ⊢ m ∶ B) : Γ ⊨ m ∶ B
+by
   mutual_induction h, h
   all_goals intro σ hσ
   case var mem => exact hσ mem
@@ -143,16 +143,13 @@ theorem soundness {Γ} :
 
 -- If a computation does not step, then it is in normal form
 theorem normal {m B} (nr : ∀ {n}, ¬ m ⇒ n) (h : ⬝ ⊢ m ∶ B) : nf m := by
-  let ⟨_, soundCom⟩ := soundness (Γ := ⬝)
-  let mB := soundCom m B h
-  simp [ℰ] at mB
-  let ⟨_, ⟨r, nfm⟩, _⟩ := mB var semCtxtNil
-  rw [substComId] at r
+  let hB := soundCom h var semCtxtNil
+  rw [substComId] at hB; simp [ℰ] at hB
+  let ⟨_, ⟨r, nfm⟩, _⟩ := hB
   cases r with | refl => exact nfm | trans r _ => cases nr r
 
 -- Type safety: computations are strongly normalizing
 theorem safety {m : Com} {B : ComType} (h : ⬝ ⊢ m ∶ B) : SN m := by
-  let ⟨_, soundCom⟩ := soundness (Γ := ⬝)
-  let hB := soundCom m B h var semCtxtNil
+  let hB := soundCom h var semCtxtNil
   rw [substComId] at hB; simp [ℰ] at hB
   let ⟨_, nfm, _⟩ := hB; exact nfm.sn

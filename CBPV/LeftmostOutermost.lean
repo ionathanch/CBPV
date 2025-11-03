@@ -103,56 +103,52 @@ infix:40 "⤳⋆ᶜ" => RedComs
   * Reduction is deterministic
 --------------------------------------------*-/
 
-theorem normality :
-  (∀ {m n}, NeCom m → m ⤳ᶜ n → False) ∧
-  (∀ {v w}, NfVal v → v ⤳ᵛ w → False) ∧
-  (∀ {m n}, NfCom m → m ⤳ᶜ n → False) := by
-  refine ⟨λ nem r ↦ ?necom, λ nfv r ↦ ?nfval, λ nfm r ↦ ?nfcom⟩
+joint
+  theorem NeCom.normality {m n} (nem : NeCom m) (r : m ⤳ᶜ n) : False
+  theorem NfVal.normality {v w} (nfv : NfVal v) (r : v ⤳ᵛ w) : False
+  theorem NfCom.normality {m n} (nfm : NfCom m) (r : m ⤳ᶜ n) : False
+by
   mutual_induction nem, nfv, nfm
-  case ne ih _ => exact ih r
+  case ne ih => exact ih r
   case force | var | unit => cases r
-  case inl ih _ | inr ih _ | thunk ih _ | lam ih _ | ret ih _ =>
+  case inl ih | inr ih | thunk ih | lam ih | ret ih =>
     cases r; rename_i r; exact ih r
-  case app ihm ihv _ =>
+  case app ihm ihv =>
     cases r
     case β nelam => cases nelam
     case app₁ r => exact ihm r
     case app₂ r => exact ihv r
-  case letin ihm ihn _ =>
+  case letin ihm ihn =>
     cases r
     case ζ neret => cases neret
     case letin₁ r => exact ihm r
     case letin₂ r => exact ihn r
-  case case ihm ihn _ =>
+  case case ihm ihn =>
     cases r
     case case₀ r => cases r
     case case₁ r => exact ihm r
     case case₂ r => exact ihn r
-  case fst neprod _ _ =>
+  case fst neprod _ =>
     cases r
     case π1 => cases neprod
     case fst ih _ _ r => exact ih r
-  case snd neprod _ _ =>
+  case snd neprod _ =>
     cases r
     case π2 => cases neprod
     case snd ih _ _ r => exact ih r
-  case prod ihm ihn _ =>
+  case prod ihm ihn =>
     cases r
     case prod₁ r => exact ihm r
     case prod₂ r => exact ihn r
 
-def NeCom.normality {m n} := @_root_.normality.left m n
-def NfVal.normality {v w} := @_root_.normality.right.left v w
-def NfCom.normality {m n} := @_root_.normality.right.right m n
-
-theorem determinism :
-  (∀ {v w w'}, v ⤳ᵛ w → v ⤳ᵛ w' → w = w') ∧
-  (∀ {m n n'}, m ⤳ᶜ n → m ⤳ᶜ n' → n = n') := by
-  refine ⟨λ r₁ r₂ ↦ ?val, λ r₁ r₂ ↦ ?com⟩
+joint
+  theorem RedVal.determinism {v w w'} (r₁ : v ⤳ᵛ w) (r₂ : v ⤳ᵛ w') : w = w'
+  theorem RedCom.determinism {m n n'} (r₁ : m ⤳ᶜ n) (r₂ : m ⤳ᶜ n') : n = n'
+by
   mutual_induction r₁, r₁
-  case inl r ih _ => cases r₂ with | _ r₂ => rw [ih r₂]
-  case inr r ih _ => cases r₂ with | _ r₂ => rw [ih r₂]
-  case thunk r ih _ => cases r₂ with | _ r₂ => rw [ih r₂]
+  case inl r ih => cases r₂ with | _ r₂ => rw [ih r₂]
+  case inr r ih => cases r₂ with | _ r₂ => rw [ih r₂]
+  case thunk r ih => cases r₂ with | _ r₂ => rw [ih r₂]
   case π => cases r₂; rfl
   case β =>
     cases r₂
@@ -166,51 +162,51 @@ theorem determinism :
   case ιr => cases r₂; rfl; contradiction
   case π1 => cases r₂; rfl; contradiction
   case π2 => cases r₂; rfl; contradiction
-  case lam ih _ => cases r₂ with | lam r => rw [ih r]
-  case app₁ ih _ =>
+  case lam ih => cases r₂ with | lam r => rw [ih r]
+  case app₁ ih =>
     cases r₂; contradiction
     case app₁ r => rw [ih r]
     case app₂ r _ nem _ => cases nem.normality r
-  case app₂ ih _ =>
+  case app₂ ih =>
     cases r₂; contradiction
     case app₁ nem _ _ _ r => cases nem.normality r
     case app₂ r => rw [ih r]
-  case ret ih _ => cases r₂ with | ret r => rw [ih r]
-  case prod₁ ih _ =>
+  case ret ih => cases r₂ with | ret r => rw [ih r]
+  case prod₁ ih =>
     cases r₂
     case prod₁ r => rw [ih r]
     case prod₂ r _ nfm _ => cases nfm.normality r
-  case prod₂ ih _ =>
+  case prod₂ ih =>
     cases r₂
     case prod₁ nfm _ _ r => cases nfm.normality r
     case prod₂ r => rw [ih r]
-  case letin₁ ih _ =>
+  case letin₁ ih =>
     cases r₂; contradiction
     case letin₁ r => rw [ih r]
     case letin₂ r _ nem _ => cases nem.normality r
-  case letin₂ ih _ =>
+  case letin₂ ih =>
     cases r₂; contradiction
     case letin₁ nem _ _ _ r => cases nem.normality r
     case letin₂ r => rw [ih r]
-  case case₀ ih _ =>
+  case case₀ ih =>
     cases r₂; contradiction; contradiction
     case case₀ r => rw [ih r]
     case case₁ r _ => cases r
     case case₂ r _ _ => cases r
-  case case₁ ih _ =>
+  case case₁ ih =>
     cases r₂
     case case₀ r => cases r
     case case₁ r => rw [ih r]
     case case₂ r _ nfm _ => cases nfm.normality r
-  case case₂ ih _ =>
+  case case₂ ih =>
     cases r₂
     case case₀ r => cases r
     case case₁ nfm _ _ r => cases nfm.normality r
     case case₂ r => rw [ih r]
-  case fst ih _ =>
+  case fst ih =>
     cases r₂; contradiction
     case fst r => rw [ih r]
-  case snd ih _ =>
+  case snd ih =>
     cases r₂; contradiction
     case snd r => rw [ih r]
 
@@ -329,70 +325,70 @@ theorem RedComs.snd {m m'} (np : NotLamRetProd m') (r : m ⤳⋆ᶜ m') : snd m 
 theorem SR.NotLamRetProd {m n} (r : m ⤳ n) : NotLamRetProd m := by
   mutual_induction r <;> simp
 
-theorem normalization :
-  (∀ {m}, SNeCom m → ∃ n, m ⤳⋆ᶜ n ∧ NeCom n) ∧
-  (∀ {v}, SNVal v → ∃ w, v ⤳⋆ᵛ w ∧ NfVal w) ∧
-  (∀ {m}, SNCom m → ∃ n, m ⤳⋆ᶜ n ∧ NfCom n) ∧
-  (∀ {m n}, m ⤳ n → m ⤳ᶜ n) := by
-  refine ⟨λ sne ↦ ?snecom, λ sn ↦ ?snval, λ sn ↦ ?sncom, λ r ↦ ?srcom⟩
+joint
+  theorem SNeCom.normalization {m} (sne : SNeCom m) : ∃ n, m ⤳⋆ᶜ n ∧ NeCom n
+  theorem SNVal.normalization {v} (sn : SNVal v) : ∃ w, v ⤳⋆ᵛ w ∧ NfVal w
+  theorem SNCom.normalization {m} (sn : SNCom m) : ∃ n, m ⤳⋆ᶜ n ∧ NfCom n
+  theorem SR.normalization {m n} (r : m ⤳ n) : m ⤳ᶜ n
+by
   mutual_induction sne, sn, sn, r
-  case snecom.force snev =>
+  case force snev =>
     let ⟨_, e⟩ := snev; subst e
     exact ⟨_, .refl, .force⟩
-  case snecom.app ihm ihv =>
+  case app ihm ihv =>
     let ⟨_, rm, nem⟩ := ihm
     let ⟨_, rv, nfv⟩ := ihv
     exact ⟨_, Trans.trans (RedComs.app₁ (nem.NotLamRetProd) rm) (RedComs.app₂ nem rv), .app nem nfv⟩
-  case snecom.letin ihm ihn =>
+  case letin ihm ihn =>
     let ⟨_, rm, nem⟩ := ihm
     let ⟨_, rn, nfn⟩ := ihn
     exact ⟨_, Trans.trans (RedComs.letin₁ (nem.NotLamRetProd) rm) (RedComs.letin₂ nem rn), .letin nem nfn⟩
-  case snecom.case snev _ _ ihm ihn =>
+  case case snev _ _ ihm ihn =>
     let ⟨_, e⟩ := snev; subst e
     let ⟨_, rm, nfm⟩ := ihm
     let ⟨_, rn, nfn⟩ := ihn
     exact ⟨_, Trans.trans (RedComs.case₁ rm) (RedComs.case₂ nfm rn), .case nfm nfn⟩
-  case snecom.fst ih =>
+  case fst ih =>
     let ⟨_, rm, nem⟩ := ih
     exact ⟨_, .fst (nem.NotLamRetProd) rm, .fst nem⟩
-  case snecom.snd ih =>
+  case snd ih =>
     let ⟨_, rm, nem⟩ := ih
     exact ⟨_, .snd (nem.NotLamRetProd) rm, .snd nem⟩
-  case snval.var => exact ⟨_, .refl, .var⟩
-  case snval.unit => exact ⟨_, .refl, .unit⟩
-  case snval.inl ih =>
+  case var => exact ⟨_, .refl, .var⟩
+  case unit => exact ⟨_, .refl, .unit⟩
+  case inl ih =>
     let ⟨_, r, nfv⟩ := ih
     exact ⟨_, .inl r, .inl nfv⟩
-  case snval.inr ih =>
+  case inr ih =>
     let ⟨_, r, nfv⟩ := ih
     exact ⟨_, .inr r, .inr nfv⟩
-  case snval.thunk ih =>
+  case thunk ih =>
     let ⟨_, r, nfm⟩ := ih
     exact ⟨_, .thunk r, .thunk nfm⟩
-  case sncom.lam ih =>
+  case lam ih =>
     let ⟨_, r, nfm⟩ := ih
     exact ⟨_, .lam r, .lam nfm⟩
-  case sncom.ret ih =>
+  case ret ih =>
     let ⟨_, r, nfv⟩ := ih
     exact ⟨_, .ret r, .ret nfv⟩
-  case sncom.prod ihm ihn =>
+  case prod ihm ihn =>
     let ⟨_, rm, nfm⟩ := ihm
     let ⟨_, rn, nfn⟩ := ihn
     exact ⟨_, .prod nfm rm rn, .prod nfm nfn⟩
-  case sncom.ne ih =>
+  case ne ih =>
     let ⟨_, r, nfm⟩ := ih
     exact ⟨_, r, .ne nfm⟩
-  case sncom.red r ih =>
+  case red r ih =>
     let ⟨_, r', nfn⟩ := ih
     exact ⟨_, .trans r r', nfn⟩
-  case srcom.π => exact .π
-  case srcom.β => exact .β
-  case srcom.ζ => exact .ζ
-  case srcom.ι1 => exact .ιl
-  case srcom.ι2 => exact .ιr
-  case srcom.π1 => exact .π1
-  case srcom.π2 => exact .π2
-  case srcom.app sr r => exact .app₁ sr.NotLamRetProd r
-  case srcom.letin sr r => exact .letin₁ sr.NotLamRetProd r
-  case srcom.fst sr r => exact .fst sr.NotLamRetProd r
-  case srcom.snd sr r => exact .snd sr.NotLamRetProd r
+  case π => exact .π
+  case β => exact .β
+  case ζ => exact .ζ
+  case ι1 => exact .ιl
+  case ι2 => exact .ιr
+  case π1 => exact .π1
+  case π2 => exact .π2
+  case app sr r => exact .app₁ sr.NotLamRetProd r
+  case letin sr r => exact .letin₁ sr.NotLamRetProd r
+  case fst sr r => exact .fst sr.NotLamRetProd r
+  case snd sr r => exact .snd sr.NotLamRetProd r

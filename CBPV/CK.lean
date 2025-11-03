@@ -177,15 +177,12 @@ end
 infix:40 "≡" => EqVal
 infix:40 "≡" => EqCom
 
-theorem reflValCom :
-  (∀ {v : Val}, v ≡ v) ∧
-  (∀ {m : Com}, m ≡ m) := by
-  refine ⟨λ {v} ↦ ?val, λ {m} ↦ ?com⟩
+joint
+  @[refl] theorem EqVal.refl {v : Val} : v ≡ v
+  @[refl] theorem EqCom.refl {m : Com} : m ≡ m
+by
   mutual_induction v, m
   all_goals constructor <;> assumption
-
-@[refl] theorem EqVal.refl : ∀ {v : Val}, v ≡ v := reflValCom.left
-@[refl] theorem EqCom.refl : ∀ {m : Com}, m ≡ m := reflValCom.right
 
 instance : Trans EqCom EqCom EqCom where
   trans := .trans

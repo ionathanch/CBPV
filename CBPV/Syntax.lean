@@ -1,4 +1,5 @@
 import MutualInduction
+import Joint
 
 open Nat
 
@@ -115,45 +116,36 @@ def renameCom (ξ : Nat → Nat) : Com → Com
 end
 
 -- Renaming extensionality
-theorem renameExt ξ ζ (h : ∀ x, ξ x = ζ x) :
-  (∀ v, renameVal ξ v = renameVal ζ v) ∧
-  (∀ m, renameCom ξ m = renameCom ζ m) := by
-  refine ⟨λ v ↦ ?val, λ m ↦ ?com⟩
+joint (ξ ζ : Nat → Nat) (h : ∀ x, ξ x = ζ x)
+  theorem renameValExt v : renameVal ξ v = renameVal ζ v
+  theorem renameComExt m : renameCom ξ m = renameCom ζ m
+by
   mutual_induction v, m generalizing ξ ζ
   all_goals simp; try repeat' constructor
   all_goals apply_rules [liftExt]
 
-def renameValExt ξ ζ h := (renameExt ξ ζ h).left
-def renameComExt ξ ζ h := (renameExt ξ ζ h).right
-
 -- Applying identity renaming does nothing
-theorem renameId :
-  (∀ v, renameVal id v = v) ∧
-  (∀ m, renameCom id m = m) := by
-  refine ⟨λ v ↦ ?val, λ m ↦ ?com⟩
+joint
+  theorem renameValId v : renameVal id v = v
+  theorem renameComId m : renameCom id m = m
+by
   mutual_induction v, m
   all_goals simp; try repeat' constructor
   all_goals try assumption
   all_goals rw [renameComExt (lift id) id]
   all_goals apply_rules [liftId]
 
-def renameValId := renameId.left
-def renameComId := renameId.right
-
 -- Renamings compose
-theorem renameComp ξ ζ ς (h : ∀ x, (ξ ∘ ζ) x = ς x) :
-  (∀ v, (renameVal ξ ∘ renameVal ζ) v = renameVal ς v) ∧
-  (∀ m, (renameCom ξ ∘ renameCom ζ) m = renameCom ς m) := by
-  refine ⟨λ v ↦ ?val, λ m ↦ ?comp⟩
+joint (ξ ζ ς : Nat → Nat) (h : ∀ x, (ξ ∘ ζ) x = ς x)
+  private theorem renameValComp' v : (renameVal ξ (renameVal ζ v)) = renameVal ς v
+  private theorem renameComComp' m : (renameCom ξ (renameCom ζ m)) = renameCom ς m
+by
   mutual_induction v, m generalizing ξ ζ ς
   all_goals simp; try repeat' constructor
   all_goals apply_rules [liftComp]
 
-def renameValComp ξ ζ v : renameVal ξ (renameVal ζ v) = renameVal (ξ ∘ ζ) v :=
-  (renameComp ξ ζ (ξ ∘ ζ) (λ _ ↦ rfl)).left v
-
-def renameComComp ξ ζ m : renameCom ξ (renameCom ζ m) = renameCom (ξ ∘ ζ) m :=
-  (renameComp ξ ζ (ξ ∘ ζ) (λ _ ↦ rfl)).right m
+def renameValComp ξ ζ := renameValComp' ξ ζ (ξ ∘ ζ) (λ _ ↦ rfl)
+def renameComComp ξ ζ := renameComComp' ξ ζ (ξ ∘ ζ) (λ _ ↦ rfl)
 
 /-*----------------------
   Lifting substitutions
@@ -238,52 +230,49 @@ notation:50 m "⦃" σ "⦄" => substCom σ m
 notation:50 m "⦃" v "⦄" => substCom (v +: var) m
 
 -- Substitution extensionality
-theorem substExt σ τ (h : ∀ x, σ x = τ x) :
-  (∀ v, substVal σ v = substVal τ v) ∧
-  (∀ m, substCom σ m = substCom τ m) := by
-  refine ⟨λ v ↦ ?val, λ m ↦ ?com⟩
+joint (σ τ : Nat → Val) (h : ∀ x, σ x = τ x)
+  theorem substValExt v : substVal σ v = substVal τ v
+  theorem substComExt m : substCom σ m = substCom τ m
+by
   mutual_induction v, m generalizing σ τ
   all_goals simp; try repeat' constructor
   all_goals apply_rules [upExt]
 
-def substValExt σ τ h := (substExt σ τ h).left
-def substComExt σ τ h := (substExt σ τ h).right
-
 -- Applying var "substitution" does nothing
-theorem substId σ (h : ∀ x, σ x = var x) :
-  (∀ v, substVal σ v = v) ∧
-  (∀ m, substCom σ m = m) := by
-  refine ⟨λ v ↦ ?val, λ m ↦ ?com⟩
+joint (σ : Nat → Val) (h : ∀ x, σ x = var x)
+  private theorem substValId' v : substVal σ v = v
+  private theorem substComId' m : substCom σ m = m
+by
   mutual_induction v, m generalizing σ
   all_goals simp; try repeat' constructor
   all_goals apply_rules [upId]
 
-def substValId := (substId var (λ _ ↦ rfl)).left
-def substComId := (substId var (λ _ ↦ rfl)).right
+def substValId := substValId' var (λ _ ↦ rfl)
+def substComId := substComId' var (λ _ ↦ rfl)
 
 -- Substitution/renaming compositionality
-theorem substRename ξ σ τ (h : ∀ x, (σ ∘ ξ) x = τ x) :
-  (∀ v, substVal σ (renameVal ξ v) = substVal τ v) ∧
-  (∀ m, substCom σ (renameCom ξ m) = substCom τ m) := by
-  refine ⟨λ v ↦ ?val, λ m ↦ ?com⟩
+joint (ξ : Nat → Nat) (σ τ : Nat → Val) (h : ∀ x, (σ ∘ ξ) x = τ x)
+  private theorem substRenameVal' v : substVal σ (renameVal ξ v) = substVal τ v
+  private theorem substRenameCom' m : substCom σ (renameCom ξ m) = substCom τ m
+by
   mutual_induction v, m generalizing ξ σ τ
   all_goals simp; try repeat' constructor
   all_goals apply_rules [upLift]
 
-def substRenameVal ξ σ := (substRename ξ σ (σ ∘ ξ) (λ _ ↦ rfl)).left
-def substRenameCom ξ σ := (substRename ξ σ (σ ∘ ξ) (λ _ ↦ rfl)).right
+def substRenameVal ξ σ := substRenameVal' ξ σ (σ ∘ ξ) (λ _ ↦ rfl)
+def substRenameCom ξ σ := substRenameCom' ξ σ (σ ∘ ξ) (λ _ ↦ rfl)
 
 -- Renaming/substitution compositionality
-theorem renameSubst ξ σ τ (h : ∀ x, (renameVal ξ ∘ σ) x = τ x) :
-  (∀ v, renameVal ξ (substVal σ v) = substVal τ v) ∧
-  (∀ m, renameCom ξ (substCom σ m) = substCom τ m) := by
-  refine ⟨λ v ↦ ?val, λ m ↦ ?com⟩
+joint (ξ : Nat → Nat) (σ τ : Nat → Val) (h : ∀ x, (renameVal ξ ∘ σ) x = τ x)
+  private theorem renameSubstVal' v : renameVal ξ (substVal σ v) = substVal τ v
+  private theorem renameSubstCom' m : renameCom ξ (substCom σ m) = substCom τ m
+by
   mutual_induction v, m generalizing ξ σ τ
   all_goals simp; try repeat' constructor
   all_goals apply_rules [upRename]
 
-def renameSubstVal ξ σ := (renameSubst ξ σ (renameVal ξ ∘ σ) (λ _ ↦ rfl)).left
-def renameSubstCom ξ σ := (renameSubst ξ σ (renameVal ξ ∘ σ) (λ _ ↦ rfl)).right
+def renameSubstVal ξ σ := renameSubstVal' ξ σ (renameVal ξ ∘ σ) (λ _ ↦ rfl)
+def renameSubstCom ξ σ := renameSubstCom' ξ σ (renameVal ξ ∘ σ) (λ _ ↦ rfl)
 
 -- Lifting commutes with substitution
 theorem upSubst ρ σ τ (h : ∀ x, (substVal ρ ∘ σ) x = τ x) :
@@ -298,28 +287,25 @@ theorem upSubst ρ σ τ (h : ∀ x, (substVal ρ ∘ σ) x = τ x) :
     _ = renameVal succ (τ n)                := by rw [← h]; rfl
 
 -- Substitution compositionality
-theorem substComp ρ σ τ (h : ∀ x, (substVal ρ ∘ σ) x = τ x) :
-  (∀ v, (substVal ρ ∘ substVal σ) v = substVal τ v) ∧
-  (∀ m, (substCom ρ ∘ substCom σ) m = substCom τ m) := by
-  refine ⟨λ v ↦ ?val, λ m ↦ ?com⟩
+joint (ρ σ τ : Nat → Val) (h : ∀ x, (substVal ρ ∘ σ) x = τ x)
+  private theorem substValComp' v : (substVal ρ ∘ substVal σ) v = substVal τ v
+  private theorem substComComp' m : (substCom ρ ∘ substCom σ) m = substCom τ m
+by
   mutual_induction v, m generalizing ρ σ τ
   all_goals simp; try repeat' constructor
   all_goals apply_rules [upSubst]
 
-def substValComp ρ σ := (substComp ρ σ (substVal ρ ∘ σ) (λ _ ↦ rfl)).left
-def substComComp ρ σ := (substComp ρ σ (substVal ρ ∘ σ) (λ _ ↦ rfl)).right
+def substValComp ρ σ := substValComp' ρ σ (substVal ρ ∘ σ) (λ _ ↦ rfl)
+def substComComp ρ σ := substComComp' ρ σ (substVal ρ ∘ σ) (λ _ ↦ rfl)
 
-theorem renameToSubst ξ :
-  (∀ v, renameVal ξ v = substVal (var ∘ ξ) v) ∧
-  (∀ m, renameCom ξ m = substCom (var ∘ ξ) m) := by
-  refine ⟨λ v ↦ ?val, λ m ↦ ?com⟩
+joint (ξ : Nat → Nat)
+  theorem renameToSubstVal v : renameVal ξ v = substVal (var ∘ ξ) v
+  theorem renameToSubstCom m : renameCom ξ m = substCom (var ∘ ξ) m
+by
   mutual_induction v, m generalizing ξ
   all_goals simp <;> try repeat' constructor
   all_goals try rw [← substComExt _ _ (upVar ξ)]
   all_goals apply_rules
-
-def renameToSubstVal ξ := (renameToSubst ξ).left
-def renameToSubstCom ξ := (renameToSubst ξ).right
 
 /-*-------------------------------------------------
   Handy dandy derived renaming substitution lemmas

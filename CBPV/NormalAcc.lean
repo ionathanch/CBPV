@@ -385,17 +385,14 @@ theorem StepSN.closure {m n} (r : m ⤳ⁿ n) (snn : StepCom.SN n) : StepCom.SN 
   | snd m => NeCom m
   | _ => False
 
-theorem preservation :
-  (∀ {v w}, v ⤳ᵛ w → NeVal v → NeVal w) ∧
-  (∀ {m n}, m ⤳ᶜ n → NeCom m → NeCom n) := by
-  refine ⟨λ r ↦ ?neval, λ r ↦ ?necom⟩
+joint
+  theorem StepVal.preservation {v w} (r : v ⤳ᵛ w) : NeVal v → NeVal w
+  theorem StepCom.preservation {m n} (r : m ⤳ᶜ n) : NeCom m → NeCom n
+by
   mutual_induction r, r
   all_goals intro ne; try simp at *
-  case necom.force ih | necom.case ih => let ⟨x, e⟩ := ne; exact ih x e
+  case force ih | case ih => let ⟨x, e⟩ := ne; exact ih x e
   all_goals apply_rules
-
-def StepVal.preservation {v w} := @_root_.preservation.left  v w
-def StepCom.preservation {m n} := @_root_.preservation.right m n
 
 /-*---------------------------
   Congruence rules on SN/SNe

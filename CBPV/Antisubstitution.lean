@@ -6,78 +6,78 @@ open ValType ComType Val Com
   Antisubstitution
 -----------------*-/
 
-theorem antisubstitution {σ} :
-  (∀ {m}, SNeCom (substCom σ m) → SNeCom m) ∧
-  (∀ {v}, SNVal  (substVal σ v) → SNVal v)  ∧
-  (∀ {m}, SNCom  (substCom σ m) → SNCom m)  ∧
-  (∀ {m n}, substCom σ m ⤳ n → (∃ n', n = substCom σ n' ∧ m ⤳ n') ∨ SNeCom m) := by
-  refine ⟨λ snem ↦ ?snecom, λ snv ↦ ?snval, λ snm ↦ ?sncom, λ r ↦ ?srcom⟩
-  case' srcom  => generalize e : substCom σ _ = m' at r
-  case' sncom  => generalize e : substCom σ _ = m' at snm
-  case' snval  => generalize e : substVal σ _ = v' at snv
-  case' snecom => generalize e : substCom σ _ = m' at snem
+joint {σ : Nat → Val}
+  theorem SNeCom.antisubstitution {m} (snem : SNeCom (substCom σ m)) : SNeCom m
+  theorem SNVal.antisubstitution {v} (snv : SNVal  (substVal σ v)) : SNVal v
+  theorem SNCom.antisubstitution {m} (snm : SNCom  (substCom σ m)) : SNCom m
+  theorem SR.antisubstitution {m n} (r : substCom σ m ⤳ n) : (∃ n', n = substCom σ n' ∧ m ⤳ n') ∨ SNeCom m
+by
+  case' SR     => generalize e : substCom σ _ = m' at r
+  case' SNCom  => generalize e : substCom σ _ = m' at snm
+  case' SNVal  => generalize e : substVal σ _ = v' at snv
+  case' SNeCom => generalize e : substCom σ _ = m' at snem
   mutual_induction snem, snv, snm, r generalizing σ
-  case snecom.force ih m =>
+  case force ih =>
     cases m <;> try contradiction
     injection e with e
     case force v =>
     let ⟨_, e⟩ := ih; subst e
     cases v <;> try contradiction
     exact .force .var
-  case snecom.app ihm ihv m =>
+  case app ihm ihv =>
     cases m <;> try contradiction
     injection e with em ev
     exact .app (ihm em) (ihv ev)
-  case snecom.letin ihm ihn m =>
+  case letin ihm ihn =>
     cases m <;> try contradiction
     injection e with em en
     exact .letin (ihm em) (ihn en)
-  case snecom.case snev _ ihv ihm ihn m =>
+  case case snev _ ihv ihm ihn =>
     cases m <;> try contradiction
     injection e with ev em en
     case case v _ _ =>
     let ⟨_, e⟩ := snev; subst e
     cases v <;> try contradiction
     exact .case .var (ihm em) (ihn en)
-  case snval.var v =>
+  case var =>
     cases v <;> try contradiction
     exact .var
-  case snval.unit v =>
+  case unit =>
     cases v <;> try injection e
     all_goals repeat constructor
-  case snval.inl ih v =>
+  case inl ih =>
     cases v <;> try contradiction
     case var => exact .var
     case inl =>
     injection e with e
     exact .inl (ih e)
-  case snval.inr ih v =>
+  case inr ih =>
     cases v <;> try contradiction
     case var => exact .var
     case inr =>
     injection e with e
     exact .inr (ih e)
-  case snval.thunk ih v =>
+  case thunk ih =>
     cases v <;> try contradiction
     case var => exact .var
     case thunk =>
     injection e with e
     exact .thunk (ih e)
-  case sncom.lam ih m =>
+  case lam ih =>
     cases m <;> try contradiction
     injection e with e
     exact .lam (ih e)
-  case sncom.ret ih m =>
+  case ret ih =>
     cases m <;> try contradiction
     injection e with e
     exact .ret (ih e)
-  case sncom.ne ih _ => exact .ne (ih e)
-  case sncom.red ihr ihm _ =>
+  case ne ih => exact .ne (ih e)
+  case red ihr ihm =>
     match ihr e with
     | .inl ⟨_, e, r⟩ =>
       exact .red r (ihm (Eq.symm e))
     | .inr snem => exact .ne snem
-  case srcom.π ih m =>
+  case π ih =>
     cases m <;> try contradiction
     injection e with e
     case force v =>
@@ -86,7 +86,7 @@ theorem antisubstitution {σ} :
     case thunk =>
     injection e with e
     exact .inl ⟨_, Eq.symm e, .π⟩
-  case srcom.β ih m =>
+  case β ih =>
     cases m <;> try contradiction
     injection e with em ev
     case app m _ =>
@@ -94,7 +94,7 @@ theorem antisubstitution {σ} :
     injection em with em
     subst ev em; rw [substDist]
     exact .inl ⟨_, rfl, .β (ih rfl)⟩
-  case srcom.ζ ih m =>
+  case ζ ih =>
     cases m <;> try contradiction
     injection e with ev em
     case letin m _ =>
@@ -102,7 +102,7 @@ theorem antisubstitution {σ} :
     injection ev with ev
     subst ev em; rw [substDist]
     exact .inl ⟨_, rfl, .ζ (ih rfl)⟩
-  case srcom.ι1 ihv ihn m =>
+  case ι1 ihv ihn =>
     cases m <;> try contradiction
     injection e with ev em en
     case case v _ _ =>
@@ -112,7 +112,7 @@ theorem antisubstitution {σ} :
     injection ev with ev
     subst ev em en; rw [substDist]
     exact .inl ⟨_, rfl, .ι1 (ihv rfl) (ihn rfl)⟩
-  case srcom.ι2 ihv ihm m =>
+  case ι2 ihv ihm =>
     cases m <;> try contradiction
     injection e with ev em en
     case case v _ _ =>
@@ -122,7 +122,7 @@ theorem antisubstitution {σ} :
     injection ev with ev
     subst ev em en; rw [substDist]
     exact .inl ⟨_, rfl, .ι2 (ihv rfl) (ihm rfl)⟩
-  case srcom.app ihv ihm m =>
+  case app ihv ihm =>
     cases m <;> try contradiction
     injection e with em ev
     match ihm em with
@@ -130,7 +130,7 @@ theorem antisubstitution {σ} :
       subst em ev
       exact .inl ⟨.app _ _, rfl, .app r⟩
     | .inr snem => exact .inr (.app snem sorry)
-  case srcom.letin ihn ihm m =>
+  case letin ihn ihm =>
     cases m <;> try contradiction
     injection e with em en
     match ihm em with
@@ -139,9 +139,6 @@ theorem antisubstitution {σ} :
       exact .inl ⟨.letin _ _, rfl, .letin r⟩
     | .inr snem => exact .inr (.letin snem sorry)
   all_goals sorry
-
-theorem SNCom.antisubstitution {m} {v : Val} (h : SNCom (m⦃v⦄)) : SNCom m :=
-  _root_.antisubstitution.right.right.left h
 
 /-*-----------------------------------------------
   Inversion lemmas depending on antisubstitution
