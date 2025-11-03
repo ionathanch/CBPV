@@ -46,22 +46,14 @@ all reduction paths are normalizing.
   implies strong normalization (inductive)
   implies strong normalization (traditional).
 
-Another goal is to show the correctness of an ANF translation of CBPV,
-which requires showing its semantic equivalence.
-* Equivalence: A logical equivalence between closed terms of a type
-  with respect to evaluation of closed commands.
-* Commutation: Various proofs that commands commute with configurations
-  with respect to logical equivalence.
-* ANF: The ANF translation into CBPV with commands and configurations,
-  validity and type preservation proofs,
-  and proving that A-normalized terms are logically equivalent to themselves.
-
 Remaining proof files show interesting properties of CBPV.
 
 * LeftmostOutermost.lean: A deterministic single-step reduction semantics
   based on strong reduction, proven to step to normal forms.
 * ClosedSemantics.lean: A logical relations proof that closed, well-typed terms
   are strongly normalizing with respect to evaluation.
+* Equivalence.lean: A logical equivalence between closed terms of a type
+  with respect to evaluation (subsumes the unary logical relation).
 * CBV.lean, CBN.lean: Translations from STLC with fine-grained CBV and CBN semantics,
   along with proofs that they preserve well-typedness and CK machine semantics.
 * Antisubstitution.lean (fails checking): An unused substitution lemma,
@@ -79,8 +71,8 @@ Evaluation    Typing    NormalInd    Reduction
   │         CBN │  │    │                │
   ╽             ╽  ╽    ╽                ╽
   ClosedSemantics  Soundness         NormalAcc
-  Equivalence ─╮          │           │
-  Commutation ─┴─╼ ANF    ╽           ╽
+  Equivalence             │           │
+                          ╽           ╽
                           Normalization
 ```
 

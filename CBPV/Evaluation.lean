@@ -38,7 +38,7 @@ end
 infix:40 "⇒" => Eval
 
 -- Single-step evaluation is deterministic
-theorem evalDet {m n₁ n₂} (r₁ : m ⇒ n₁) (r₂ : m ⇒ n₂) : n₁ = n₂ := by
+theorem Eval.det {m n₁ n₂} (r₁ : m ⇒ n₁) (r₂ : m ⇒ n₂) : n₁ = n₂ := by
   induction r₁ generalizing n₂
   all_goals cases r₂; try rfl
   case fst.fst ih _ r | snd.snd ih _ r => rw [ih r]
@@ -52,52 +52,47 @@ theorem evalDet {m n₁ n₂} (r₁ : m ⇒ n₁) (r₂ : m ⇒ n₂) : n₁ = n
 @[reducible] def Evals := RTC Eval
 infix:40 "⇒⋆" => Evals
 
-theorem Evals.app {m n v} (r : m ⇒⋆ n) : app m v ⇒⋆ app n v := by
+namespace Evals
+
+theorem app {m n v} (r : m ⇒⋆ n) : app m v ⇒⋆ app n v := by
   induction r
   case refl => exact .refl
   case trans r _ ih => exact .trans (.app r) ih
 
-theorem Evals.let {m m' n} (r : m ⇒⋆ m') : letin m n ⇒⋆ letin m' n := by
+theorem letin {m m' n} (r : m ⇒⋆ m') : letin m n ⇒⋆ letin m' n := by
   induction r
   case refl => exact .refl
   case trans r _ ih => exact .trans (.letin r) ih
 
-theorem Evals.fst {m m'} (r : m ⇒⋆ m') : fst m ⇒⋆ fst m' := by
+theorem fst {m m'} (r : m ⇒⋆ m') : fst m ⇒⋆ fst m' := by
   induction r
   case refl => exact .refl
   case trans r _ ih => exact .trans (.fst r) ih
 
-theorem Evals.snd {m m'} (r : m ⇒⋆ m') : snd m ⇒⋆ snd m' := by
+theorem snd {m m'} (r : m ⇒⋆ m') : snd m ⇒⋆ snd m' := by
   induction r
   case refl => exact .refl
   case trans r _ ih => exact .trans (.snd r) ih
 
-theorem Evals.ret_inv {v m} (r : ret v ⇒⋆ m) : ret v = m := by
+theorem ret_inv {v m} (r : ret v ⇒⋆ m) : ret v = m := by
   generalize e : ret v = n at r
   induction r generalizing v <;> subst e
   case refl => rfl
   case trans r => cases r
 
-theorem Evals.lam_inv {m n} (r : lam m ⇒⋆ n) : lam m = n := by
+theorem lam_inv {m n} (r : lam m ⇒⋆ n) : lam m = n := by
   generalize e : lam m = m' at r
   induction r generalizing m <;> subst e
   case refl => rfl
   case trans r => cases r
 
-theorem Evals.prod_inv {m₁ m₂ n} (r : prod m₁ m₂ ⇒⋆ n) : prod m₁ m₂ = n := by
+theorem prod_inv {m₁ m₂ n} (r : prod m₁ m₂ ⇒⋆ n) : prod m₁ m₂ = n := by
   generalize e : prod m₁ m₂ = m at r
   induction r generalizing m₁ m₂ <;> subst e
   case refl => rfl
   case trans r => cases r
 
--- Multi-step reduction is confluent trivially by determinism
-theorem confluence {m n₁ n₂} (r₁ : m ⇒⋆ n₁) (r₂ : m ⇒⋆ n₂) : ∃ m', n₁ ⇒⋆ m' ∧ n₂ ⇒⋆ m' := by
-  induction r₁ generalizing n₂
-  case refl => exact ⟨n₂, r₂, .refl⟩
-  case trans r₁ rs₁ ih =>
-    cases r₂
-    case refl => exact ⟨_, .refl, .trans r₁ rs₁⟩
-    case trans r₂ rs₂ => rw [evalDet r₁ r₂] at *; exact ih rs₂
+end Evals
 
 /-*----------------------------
   Normal forms and evaluation
@@ -120,15 +115,26 @@ theorem nf.steps {m n} (nfm : nf m) (r : m ⇒⋆ n) : m = n := by
 def Norm (m n : Com) := m ⇒⋆ n ∧ nf n
 infix:40 "⇓ₙ" => Norm
 
-@[refl] theorem Norm.refl {m} (nfm : nf m) : m ⇓ₙ m := by exists .refl
+theorem Evals.merge {m₁ m₂ n} (rm : m₁ ⇒⋆ m₂) : m₁ ⇓ₙ n → m₂ ⇒⋆ n
+  | ⟨rn, nfn⟩ => by
+    induction rm generalizing n
+    case refl => assumption
+    case trans r _ ih =>
+      cases rn
+      case refl => cases nfn.stepn't r
+      case trans r' rn => rw [Eval.det r r'] at ih; exact ih rn nfn
 
-theorem Norm.bwd {m m' n} (r : m ⇒⋆ m') : m' ⇓ₙ n → m ⇓ₙ n
+namespace Norm
+
+@[refl] theorem refl {m} (nfm : nf m) : m ⇓ₙ m := by exists .refl
+
+theorem bwds {m m' n} (r : m ⇒⋆ m') : m' ⇓ₙ n → m ⇓ₙ n
   | ⟨rn, nfn⟩ => ⟨.trans' r rn, nfn⟩
 
-theorem Norm.join {m n₁ n₂} : m ⇓ₙ n₁ → m ⇓ₙ n₂ → n₁ = n₂
-  | ⟨rn₁, nfn₁⟩, ⟨rn₂, nfn₂⟩ =>
-    let ⟨n', rn₁', rn₂'⟩ := confluence rn₁ rn₂
-    by rw [nfn₁.steps rn₁', nfn₂.steps rn₂']
+theorem join {m n₁ n₂} : m ⇓ₙ n₁ → m ⇓ₙ n₂ → n₁ = n₂
+  | ⟨rn₁, nfn₁⟩, rn₂ => nfn₁.steps (rn₁.merge rn₂)
+
+end Norm
 
 /-*---------------------
   Strong normalization
@@ -137,10 +143,8 @@ theorem Norm.join {m n₁ n₂} : m ⇓ₙ n₁ → m ⇓ₙ n₂ → n₁ = n�
 inductive SN : Com → Prop where
   | sn : ∀ m, (∀ n, m ⇒ n → SN n) → SN m
 
-theorem SN.nf {m} (nfm : nf m) : SN m := by
-  constructor; intro n r; cases nfm.stepn't r
-
-theorem Evals.sn {m n} (r : m ⇒⋆ n) (nfn : nf n) : SN m := by
-  induction r
-  case refl => exact .nf nfn
-  case trans r _ ih => constructor; intro _ r'; rw [← evalDet r r']; exact ih nfn
+theorem Norm.sn {m n} : m ⇓ₙ n → SN m
+  | ⟨r, nfn⟩ => by
+    induction r
+    case refl => constructor; intro _ r; cases nfn.stepn't r
+    case trans r _ ih => constructor; intro _ r'; rw [← Eval.det r r']; exact ih nfn

@@ -32,6 +32,16 @@ notation:40 "(" v:41 "," w:41 ")" "∈" "⟦" A:41 "⟧ᵛ" => 𝒱 A v w
 notation:40 "(" m:41 "," n:41 ")" "∈" "⟦" B:41 "⟧ᶜ" => 𝒞 B m n
 notation:40 "(" m:41 "," n:41 ")" "∈" "⟦" B:41 "⟧ᵉ" => ℰ B m n
 
+/-* LE computations are normal and embed into LE evaluations *-/
+
+theorem 𝒞.nf {m n B} (h : (m, n) ∈ ⟦B⟧ᶜ) : nf m ∧ nf n := by
+  match (generalizing := true) B with
+  | F _ | Arr _ _ => unfold 𝒞 at h; let ⟨_, _, _, e₁, e₂⟩ := h; simp [e₁, e₂]
+  | .Prod _ _ => unfold 𝒞 at h; let ⟨_, _, _, _, _, _, e₁, e₂⟩ := h; simp [e₁, e₂]
+
+theorem 𝒞ℰ {m n A} (h : (m, n) ∈ ⟦A⟧ᶜ) : ℰ A m n := by
+  unfold ℰ; let ⟨nfm, nfn⟩ := h.nf; exact ⟨m, n, .refl nfm, .refl nfn, h⟩
+
 /-*-------------------------------
   Convenient constructors for LE
 -------------------------------*-/
@@ -39,47 +49,49 @@ notation:40 "(" m:41 "," n:41 ")" "∈" "⟦" B:41 "⟧ᵉ" => ℰ B m n
 theorem 𝒱.unit : 𝒱 Unit unit unit := by simp [𝒱]
 theorem 𝒱.inl {v w A₁ A₂} (h : (v, w) ∈ ⟦A₁⟧ᵛ) : (inl v, inl w) ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [𝒱, h]
 theorem 𝒱.inr {v w A₁ A₂} (h : (v, w) ∈ ⟦A₂⟧ᵛ) : (inr v, inr w) ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [𝒱, h]
+theorem 𝒱.thunk {m n B} (h : (m, n) ∈ ⟦B⟧ᵉ) : (thunk m, thunk n) ∈ ⟦U B⟧ᵛ := by simp [𝒱, h]
 
-theorem 𝒱.thunk {m n B} (h : (m, n) ∈ ⟦B⟧ᵉ) : (thunk m, thunk n) ∈ ⟦U B⟧ᵛ := by
-  unfold 𝒱; exact ⟨_, _, h, rfl, rfl⟩
+namespace ℰ
 
-theorem ℰ.ret {v w A} (h : (v, w) ∈ ⟦A⟧ᵛ) : (ret v, ret w) ∈ ⟦F A⟧ᵉ := by
-  unfold ℰ 𝒞; exact ⟨_, _, .refl ⟨⟩, .refl ⟨⟩, _, _, h, rfl, rfl⟩
+theorem ret {v w A} (h : (v, w) ∈ ⟦A⟧ᵛ) : (ret v, ret w) ∈ ⟦F A⟧ᵉ := by
+  apply 𝒞ℰ; simp [𝒞, h]
 
-theorem ℰ.lam {m n A B} (hB : ∀ v w, (v, w) ∈ ⟦A⟧ᵛ → (m⦃v⦄, n⦃w⦄) ∈ ⟦B⟧ᵉ) : (lam m, lam n) ∈ ⟦Arr A B⟧ᵉ := by
-  unfold ℰ 𝒞; exact ⟨_, _, .refl ⟨⟩, .refl ⟨⟩, _, _, λ _ _ hA ↦ hB _ _ hA, rfl, rfl⟩
+theorem lam {m n A B} (h : ∀ v w, (v, w) ∈ ⟦A⟧ᵛ → (m⦃v⦄, n⦃w⦄) ∈ ⟦B⟧ᵉ) : (lam m, lam n) ∈ ⟦Arr A B⟧ᵉ := by
+  apply 𝒞ℰ; simp [ℰ, 𝒞] at *; exact h
 
-theorem ℰ.prod {m₁ m₂ n₁ n₂ B₁ B₂} (hB₁ : (m₁, n₁) ∈ ⟦B₁⟧ᵉ) (hB₂ : (m₂, n₂) ∈ ⟦B₂⟧ᵉ) : (prod m₁ m₂, prod n₁ n₂) ∈ ⟦Prod B₁ B₂⟧ᵉ:= by
-  unfold ℰ 𝒞; exact ⟨_, _, .refl ⟨⟩, .refl ⟨⟩, _, _, _, _, hB₁, hB₂, rfl, rfl⟩
+theorem prod {m₁ m₂ n₁ n₂ B₁ B₂} (hB₁ : (m₁, n₁) ∈ ⟦B₁⟧ᵉ) (hB₂ : (m₂, n₂) ∈ ⟦B₂⟧ᵉ) : (prod m₁ m₂, prod n₁ n₂) ∈ ⟦Prod B₁ B₂⟧ᵉ:= by
+  apply 𝒞ℰ; unfold 𝒞; exact ⟨_, _, _, _, hB₁, hB₂, rfl, rfl⟩
 
 /-*-----------------------
   Inversion lemmas on LE
 -----------------------*-/
 
-theorem ℰ.ret_inv {m n A} (h : (m, n) ∈ ⟦F A⟧ᵉ) : ∃ v w, m ⇒⋆ .ret v ∧ n ⇒⋆ .ret w ∧ (v, w) ∈ ⟦A⟧ᵛ := by
+theorem ret_inv {m n A} (h : (m, n) ∈ ⟦F A⟧ᵉ) : ∃ v w, m ⇒⋆ Com.ret v ∧ n ⇒⋆ Com.ret w ∧ (v, w) ∈ ⟦A⟧ᵛ := by
   unfold ℰ 𝒞 at h
   let ⟨_, _, ⟨r₁, _⟩, ⟨r₂, _⟩, _, _, h, e₁, e₂⟩ := h
   subst e₁ e₂; exact ⟨_, _, r₁, r₂, h⟩
 
-theorem ℰ.lam_inv {m₁ m₂ A B} (h : (m₁, m₂) ∈ ⟦Arr A B⟧ᵉ) : ∃ n₁ n₂, m₁ ⇒⋆ .lam n₁ ∧ m₂ ⇒⋆ .lam n₂ ∧ (∀ v w, 𝒱 A v w → ℰ B (n₁⦃v⦄) (n₂⦃w⦄)) := by
+theorem lam_inv {m₁ m₂ A B} (h : (m₁, m₂) ∈ ⟦Arr A B⟧ᵉ) : ∃ n₁ n₂, m₁ ⇒⋆ Com.lam n₁ ∧ m₂ ⇒⋆ Com.lam n₂ ∧ (∀ v w, (v, w) ∈ ⟦A⟧ᵛ → (n₁⦃v⦄, n₂⦃w⦄) ∈ ⟦B⟧ᵉ) := by
   unfold ℰ 𝒞 at h
   let ⟨_, _, ⟨r₁, _⟩, ⟨r₂, _⟩, _, _, h, e₁, e₂⟩ := h
   subst e₁ e₂; exact ⟨_, _, r₁, r₂, h⟩
 
-theorem ℰ.prod_inv {m n B₁ B₂} (h : (m, n) ∈ ⟦Prod B₁ B₂⟧ᵉ) : ∃ m₁ m₂ n₁ n₂, m ⇒⋆ .prod m₁ m₂ ∧ n ⇒⋆ .prod n₁ n₂ ∧ (m₁, n₁) ∈ ⟦B₁⟧ᵉ ∧ (m₂, n₂) ∈ ⟦B₂⟧ᵉ := by
+theorem prod_inv {m n B₁ B₂} (h : (m, n) ∈ ⟦Prod B₁ B₂⟧ᵉ) : ∃ m₁ m₂ n₁ n₂, m ⇒⋆ .prod m₁ m₂ ∧ n ⇒⋆ .prod n₁ n₂ ∧ (m₁, n₁) ∈ ⟦B₁⟧ᵉ ∧ (m₂, n₂) ∈ ⟦B₂⟧ᵉ := by
   unfold ℰ 𝒞 at h
   let ⟨_, _, ⟨r₁, _⟩, ⟨r₂, _⟩, _, _, _, _, h₁, h₂, e₁, e₂⟩ := h
   subst e₁ e₂; exact ⟨_, _, _, _, r₁, r₂, h₁, h₂⟩
 
-theorem ℰ.fst {m n B₁ B₂} (h : (m, n) ∈ ⟦Prod B₁ B₂⟧ᵉ) : ∃ m₁ m₂ n₁ n₂, m ⇒⋆ .prod m₁ m₂ ∧ n ⇒⋆ .prod n₁ n₂ ∧ (m₁, n₁) ∈ ⟦B₁⟧ᵉ := by
+theorem fst {m n B₁ B₂} (h : (m, n) ∈ ⟦Prod B₁ B₂⟧ᵉ) : ∃ m₁ m₂ n₁ n₂, m ⇒⋆ .prod m₁ m₂ ∧ n ⇒⋆ .prod n₁ n₂ ∧ (m₁, n₁) ∈ ⟦B₁⟧ᵉ := by
   unfold ℰ 𝒞 at h
   let ⟨_, _, ⟨r₁, _⟩, ⟨r₂, _⟩, _, _, _, _, h, _, e₁, e₂⟩ := h
   subst e₁ e₂; exact ⟨_, _, _, _, r₁, r₂, h⟩
 
-theorem ℰ.snd {m n B₁ B₂} (h : (m, n) ∈ ⟦Prod B₁ B₂⟧ᵉ) : ∃ m₁ m₂ n₁ n₂, m ⇒⋆ .prod m₁ m₂ ∧ n ⇒⋆ .prod n₁ n₂ ∧ (m₂, n₂) ∈ ⟦B₂⟧ᵉ := by
+theorem snd {m n B₁ B₂} (h : (m, n) ∈ ⟦Prod B₁ B₂⟧ᵉ) : ∃ m₁ m₂ n₁ n₂, m ⇒⋆ .prod m₁ m₂ ∧ n ⇒⋆ .prod n₁ n₂ ∧ (m₂, n₂) ∈ ⟦B₂⟧ᵉ := by
   unfold ℰ 𝒞 at h
   let ⟨_, _, ⟨r₁, _⟩, ⟨r₂, _⟩, _, _, _, _, _, h, e₁, e₂⟩ := h
   subst e₁ e₂; exact ⟨_, _, _, _, r₁, r₂, h⟩
+
+end ℰ
 
 /-*------------
   LE is a PER
@@ -131,7 +143,7 @@ theorem trans𝒞ℰ {B} (𝒞trans : ∀ {m₁ m₂ m₃}, (m₁, m₂) ∈ ⟦
   let ⟨m, m', nm, nm', hB₁₂⟩ := h₁₂
   let ⟨n', n, nn', nn, hB₂₃⟩ := h₂₃
   rw [Norm.join nm' nn'] at hB₁₂
-  refine ⟨m, n, nm, nn, 𝒞trans hB₁₂ hB₂₃⟩
+  exact ⟨m, n, nm, nn, 𝒞trans hB₁₂ hB₂₃⟩
 
 theorem trans𝒱𝒞 :
   (∀ {v₁ v₂ v₃ A}, (v₁, v₂) ∈ ⟦A⟧ᵛ → (v₂, v₃) ∈ ⟦A⟧ᵛ → (v₁, v₃) ∈ ⟦A⟧ᵛ) ∧
@@ -184,48 +196,43 @@ def 𝒱.trans := @trans𝒱𝒞.left
 def 𝒞.trans := @trans𝒱𝒞.right
 def ℰ.trans {B} := @trans𝒞ℰ B 𝒞.trans
 
-/-*-------------------------------
-  Other properties of LE:
-  * LE evals are backward closed
-  * Reductions are LE evals
-  * LE comps are normal
-  * LE comps embed into evals
--------------------------------*-/
+/-*-----------------------------
+  LE evals are backward closed
+-----------------------------*-/
 
-theorem ℰ.bwds {m m' n n' B} (rm : m ⇒⋆ m') (rn : n ⇒⋆ n') (h : (m', n') ∈ ⟦B⟧ᵉ) : (m, n) ∈ ⟦B⟧ᵉ := by
+namespace ℰ
+
+theorem bwds {m m' n n' B} (rm : m ⇒⋆ m') (rn : n ⇒⋆ n') (h : (m', n') ∈ ⟦B⟧ᵉ) : (m, n) ∈ ⟦B⟧ᵉ := by
   unfold ℰ at *
-  match h with
-  | ⟨m'', n'', nm', nn', h⟩ =>
-  exact ⟨m'', n'', nm'.bwd rm, nn'.bwd rn, h⟩
+  let ⟨m'', n'', nm', nn', h⟩ := h
+  exact ⟨m'', n'', nm'.bwds rm, nn'.bwds rn, h⟩
 
-theorem ℰ.bwd {m m' n n' B} (rm : m ⇒ m') (rn : n ⇒ n') : (m', n') ∈ ⟦B⟧ᵉ → (m, n) ∈ ⟦B⟧ᵉ := ℰ.bwds (.once rm) (.once rn)
+theorem bwd {m m' n n' B} (rm : m ⇒ m') (rn : n ⇒ n') :
+  (m', n') ∈ ⟦B⟧ᵉ → (m, n) ∈ ⟦B⟧ᵉ := ℰ.bwds (.once rm) (.once rn)
 
-theorem ℰ.red {m n B} (r : m ⇒⋆ n) (h : (n, n) ∈ ⟦B⟧ᵉ) : (m, n) ∈ ⟦B⟧ᵉ := ℰ.bwds r .refl h
-
-theorem 𝒞.nf {m n B} (h : (m, n) ∈ ⟦B⟧ᶜ) : nf m ∧ nf n := by
-  match (generalizing := true) B with
-  | F _ | Arr _ _ => unfold 𝒞 at h; let ⟨_, _, _, e₁, e₂⟩ := h; simp [e₁, e₂]
-  | .Prod _ _ => unfold 𝒞 at h; let ⟨_, _, _, _, _, _, e₁, e₂⟩ := h; simp [e₁, e₂]
-
-theorem 𝒞ℰ {m n A} (h : 𝒞 A m n) : ℰ A m n := by
-  unfold ℰ; let ⟨nfm, nfn⟩ := h.nf; exact ⟨m, n, .refl nfm, .refl nfn, h⟩
+end ℰ
 
 /-*---------------------
   Semantic equivalence
 ---------------------*-/
 
-/-* Semantic equivalence of contexts *-/
+/-* Semantic equivalence of contexts as a PER *-/
 
 def semCtxt Γ (σ τ : Nat → Val) := ∀ {x A}, Γ ∋ x ∶ A → (σ x, τ x) ∈ ⟦ A ⟧ᵛ
 notation:40 Γ:41 "⊨" σ:41 "~" τ:41 => semCtxt Γ σ τ
 
-theorem semCtxt.nil : ⬝ ⊨ var ~ var := by intro _ _ mem; cases mem
-theorem semCtxt.cons {Γ σ τ v w A} (h : (v, w) ∈ ⟦ A ⟧ᵛ) (hστ : Γ ⊨ σ ~ τ) : Γ ∷ A ⊨ v +: σ ~ w +: τ
+namespace semCtxt
+
+theorem nil : ⬝ ⊨ var ~ var := λ mem ↦ by cases mem
+theorem cons {Γ σ τ v w A} (h : (v, w) ∈ ⟦ A ⟧ᵛ) (hστ : Γ ⊨ σ ~ τ) : Γ ∷ A ⊨ v +: σ ~ w +: τ
   | _, _, .here => h
   | _, _, .there mem => hστ mem
 
-theorem semCtxt.rename {ξ σ τ} {Γ Δ : Ctxt} (hξ : Γ ⊢ ξ ∶ Δ) (h : Γ ⊨ σ ~ τ) : Δ ⊨ σ ∘ ξ ~ τ ∘ ξ :=
-  λ mem ↦ h (hξ _ _  mem)
+theorem sym {Γ σ τ} (h : Γ ⊨ σ ~ τ) : Γ ⊨ τ ~ σ := 𝒱.sym ∘ h
+theorem trans {Γ ρ σ τ} (hρσ : Γ ⊨ ρ ~ σ) (hστ : Γ ⊨ σ ~ τ) : Γ ⊨ ρ ~ τ := λ mem ↦ 𝒱.trans (hρσ mem) (hστ mem)
+theorem rename {ξ σ τ} {Γ Δ : Ctxt} (hξ : Γ ⊢ ξ ∶ Δ) (h : Γ ⊨ σ ~ τ) : Δ ⊨ σ ∘ ξ ~ τ ∘ ξ := h ∘ hξ _ _
+
+end semCtxt
 
 /-* Semantic equivalence of values and computations *-/
 
@@ -236,14 +243,11 @@ notation:40 Γ:41 "⊨" m:41 "~" n:41 "∶" B:41 => semCom Γ m n B
 
 /-* Semantic equivalence is a PER *-/
 
-theorem semCtxt.sym {Γ σ τ} (h : Γ ⊨ σ ~ τ) : Γ ⊨ τ ~ σ := λ mem ↦ (h mem).sym
 theorem semVal.sym {Γ v w} {A : ValType} (h : Γ ⊨ v ~ w ∶ A) : Γ ⊨ w ~ v ∶ A :=
   λ _ _ hστ ↦ (h _ _ hστ.sym).sym
 theorem semCom.sym {Γ m n} {B : ComType} (h : Γ ⊨ m ~ n ∶ B) : Γ ⊨ n ~ m ∶ B :=
   λ _ _ hστ ↦ (h _ _ hστ.sym).sym
 
-theorem semCtxt.trans {Γ ρ σ τ} (hρσ : Γ ⊨ ρ ~ σ) (hστ : Γ ⊨ σ ~ τ) : Γ ⊨ ρ ~ τ :=
-  λ mem ↦ 𝒱.trans (hρσ mem) (hστ mem)
 theorem semVal.trans {Γ v₁ v₂ v₃} {A : ValType} (h₁₂ : Γ ⊨ v₁ ~ v₂ ∶ A) (h₂₃ : Γ ⊨ v₂ ~ v₃ ∶ A) : Γ ⊨ v₁ ~ v₃ ∶ A :=
   λ _ _ hστ ↦ by refine 𝒱.trans (h₁₂ _ _ hστ) (h₂₃ _ _ (semCtxt.trans hστ.sym hστ))
 theorem semCom.trans {Γ m₁ m₂ m₃} {B : ComType} (h₁₂ : Γ ⊨ m₁ ~ m₂ ∶ B) (h₂₃ : Γ ⊨ m₂ ~ m₃ ∶ B) : Γ ⊨ m₁ ~ m₃ ∶ B :=
@@ -282,8 +286,8 @@ theorem soundness {Γ} :
     let ⟨v, w, r₁, r₂, hA⟩ := (ihm σ τ hστ).ret_inv
     refine ℰ.bwds ?_ ?_ (ihn (v +: σ) (w +: τ) (semCtxt.cons hA hστ))
     all_goals rw [substUnion]
-    . exact .trans' (Evals.let r₁) (.once .ζ)
-    . exact .trans' (Evals.let r₂) (.once .ζ)
+    . exact .trans' (Evals.letin r₁) (.once .ζ)
+    . exact .trans' (Evals.letin r₂) (.once .ζ)
   case case ihv ihm ihn =>
     simp [𝒱] at ihv
     match ihv σ τ hστ with
@@ -305,3 +309,9 @@ theorem soundness {Γ} :
 
 def soundVal {Γ v} {A : ValType} : Γ ⊢ v ∶ A → Γ ⊨ v ~ v ∶ A := soundness.left v A
 def soundCom {Γ m} {B : ComType} : Γ ⊢ m ∶ B → Γ ⊨ m ~ m ∶ B := soundness.right m B
+
+-- Type safety: computations are strongly normalizing
+theorem safety {m} {B : ComType} (h : ⬝ ⊢ m ∶ B) : SN m := by
+  have hB := soundCom h var var semCtxt.nil
+  rw [substComId] at hB; unfold ℰ at hB
+  let ⟨_, _, nfm, _, _⟩ := hB; exact nfm.sn

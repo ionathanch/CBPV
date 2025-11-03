@@ -26,33 +26,37 @@ notation:40 v:41 "∈" "⟦" A:41 "⟧ᵛ" => 𝒱 A v
 notation:40 m:41 "∈" "⟦" B:41 "⟧ᶜ" => 𝒞 B m
 notation:40 m:41 "∈" "⟦" B:41 "⟧ᵉ" => ℰ B m
 
--- Convenient constructors for the logical relation
-theorem 𝒱.unit : 𝒱 Unit unit := by simp [𝒱]
-theorem 𝒱.inl {v A₁ A₂} (h : 𝒱 A₁ v) : 𝒱 (Sum A₁ A₂) (inl v) := by simp [𝒱]; assumption
-theorem 𝒱.inr {v A₁ A₂} (h : 𝒱 A₂ v) : 𝒱 (Sum A₁ A₂) (inr v) := by simp [𝒱]; assumption
-theorem 𝒱.thunk {m B} (h : ℰ B m) : 𝒱 (U B) (thunk m) := by simp [𝒱]; assumption
-theorem 𝒞.ret {v A} (h : 𝒱 A v) : 𝒞 (F A) (ret v) := by simp [𝒞]; assumption
-theorem 𝒞.lam {n A B} (h : ∀ v, 𝒱 A v → ℰ B (n⦃v⦄)) : 𝒞 (Arr A B) (lam n) := by simp [𝒞]; assumption
-theorem 𝒞.prod {m n B₁ B₂} (hm : ℰ B₁ m) (hn : ℰ B₂ n) : 𝒞 (Prod B₁ B₂) (prod m n) := by simp [𝒞]; constructor <;> assumption
+/-* Semantic computations are normal and embed into semantic evaluations *-/
 
--- Semantic computations are normal
-theorem 𝒞nf {B m} (h : m ∈ ⟦ B ⟧ᶜ) : nf m :=
+theorem 𝒞.nf {B m} (h : m ∈ ⟦ B ⟧ᶜ) : nf m :=
   match (generalizing := true) B with
   | F _ | Arr _ _ =>
     by unfold 𝒞 at h; let ⟨_, _, e⟩ := h; subst e; exact ⟨⟩
   | .Prod _ _ =>
     by unfold 𝒞 at h; let ⟨_, _, _, _, e⟩ := h; subst e; exact ⟨⟩
 
--- Semantic computations embed into semantic evaluations
 theorem 𝒞ℰ {B m} (h : m ∈ ⟦ B ⟧ᶜ) : m ∈ ⟦ B ⟧ᵉ :=
-  by unfold ℰ; exact ⟨m, ⟨.refl, 𝒞nf h⟩, h⟩
+  by unfold ℰ; exact ⟨m, ⟨.refl, h.nf⟩, h⟩
 
--- Semantic evaluations are backward closed under reduction
-theorem ℰbwd {B m n} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᵉ) : m ∈ ⟦ B ⟧ᵉ := by
+/-* Convenient constructors for the logical relation *-/
+
+theorem 𝒱.unit : 𝒱 Unit unit := by simp [𝒱]
+theorem 𝒱.inl {v A₁ A₂} (h : 𝒱 A₁ v) : 𝒱 (Sum A₁ A₂) (inl v) := by simp [𝒱]; assumption
+theorem 𝒱.inr {v A₁ A₂} (h : 𝒱 A₂ v) : 𝒱 (Sum A₁ A₂) (inr v) := by simp [𝒱]; assumption
+theorem 𝒱.thunk {m B} (h : ℰ B m) : 𝒱 (U B) (thunk m) := by simp [𝒱]; assumption
+
+theorem ℰ.ret {v A} (h : 𝒱 A v) : ℰ (F A) (ret v) := by apply 𝒞ℰ; simp [𝒞]; assumption
+theorem ℰ.lam {n A B} (h : ∀ v, 𝒱 A v → ℰ B (n⦃v⦄)) : ℰ (Arr A B) (lam n) := by apply 𝒞ℰ; simp [𝒞]; assumption
+theorem ℰ.prod {m n B₁ B₂} (hm : ℰ B₁ m) (hn : ℰ B₂ n) : ℰ (Prod B₁ B₂) (prod m n) := by apply 𝒞ℰ; simp [𝒞]; constructor <;> assumption
+
+/-* Semantic evaluations are backward closed under reduction *-/
+
+theorem ℰ.bwd {B m n} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᵉ) : m ∈ ⟦ B ⟧ᵉ := by
   unfold ℰ at *
   let ⟨n', ⟨r', nfn⟩, h⟩ := h
   refine ⟨n', ⟨.trans' r r', nfn⟩, h⟩
-theorem 𝒞bwd {B m n} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᶜ) : m ∈ ⟦ B ⟧ᵉ := ℰbwd r (𝒞ℰ h)
+
+theorem 𝒞.bwd {B m n} (r : m ⇒⋆ n) (h : n ∈ ⟦ B ⟧ᶜ) : m ∈ ⟦ B ⟧ᵉ := ℰ.bwd r (𝒞ℰ h)
 
 /-*----------------
   Semantic typing
@@ -91,53 +95,51 @@ theorem soundness {Γ} :
   case inr ih => exact 𝒱.inr (ih σ hσ)
   case thunk ih => exact 𝒱.thunk (ih σ hσ)
   case force ih =>
-    simp [𝒱, ℰ] at ih
-    let ⟨_, ⟨_, ⟨r, _⟩, h⟩, e⟩ := ih σ hσ
-    let rf : _ ⇒⋆ _ := .trans .π r
-    rw [← e] at rf
-    exact 𝒞bwd rf h
+    simp [𝒱] at ih
+    let ⟨_, h, e⟩ := ih σ hσ
+    simp [e]; exact ℰ.bwd (.once .π) h
   case lam ih =>
-    apply 𝒞ℰ; apply 𝒞.lam
-    intro v hv; rw [← substUnion]
+    apply ℰ.lam (λ v hv ↦ ?_)
+    rw [← substUnion]
     exact ih (v +: σ) (semCtxtCons hv hσ)
   case app ihm ihv =>
     simp [ℰ, 𝒞] at ihm
     let ⟨_, ⟨rlam, _⟩, _, h, e⟩ := ihm σ hσ; subst e
     let ⟨_, ⟨rval, _⟩, h⟩ := h _ (ihv σ hσ)
-    exact 𝒞bwd (Trans.trans (Evals.app rlam) (Trans.trans Eval.β rval)) h
-  case ret ih => exact 𝒞ℰ (𝒞.ret (ih σ hσ))
+    exact 𝒞.bwd (Trans.trans (Evals.app rlam) (Trans.trans Eval.β rval)) h
+  case ret ih => exact ℰ.ret (ih σ hσ)
   case letin ihret ih =>
     simp [ℰ, 𝒞] at ihret ih
     let ⟨_, ⟨rret, _⟩, v, hv, e⟩ := ihret σ hσ; subst e
     let ⟨_, ⟨rlet, nflet⟩, h⟩ := ih (v +: σ) (semCtxtCons hv hσ)
     rw [substUnion] at rlet
-    exact 𝒞bwd (Trans.trans (Evals.let rret) (Trans.trans Eval.ζ rlet)) h
+    exact 𝒞.bwd (Trans.trans (Evals.letin rret) (Trans.trans Eval.ζ rlet)) h
   case case m n _ _ _ _ _ _ ihv ihm ihn =>
     simp [𝒱] at ihv
     match ihv σ hσ with
     | .inl ⟨v, hv, e⟩ =>
       let hm := ihm (v +: σ) (semCtxtCons hv hσ)
       simp only [substCom]; rw [e]; rw [substUnion] at hm
-      exact ℰbwd (.once .ιl) hm
+      exact ℰ.bwd (.once .ιl) hm
     | .inr ⟨v, hv, e⟩ =>
       let hn := ihn (v +: σ) (semCtxtCons hv hσ)
       simp only [substCom]; rw [e]; rw [substUnion] at hn
-      exact ℰbwd (.once .ιr) hn
+      exact ℰ.bwd (.once .ιr) hn
   case prod m n _ _ _ _ ihm ihn =>
-    simp [ℰ, 𝒞] at ihm ihn
+    simp [ℰ] at ihm ihn
     let ⟨_, ⟨rm, _⟩, hm⟩ := ihm σ hσ
     let ⟨_, ⟨rn, _⟩, hn⟩ := ihn σ hσ
-    apply 𝒞ℰ; exact 𝒞.prod (𝒞bwd rm hm) (𝒞bwd rn hn)
+    exact ℰ.prod (𝒞.bwd rm hm) (𝒞.bwd rn hn)
   case fst ih =>
     simp [ℰ] at ih; unfold 𝒞 at ih
     let ⟨_, ⟨rprod, nfprod⟩, n₁, n₂, hm, _, e⟩ := ih σ hσ; subst e
     let r : fst (_⦃σ⦄) ⇒⋆ n₁ := Trans.trans (Evals.fst rprod) Eval.π1
-    exact ℰbwd r hm
+    exact ℰ.bwd r hm
   case snd ih =>
     simp [ℰ] at ih; unfold 𝒞 at ih
     let ⟨_, ⟨rprod, nfprod⟩, n₁, n₂, _, hn, e⟩ := ih σ hσ; subst e
     let r : snd (_⦃σ⦄) ⇒⋆ n₂ := Trans.trans (Evals.snd rprod) Eval.π2
-    exact ℰbwd r hn
+    exact ℰ.bwd r hn
 
 -- If a computation does not step, then it is in normal form
 theorem normal {m B} (nr : ∀ {n}, ¬ m ⇒ n) (h : ⬝ ⊢ m ∶ B) : nf m := by
@@ -148,11 +150,9 @@ theorem normal {m B} (nr : ∀ {n}, ¬ m ⇒ n) (h : ⬝ ⊢ m ∶ B) : nf m := 
   rw [substComId] at r
   cases r with | refl => exact nfm | trans r _ => cases nr r
 
--- Computations are strongly normalizing
-theorem normalization {m : Com} {B : ComType} (h : ⬝ ⊢ m ∶ B) : SN m := by
+-- Type safety: computations are strongly normalizing
+theorem safety {m : Com} {B : ComType} (h : ⬝ ⊢ m ∶ B) : SN m := by
   let ⟨_, soundCom⟩ := soundness (Γ := ⬝)
-  let mB := soundCom m B h
-  simp [ℰ] at mB
-  let ⟨_, ⟨r, nfm⟩, _⟩ := mB var semCtxtNil
-  rw [substComId] at r
-  exact r.sn nfm
+  let hB := soundCom m B h var semCtxtNil
+  rw [substComId] at hB; simp [ℰ] at hB
+  let ⟨_, nfm, _⟩ := hB; exact nfm.sn
