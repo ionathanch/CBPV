@@ -55,7 +55,7 @@ by
     exact ⟨_, .Sum hA₁ hA₂, .inr (.inr ⟨_, rfl, pv⟩)⟩
   case thunk ih =>
     let ⟨_, hB, pm⟩ := ih σ hσ
-    exact ⟨_, .U hB, hB.closure (.once .π) pm⟩
+    exact ⟨_, .U hB, hB.closure (.once .μ) pm⟩
   case force ih =>
     let ⟨_, hUB, pv⟩ := ih σ hσ
     cases hUB with | U hB => exact ⟨_, hB, pv⟩

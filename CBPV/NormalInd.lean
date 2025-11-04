@@ -33,7 +33,7 @@ inductive SNCom : Com → Prop where
   | red {m n : Com} : m ⤳ n → SNCom n → SNCom m
 
 inductive SR : Com → Com → Prop where
-  | π {m} : force (thunk m) ⤳ m
+  | μ {m} : force (thunk m) ⤳ m
   | β {m : Com} {v} : SNVal v → app (lam m) v ⤳ m⦃v⦄
   | ζ {v m} : SNVal v → letin (ret v) m ⤳ m⦃v⦄
   | ι1 {v m n} : SNVal v → SNCom n → case (inl v) m n ⤳ m⦃v⦄
@@ -169,13 +169,13 @@ by
   case red ihr ihm =>
     let ⟨_, e, r⟩ := ihr e
     exact .red r (ihm (.symm e))
-  case π ih =>
+  case μ ih =>
     cases m <;> try contradiction
     injection e with e
     case force v =>
     cases v <;> try contradiction
     injection e with e
-    exact ⟨_, .symm e, .π⟩
+    exact ⟨_, .symm e, .μ⟩
   case β ih =>
     cases m <;> try contradiction
     injection e with em ev

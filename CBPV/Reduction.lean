@@ -19,7 +19,7 @@ inductive StepVal : Val → Val → Prop where
   | thunk {m n} : m ⤳ᶜ n → thunk m ⤳ᵛ thunk n
 
 inductive StepCom : Com → Com → Prop where
-  | π {m} : force (thunk m) ⤳ᶜ m
+  | μ {m} : force (thunk m) ⤳ᶜ m
   | β {m v} : app (lam m) v ⤳ᶜ m⦃v⦄
   | ζ {v m} : letin (ret v) m ⤳ᶜ m⦃v⦄
   | ιl {v m n} : case (inl v) m n ⤳ᶜ m⦃v⦄

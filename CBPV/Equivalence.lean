@@ -268,7 +268,7 @@ by
   case force ih =>
     simp [𝒱] at ih
     let ⟨_, _, h, em, en⟩ := ih σ τ hστ
-    simp [em, en]; exact ℰ.bwd .π .π h
+    simp [em, en]; exact ℰ.bwd .μ .μ h
   case lam ih =>
     refine ℰ.lam (λ v w hA ↦ ?_)
     rw [← substUnion, ← substUnion]

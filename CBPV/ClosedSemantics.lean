@@ -97,7 +97,7 @@ by
   case force ih =>
     simp [𝒱] at ih
     let ⟨_, h, e⟩ := ih σ hσ
-    simp [e]; exact ℰ.bwd (.once .π) h
+    simp [e]; exact ℰ.bwd (.once .μ) h
   case lam ih =>
     apply ℰ.lam (λ v hv ↦ ?_)
     rw [← substUnion]

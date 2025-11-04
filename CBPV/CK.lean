@@ -40,7 +40,7 @@ inductive Step : CK → CK → Prop where
   | ζ {v m k} :     ⟨ret v, letin m :: k⟩ ⤳ ⟨m⦃v⦄, k⟩
   | ιl {v m n k} :  ⟨case (inl v) m n, k⟩ ⤳ ⟨m⦃v⦄, k⟩
   | ιr {v m n k} :  ⟨case (inr v) m n, k⟩ ⤳ ⟨n⦃v⦄, k⟩
-  | π {m k} :       ⟨force (thunk m), k⟩  ⤳ ⟨m, k⟩
+  | μ {m k} :       ⟨force (thunk m), k⟩  ⤳ ⟨m, k⟩
   | π1 {m n k} :    ⟨prod m n, fst :: k⟩  ⤳ ⟨m, k⟩
   | π2 {m n k} :    ⟨prod m n, snd :: k⟩  ⤳ ⟨n, k⟩
   | app {m v k} :   ⟨app m v, k⟩          ⤳ ⟨m, app v :: k⟩
@@ -64,7 +64,7 @@ inductive BStep : Com → Com → Prop where
   | lam {m} : lam m ⇓ lam m
   | ret {v} : ret v ⇓ ret v
   | prod {m₁ m₂} : prod m₁ m₂ ⇓ prod m₁ m₂
-  | π {m t} :
+  | μ {m t} :
     m ⇓ t →
     -------------------
     force (thunk m) ⇓ t
@@ -167,7 +167,7 @@ inductive EqCom : Com → Com → Prop
   | ζ {m v} : letin (ret v) m ≡ m⦃v⦄
   | ιl {v m₁ m₂} : case (inl v) m₁ m₂ ≡ m₁⦃v⦄
   | ιr {v m₁ m₂} : case (inr v) m₁ m₂ ≡ m₂⦃v⦄
-  | π {m} : force (thunk m) ≡ m
+  | μ {m} : force (thunk m) ≡ m
   | π1 {m₁ m₂} : fst (prod m₁ m₂) ≡ m₁
   | π2 {m₁ m₂} : snd (prod m₁ m₂) ≡ m₂
   | sym {m n : Com} : n ≡ m → m ≡ n
@@ -207,7 +207,7 @@ theorem stepEval {m n k₁ k₂} (r : ⟨m, k₁⟩ ⤳ ⟨n, k₂⟩) :
   induction r generalizing m n k₁ k₂
   all_goals injection e₁ with em ek₁; subst em ek₁
   all_goals injection e₂ with en ek₂; subst en ek₂
-  case β | ζ | ιl | ιr | π | π1 | π2 => (try simp); left; apply evalCongK; constructor
+  case β | ζ | ιl | ιr | μ | π1 | π2 => (try simp); left; apply evalCongK; constructor
   case app | letin | fst | snd => right; rfl
 
 theorem stepEvals {m n k₁ k₂} (r : ⟨m, k₁⟩ ⤳⋆ ⟨n, k₂⟩) : dismantle m k₁ ⇒⋆ dismantle n k₂ := by
@@ -240,7 +240,7 @@ theorem bigStep {m n t k₁ k₂} (r : ⟨m, k₁⟩ ⤳ ⟨n, k₂⟩) : disman
   all_goals injection en with en ek; subst en ek
   all_goals apply bigCongK; (try simp) <;> intro t r
   case β | ζ | π1 | π2 => constructor; constructor; assumption
-  case ιl | ιr | π => constructor; assumption
+  case ιl | ιr | μ => constructor; assumption
 
 theorem bigSteps {m n t k₁ k₂} (r : ⟨m, k₁⟩ ⤳⋆ ⟨n, k₂⟩) : dismantle n k₂ ⇓ t → dismantle m k₁ ⇓ t := by
   generalize em : (m, k₁) = mk at r
@@ -257,7 +257,7 @@ theorem bigStepsNil {m t} (nfn : nf t)  (r : ⟨m, []⟩ ⤳⋆ ⟨t, []⟩) : m
 theorem stepBig {m n k} (r : m ⇓ n) : ⟨m, k⟩ ⤳⋆ ⟨n, k⟩ := by
   induction r generalizing k
   case lam | ret | prod => rfl
-  case π ih => exact .trans .π ih
+  case μ ih => exact .trans .μ ih
   case ιl ih => exact .trans .ιl ih
   case ιr ih => exact .trans .ιr ih
   case β n t m v _ _ ih₁ ih₂ =>
@@ -289,7 +289,7 @@ theorem stepBig {m n k} (r : m ⇓ n) : ⟨m, k⟩ ⤳⋆ ⟨n, k⟩ := by
 
 theorem evalBig {m n t} (r : m ⇒ n) : n ⇓ t → m ⇓ t := by
   induction r generalizing t <;> intro r
-  case π => exact .π r
+  case μ => exact .μ r
   case β => exact .β .lam r
   case ζ => exact .ζ .ret r
   case ιl => exact .ιl r

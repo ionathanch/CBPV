@@ -65,7 +65,7 @@ inductive RedVal : Val → Val → Prop where
   | thunk {m n} : m ⤳ᶜ n → thunk m ⤳ᵛ thunk n
 
 inductive RedCom : Com → Com → Prop where
-  | π {m} : force (thunk m) ⤳ᶜ m
+  | μ {m} : force (thunk m) ⤳ᶜ m
   | β {m v} : app (lam m) v ⤳ᶜ m⦃v⦄
   | ζ {v m} : letin (ret v) m ⤳ᶜ m⦃v⦄
   | ιl {v m n} : case (inl v) m n ⤳ᶜ m⦃v⦄
@@ -149,7 +149,7 @@ by
   case inl r ih => cases r₂ with | _ r₂ => rw [ih r₂]
   case inr r ih => cases r₂ with | _ r₂ => rw [ih r₂]
   case thunk r ih => cases r₂ with | _ r₂ => rw [ih r₂]
-  case π => cases r₂; rfl
+  case μ => cases r₂; rfl
   case β =>
     cases r₂
     case β => rfl
@@ -381,7 +381,7 @@ by
   case red r ih =>
     let ⟨_, r', nfn⟩ := ih
     exact ⟨_, .trans r r', nfn⟩
-  case π => exact .π
+  case μ => exact .μ
   case β => exact .β
   case ζ => exact .ζ
   case ι1 => exact .ιl

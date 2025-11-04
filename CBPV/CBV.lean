@@ -351,7 +351,7 @@ theorem CBV.simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨⟦ t
     calc
       _ ⤳ _ := .ζ
       _ ⤳ _ := by exact .app
-      _ ⤳ _ := .π
+      _ ⤳ _ := .μ
       _ ⤳ _ := .β
       _ = _ := by
         rw [← substUnion, substDropCom₂, ← transSubstCom, substComExt]
@@ -375,14 +375,14 @@ theorem CBV.simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨⟦ t
     calc
       _ ⤳ _ := .ζ
       _ ⤳ _ := by exact .fst
-      _ ⤳ _ := .π
+      _ ⤳ _ := .μ
       _ ⤳ _ := .π1
   case π2 =>
     simp
     calc
       _ ⤳ _ := .ζ
       _ ⤳ _ := by exact .snd
-      _ ⤳ _ := .π
+      _ ⤳ _ := .μ
       _ ⤳ _ := .π2
   case app₁ => exact .once .letin
   case app₂ =>

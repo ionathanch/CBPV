@@ -11,7 +11,7 @@ section
 set_option hygiene false
 local infix:40 "⇒" => Eval
 inductive Eval : Com → Com → Prop where
-  | π {m} : force (thunk m) ⇒ m
+  | μ {m} : force (thunk m) ⇒ m
   | β {m v} : app (lam m) v ⇒ m⦃v⦄
   | ζ {v m} : letin (ret v) m ⇒ m⦃v⦄
   | ιl {v m n} : case (inl v) m n ⇒ m⦃v⦄

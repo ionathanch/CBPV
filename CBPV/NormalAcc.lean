@@ -35,7 +35,7 @@ theorem loopDiverges {m n} (rmn : m ⤳ᶜ n) (rnm : n ⤳ᶜ m) (snm : StepCom.
   induction snm generalizing n
   case sn ih => exact ih rmn rnm rmn
 
-def ΩDiverges : StepCom.SN Ω → False := loopDiverges .β (.app₁ .π)
+def ΩDiverges : StepCom.SN Ω → False := loopDiverges .β (.app₁ .μ)
 
 /-*-----------------------
   Inversion lemmas on SN
@@ -97,7 +97,7 @@ theorem StepCom.SN.antisubstitution {m} {v : Val} (snm : StepCom.SN (m⦃v⦄)) 
 theorem StepCom.SN.force_thunk {m} (snm : StepCom.SN m) : StepCom.SN (.force (.thunk m)) := by
   induction snm
   constructor; intro _ r; cases r
-  case a.π h _ => exact .sn h
+  case a.μ h _ => exact .sn h
   case a.force ih _ r =>
     cases r with | thunk r => exact ih r
 
@@ -201,7 +201,7 @@ section
 set_option hygiene false
 local infix:40 "⤳ⁿ" => StepSN
 inductive StepSN : Com → Com → Prop where
-  | π {m} : force (thunk m) ⤳ⁿ m
+  | μ {m} : force (thunk m) ⤳ⁿ m
   | β {m : Com} {v} : StepVal.SN v → app (lam m) v ⤳ⁿ m⦃v⦄
   | ζ {v m} : StepVal.SN v → letin (ret v) m ⤳ⁿ m⦃v⦄
   | ι1 {v m n} : StepVal.SN v → StepCom.SN n → case (inl v) m n ⤳ⁿ m⦃v⦄
@@ -221,9 +221,9 @@ infix:40 "⤳ⁿ" => StepSN
 
 theorem confluence {m n₁ n₂} (r₁ : m ⤳ᶜ n₁) (r₂ : m ⤳ⁿ n₂) : (∃ m', n₁ ⤳ⁿ m' ∧ n₂ ⤳⋆ᶜ m') ∨ n₁ = n₂ := by
   induction r₂ generalizing n₁ <;> cases r₁
-  case π.π => exact .inr rfl
-  case π.force r =>
-    cases r with | thunk r => exact .inl ⟨_, .π, .once r⟩
+  case μ.μ => exact .inr rfl
+  case μ.force r =>
+    cases r with | thunk r => exact .inl ⟨_, .μ, .once r⟩
   case β.β => exact .inr rfl
   case β.app₁ snv _ r =>
     cases r with | lam r =>
@@ -358,7 +358,7 @@ theorem closure_snd {m n} (r₁ : m ⤳ⁿ n) (snn : StepCom.SN m) (snsnd : Step
 
 theorem StepSN.closure {m n} (r : m ⤳ⁿ n) (snn : StepCom.SN n) : StepCom.SN m := by
   induction r
-  case π => exact .force_thunk snn
+  case μ => exact .force_thunk snn
   case β snv => exact .app_lam snv snn
   case ζ snv => exact .letin_ret snv snn
   case ι1 snv snm => exact .case_inl snv snn snm
@@ -420,7 +420,7 @@ theorem StepCom.SN.ret {v} (h : StepVal.SN v) : StepCom.SN (.ret v) := by
 
 theorem StepCom.SN.force {v} (h : NeVal v) : StepCom.SN (.force v) := by
   induction h; constructor; intro _ r; cases r
-  case π => contradiction
+  case μ => contradiction
   case force e _ r => subst e; cases r
 
 theorem StepCom.SN.app {m v} (nem : NeCom m) (snm : StepCom.SN m) (snv : StepVal.SN v) : StepCom.SN (app m v) := by

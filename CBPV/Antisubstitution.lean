@@ -77,7 +77,7 @@ by
     | .inl ⟨_, e, r⟩ =>
       exact .red r (ihm (Eq.symm e))
     | .inr snem => exact .ne snem
-  case π ih =>
+  case μ ih =>
     cases m <;> try contradiction
     injection e with e
     case force v =>
@@ -85,7 +85,7 @@ by
     case var => exact .inr (.force .var)
     case thunk =>
     injection e with e
-    exact .inl ⟨_, Eq.symm e, .π⟩
+    exact .inl ⟨_, Eq.symm e, .μ⟩
   case β ih =>
     cases m <;> try contradiction
     injection e with em ev
