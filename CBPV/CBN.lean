@@ -157,71 +157,71 @@ end CBN
 /-* Translation of types *-/
 section
 set_option hygiene false
-local notation:40 "⟦" A:41 "⟧ᵀ" => transType A
+local notation:40 "⟦" A:41 "⟧ᴺ" => translate A
 @[simp]
-def transType : CBN.SType → ComType
+def CBN.SType.translate : CBN.SType → ComType
   | .Unit => .F .Unit
-  | .Sum A₁ A₂ => .F (.Sum (.U (⟦ A₁ ⟧ᵀ)) (.U (⟦ A₂ ⟧ᵀ)))
-  | .Arr A B => .Arr (.U (⟦ A ⟧ᵀ)) (⟦ B ⟧ᵀ)
-  | .Prod B₁ B₂ => .Prod (⟦ B₁ ⟧ᵀ) (⟦ B₂ ⟧ᵀ)
+  | .Sum A₁ A₂ => .F (.Sum (.U (⟦ A₁ ⟧ᴺ)) (.U (⟦ A₂ ⟧ᴺ)))
+  | .Arr A B => .Arr (.U (⟦ A ⟧ᴺ)) (⟦ B ⟧ᴺ)
+  | .Prod B₁ B₂ => .Prod (⟦ B₁ ⟧ᴺ) (⟦ B₂ ⟧ᴺ)
 end
-notation:40 "⟦" A:41 "⟧ᵀ" => transType A
+notation:40 "⟦" A:41 "⟧ᴺ" => CBN.SType.translate A
 
 /-* Translation of contexts *-/
 section
 set_option hygiene false
-local notation:40 "⟦" Γ:41 "⟧ᶜ" => transCtxt Γ
+local notation:40 "⟦" Γ:41 "⟧ᴺ" => translate Γ
 @[simp]
-def transCtxt : CBN.Ctxt → Ctxt
+def CBN.Ctxt.translate : CBN.Ctxt → _root_.Ctxt
   | .nil => .nil
-  | .cons Γ A => .cons (⟦ Γ ⟧ᶜ) (.U (⟦ A ⟧ᵀ))
+  | .cons Γ A => .cons (⟦ Γ ⟧ᴺ) (.U (⟦ A ⟧ᴺ))
 end
-notation:40 "⟦" Γ:41 "⟧ᶜ" => transCtxt Γ
+notation:40 "⟦" Γ:41 "⟧ᴺ" => CBN.Ctxt.translate Γ
 
 /-* Translation of terms *-/
 section
 set_option hygiene false
-local notation:40 "⟦" t:41 "⟧ᵗ" => transTerm t
+local notation:40 "⟦" t:41 "⟧ᴺ" => translate t
 @[simp]
-def transTerm : CBN.Term → Com
+def CBN.Term.translate : CBN.Term → Com
   | .var s => .force (.var s)
   | .unit => .ret .unit
-  | .lam t => .lam (⟦ t ⟧ᵗ)
-  | .app t u => .app (⟦ t ⟧ᵗ) (.thunk (⟦ u ⟧ᵗ))
-  | .inl t => .ret (.inl (.thunk (⟦ t ⟧ᵗ)))
-  | .inr t => .ret (.inr (.thunk (⟦ t ⟧ᵗ)))
+  | .lam t => .lam (⟦ t ⟧ᴺ)
+  | .app t u => .app (⟦ t ⟧ᴺ) (.thunk (⟦ u ⟧ᴺ))
+  | .inl t => .ret (.inl (.thunk (⟦ t ⟧ᴺ)))
+  | .inr t => .ret (.inr (.thunk (⟦ t ⟧ᴺ)))
   | .case s t u =>
-    .letin (⟦ s ⟧ᵗ)
+    .letin (⟦ s ⟧ᴺ)
       (.case (.var 0)
-        (renameCom (lift succ) (⟦ t ⟧ᵗ))
-        (renameCom (lift succ) (⟦ u ⟧ᵗ)))
-  | .prod t u => .prod (⟦ t ⟧ᵗ) (⟦ u ⟧ᵗ)
-  | .fst t => .fst (⟦ t ⟧ᵗ)
-  | .snd t => .snd (⟦ t ⟧ᵗ)
+        (renameCom (lift succ) (⟦ t ⟧ᴺ))
+        (renameCom (lift succ) (⟦ u ⟧ᴺ)))
+  | .prod t u => .prod (⟦ t ⟧ᴺ) (⟦ u ⟧ᴺ)
+  | .fst t => .fst (⟦ t ⟧ᴺ)
+  | .snd t => .snd (⟦ t ⟧ᴺ)
 end
-notation:40 "⟦" t:41 "⟧ᵗ" => transTerm t
+notation:40 "⟦" t:41 "⟧ᴺ" => CBN.Term.translate t
 
 /-* Translation of stacks *-/
 section
 set_option hygiene false
-local notation:40 "⟦" k:41 "⟧ᴷ" => transK k
+local notation:40 "⟦" k:41 "⟧ᴺ" => translate k
 @[simp]
-def transK : CBN.K → K
+def CBN.K.translate : CBN.K → CK.K
   | [] => []
-  | .app u :: k   => .app (.thunk (⟦ u ⟧ᵗ)) :: (⟦ k ⟧ᴷ)
+  | .app u :: k   => .app (.thunk (⟦ u ⟧ᴺ)) :: (⟦ k ⟧ᴺ)
   | .case t u :: k => .letin (.case (.var 0)
-                        (renameCom (lift succ) (⟦ t ⟧ᵗ))
-                        (renameCom (lift succ) (⟦ u ⟧ᵗ))) :: (⟦ k ⟧ᴷ)
-  | .fst :: k => .fst :: (⟦ k ⟧ᴷ)
-  | .snd :: k => .snd :: (⟦ k ⟧ᴷ)
+                        (renameCom (lift succ) (⟦ t ⟧ᴺ))
+                        (renameCom (lift succ) (⟦ u ⟧ᴺ))) :: (⟦ k ⟧ᴺ)
+  | .fst :: k => .fst :: (⟦ k ⟧ᴺ)
+  | .snd :: k => .snd :: (⟦ k ⟧ᴺ)
 end
-notation:40 "⟦" k:41 "⟧ᴷ" => transK k
+notation:40 "⟦" k:41 "⟧ᴺ" => CBN.K.translate k
 
 /-* Translation of terms with arbitrary π-expansion *-/
 section
 set_option hygiene false
-local infix:40 "↦ₙ" => transTerm'
-inductive transTerm' : CBN.Term → Com → Prop where
+local infix:40 "↦ₙ" => expand
+inductive CBN.Term.expand : CBN.Term → Com → Prop where
   | var {s} : .var s ↦ₙ .force (.var s)
   | unit : .unit ↦ₙ .ret .unit
   | lam {t m} : t ↦ₙ m → .lam t ↦ₙ .lam m
@@ -239,9 +239,9 @@ inductive transTerm' : CBN.Term → Com → Prop where
   | snd {t m} : t ↦ₙ m → .snd t ↦ₙ .snd m
   | ft {t m} : t ↦ₙ m → t ↦ₙ .force (.thunk m)
 end
-infix:40 "↦ₙ" => transTerm'
+infix:40 "↦ₙ" => CBN.Term.expand
 
-theorem transTransTerm {t} : t ↦ₙ (⟦ t ⟧ᵗ) := by
+theorem transExpand {t} : t ↦ₙ (⟦ t ⟧ᴺ) := by
   induction t <;> constructor <;> assumption
 
 /-*---------------------------------------
@@ -250,12 +250,12 @@ theorem transTransTerm {t} : t ↦ₙ (⟦ t ⟧ᵗ) := by
 
 /-* Translation is type preserving *-/
 
-theorem presIn {x A Γ} (h : CBN.In x A Γ) : (⟦ Γ ⟧ᶜ) ∋ x ∶ .U (⟦ A ⟧ᵀ) := by
+theorem CBN.In.presIn {x A Γ} (h : CBN.In x A Γ) : (⟦ Γ ⟧ᴺ) ∋ x ∶ .U (⟦ A ⟧ᴺ) := by
   induction h <;> constructor; assumption
 
-theorem preservation {Γ t A} (h : Γ ⊢ₛ t ∶ A) : (⟦ Γ ⟧ᶜ) ⊢ (⟦ t ⟧ᵗ) ∶ (⟦ A ⟧ᵀ) := by
+theorem preservation {Γ t A} (h : Γ ⊢ₛ t ∶ A) : (⟦ Γ ⟧ᴺ) ⊢ (⟦ t ⟧ᴺ) ∶ (⟦ A ⟧ᴺ) := by
   induction h
-  case var ih => exact .force (.var (presIn ih))
+  case var mem => exact .force (.var mem.presIn)
   case unit => exact .ret .unit
   case lam ih => exact .lam ih
   case app iht ihu => exact .app iht (.thunk ihu)
@@ -269,56 +269,56 @@ theorem preservation {Γ t A} (h : Γ ⊢ₛ t ∶ A) : (⟦ Γ ⟧ᶜ) ⊢ (⟦
 
 /-* Translation commutes with renaming and substitution *-/
 
-theorem transRename {ξ t m} (h : t ↦ₙ m) : CBN.rename ξ t ↦ₙ renameCom ξ m := by
+theorem expandRename {ξ t m} (h : t ↦ₙ m) : CBN.rename ξ t ↦ₙ renameCom ξ m := by
   induction h generalizing ξ
   case case ihs iht ihu =>
     simp; rw [renameLiftLiftRename, renameLiftLiftRename]
     exact .case ihs iht ihu
   all_goals constructor <;> apply_assumption
 
-theorem transUp {σ : Nat → CBN.Term} {σ' : Nat → Val}
+theorem expandUp {σ : Nat → CBN.Term} {σ' : Nat → Val}
   (h : ∀ x, σ x ↦ₙ .force (σ' x)) : ∀ x, (⇑ σ) x ↦ₙ .force ((⇑ σ') x) := by
   have e {ξ v} : .force (renameVal ξ v) = renameCom ξ (.force v) := rfl
   intro n; cases n
   case zero => exact .var
-  case succ n => simp [up]; rw [e]; exact transRename (h n)
+  case succ n => simp [up]; rw [e]; exact expandRename (h n)
 
-theorem transSubst {σ σ' t} (h : ∀ x, σ x ↦ₙ .force (σ' x)) : CBN.subst σ t ↦ₙ substCom σ' (⟦t⟧ᵗ) := by
+theorem expandSubst {σ σ' t} (h : ∀ x, σ x ↦ₙ .force (σ' x)) : CBN.subst σ t ↦ₙ substCom σ' (⟦t⟧ᴺ) := by
   induction t generalizing σ σ'
   case var => exact h _
-  case lam ih => exact .lam (ih (transUp h))
+  case lam ih => exact .lam (ih (expandUp h))
   case case ihs iht ihu =>
-    simp [transTerm]; rw [← renameUpLiftSubst, ← renameUpLiftSubst]
-    exact .case (ihs h) (iht (transUp h)) (ihu (transUp h))
+    simp [CBN.Term.translate]; rw [← renameUpLiftSubst, ← renameUpLiftSubst]
+    exact .case (ihs h) (iht (expandUp h)) (ihu (expandUp h))
   all_goals constructor <;> apply_rules
 
-theorem transSubstSingle {t u} : CBN.subst (u +: .var) t ↦ₙ (⟦t⟧ᵗ) ⦃ Val.thunk (⟦ u ⟧ᵗ) +: .var ⦄ := by
-  refine transSubst (λ n ↦ ?_); cases n <;> constructor; exact transTransTerm
+theorem expandSubstSingle {t u} : CBN.subst (u +: .var) t ↦ₙ (⟦t⟧ᴺ) ⦃ Val.thunk (⟦ u ⟧ᴺ) +: .var ⦄ := by
+  refine expandSubst (λ n ↦ ?_); cases n <;> constructor; exact transExpand
 
 /-* Translation preserves machine semantics *-/
 
-theorem simulation {t u k k'} (r : ⟨t, k⟩ ⤳ₙ ⟨u, k'⟩) : ∃ m, ⟨⟦ t ⟧ᵗ, ⟦ k ⟧ᴷ⟩ ⤳⋆ ⟨m, ⟦ k' ⟧ᴷ⟩ ∧ u ↦ₙ m := by
+theorem CBN.simulation {t u k k'} (r : ⟨t, k⟩ ⤳ₙ ⟨u, k'⟩) : ∃ m, ⟨⟦ t ⟧ᴺ, ⟦ k ⟧ᴺ⟩ ⤳⋆ ⟨m, ⟦ k' ⟧ᴺ⟩ ∧ u ↦ₙ m := by
   generalize et : (t, k)  = ck  at r
   generalize eu : (u, k') = ck' at r
   induction r
   all_goals injection et with et ek; subst et ek
   all_goals injection eu with eu ek; subst eu ek
-  case β t u => exact ⟨⟦ t ⟧ᵗ ⦃ .thunk (⟦ u ⟧ᵗ) ⦄, .once .β, transSubstSingle⟩
+  case β t u => exact ⟨⟦ t ⟧ᴺ ⦃ .thunk (⟦ u ⟧ᴺ) ⦄, .once .β, expandSubstSingle⟩
   case ιl s t _ =>
-    refine ⟨⟦ t ⟧ᵗ ⦃ .thunk (⟦ s ⟧ᵗ)⦄, ?_, transSubstSingle⟩
+    refine ⟨⟦ t ⟧ᴺ ⦃ .thunk (⟦ s ⟧ᴺ)⦄, ?_, expandSubstSingle⟩
     calc
       _ ⤳ _ := .ζ
       _ ⤳ _ := by exact .ιl
       _ = _ := by rw [← substUnion, substDropCom₂]
   case ιr s _ u =>
-    refine ⟨⟦ u ⟧ᵗ ⦃ .thunk (⟦ s ⟧ᵗ)⦄, ?_, transSubstSingle⟩
+    refine ⟨⟦ u ⟧ᴺ ⦃ .thunk (⟦ s ⟧ᴺ)⦄, ?_, expandSubstSingle⟩
     calc
       _ ⤳ _ := .ζ
       _ ⤳ _ := by exact .ιr
       _ = _ := by rw [← substUnion, substDropCom₂]
-  case π1 => exact ⟨_, .once .π1, transTransTerm⟩
-  case π2 => exact ⟨_, .once .π2, transTransTerm⟩
-  case app => exact ⟨_, .once .app, transTransTerm⟩
-  case case => exact ⟨_, .once .letin, transTransTerm⟩
-  case fst => exact ⟨_, .once .fst, transTransTerm⟩
-  case snd => exact ⟨_, .once .snd, transTransTerm⟩
+  case π1 => exact ⟨_, .once .π1, transExpand⟩
+  case π2 => exact ⟨_, .once .π2, transExpand⟩
+  case app => exact ⟨_, .once .app, transExpand⟩
+  case case => exact ⟨_, .once .letin, transExpand⟩
+  case fst => exact ⟨_, .once .fst, transExpand⟩
+  case snd => exact ⟨_, .once .snd, transExpand⟩

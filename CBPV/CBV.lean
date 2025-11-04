@@ -37,25 +37,25 @@ open Value
 
 mutual
 @[simp]
-def renameVal (ξ : Nat → Nat) : Value → Value
+def Value.rename (ξ : Nat → Nat) : Value → Value
   | var x => var (ξ x)
   | unit => unit
-  | lam t => lam (rename (lift ξ) t)
-  | inl v => inl (renameVal ξ v)
-  | inr v => inr (renameVal ξ v)
-  | pair v w => pair (renameVal ξ v) (renameVal ξ w)
+  | lam t => lam (.rename (lift ξ) t)
+  | inl v => inl (.rename ξ v)
+  | inr v => inr (.rename ξ v)
+  | pair v w => pair (.rename ξ v) (.rename ξ w)
 
 @[simp]
-def rename (ξ : Nat → Nat) : Term → Term
-  | val v => val (renameVal ξ v)
-  | app t u => app (rename ξ t) (rename ξ u)
-  | case s t u => case (rename ξ s) (rename (lift ξ) t) (rename (lift ξ) u)
-  | fst t => fst (rename ξ t)
-  | snd t => snd (rename ξ t)
+def Term.rename (ξ : Nat → Nat) : Term → Term
+  | val v => val (.rename ξ v)
+  | app t u => app (.rename ξ t) (.rename ξ u)
+  | case s t u => case (.rename ξ s) (.rename (lift ξ) t) (.rename (lift ξ) u)
+  | fst t => fst (.rename ξ t)
+  | snd t => snd (.rename ξ t)
 end
 
 def up (σ : Nat → Value) : Nat → Value :=
-  var 0 +: (renameVal succ ∘ σ)
+  var 0 +: (.rename succ ∘ σ)
 prefix:95 "⇑" => up
 
 mutual
@@ -191,38 +191,38 @@ end CBV
 
 section
 set_option hygiene false
-local notation:40 "⟦" A:41 "⟧ᵀ" => transType A
+local notation:40 "⟦" A:41 "⟧ᵀ" => translate A
 @[simp]
-def transType : CBV.VType → ValType
+def CBV.VType.translate : CBV.VType → ValType
   | .Unit => .Unit
   | .Sum A₁ A₂ => .Sum (⟦ A₁ ⟧ᵀ) (⟦ A₂ ⟧ᵀ)
   | .Arr A B => .U (.Arr (⟦ A ⟧ᵀ) (.F (⟦ B ⟧ᵀ)))
   | .Pair A₁ A₂ => .U (.Prod (.F (⟦ A₁ ⟧ᵀ)) (.F (⟦ A₂ ⟧ᵀ)))
 end
-notation:40 "⟦" A:41 "⟧ᵀ" => transType A
+notation:40 "⟦" A:41 "⟧ᵀ" => CBV.VType.translate A
 
 /-* Translation of contexts *-/
 
 section
 set_option hygiene false
-local notation:40 "⟦" Γ:41 "⟧ᶜ" => transCtxt Γ
+local notation:40 "⟦" Γ:41 "⟧ᶜ" => translate Γ
 @[simp]
-def transCtxt : CBV.Ctxt → Ctxt
+def CBV.Ctxt.translate : CBV.Ctxt → _root_.Ctxt
   | .nil => .nil
   | .cons Γ A => .cons (⟦ Γ ⟧ᶜ) (⟦ A ⟧ᵀ)
 end
-notation:40 "⟦" Γ:41 "⟧ᶜ" => transCtxt Γ
+notation:40 "⟦" Γ:41 "⟧ᶜ" => CBV.Ctxt.translate Γ
 
 /-* Translation of values and terms *-/
 
 section
 set_option hygiene false
-local notation:40 "⟦" v:41 "⟧ᵛ" => transValue v
-local notation:40 "⟦" t:41 "⟧ᵗ" => transTerm t
+local notation:40 "⟦" v:41 "⟧ᵛ" => CBV.Value.translate v
+local notation:40 "⟦" t:41 "⟧ᵗ" => CBV.Term.translate t
 
 mutual
 @[simp]
-def transValue : CBV.Value → Val
+def CBV.Value.translate : CBV.Value → Val
   | .var x => .var x
   | .unit => .unit
   | .lam t => .thunk (.lam (⟦ t ⟧ᵗ))
@@ -231,7 +231,7 @@ def transValue : CBV.Value → Val
   | .pair v w => .thunk (.prod (.ret (⟦ v ⟧ᵛ)) (.ret (⟦ w ⟧ᵛ)))
 
 @[simp]
-def transTerm : CBV.Term → Com
+def CBV.Term.translate : CBV.Term → Com
   | .val v => .ret (⟦ v ⟧ᵛ)
   | .app t u =>
     .letin (⟦ t ⟧ᵗ)
@@ -247,8 +247,8 @@ def transTerm : CBV.Term → Com
 end
 end
 
-notation:40 "⟦" v:41 "⟧ᵛ" => transValue v
-notation:40 "⟦" t:41 "⟧ᵗ" => transTerm t
+notation:40 "⟦" v:41 "⟧ᵛ" => CBV.Value.translate v
+notation:40 "⟦" t:41 "⟧ᵗ" => CBV.Term.translate t
 
 @[simp] def transSubst' (σ : Nat → CBV.Value) : Nat → Val := λ x ↦ ⟦ σ x ⟧ᵛ
 notation:40 "⟦" σ:41 "⟧ˢ" => transSubst' σ
@@ -257,9 +257,9 @@ notation:40 "⟦" σ:41 "⟧ˢ" => transSubst' σ
 
 section
 set_option hygiene false
-local notation:40 "⟦" k:41 "⟧ᴷ" => transK k
+local notation:40 "⟦" k:41 "⟧ᴷ" => translate k
 @[simp]
-def transK : CBV.K → K
+def CBV.K.translate : CBV.K → CK.K
   | [] => []
   | .app₁ u :: k   => .letin (.letin (renameCom succ (⟦ u ⟧ᵗ))
                         (.app (.force (.var 1)) (.var 0))) :: (⟦ k ⟧ᴷ)
@@ -270,7 +270,7 @@ def transK : CBV.K → K
   | .fst :: k      => .letin (.fst (.force (.var 0))) :: (⟦ k ⟧ᴷ)
   | .snd :: k      => .letin (.snd (.force (.var 0))) :: (⟦ k ⟧ᴷ)
 end
-notation:40 "⟦" k:41 "⟧ᴷ" => transK k
+notation:40 "⟦" k:41 "⟧ᴷ" => CBV.K.translate k
 
 /-*---------------------------------------
   Preservation properties of translation
@@ -278,16 +278,17 @@ notation:40 "⟦" k:41 "⟧ᴷ" => transK k
 
 /-* Translation is type preserving *-/
 
-theorem presIn {x A Γ} (h : CBV.In x A Γ) : (⟦ Γ ⟧ᶜ) ∋ x ∶ (⟦ A ⟧ᵀ) := by
+namespace CBV
+
+theorem In.presIn {x A Γ} (h : CBV.In x A Γ) : (⟦ Γ ⟧ᶜ) ∋ x ∶ (⟦ A ⟧ᵀ) := by
   induction h <;> constructor; assumption
 
-namespace CBV
 joint {Γ : Ctxt} {A : VType}
   theorem WtVal.preservation {v} (h : Γ ⊢ᵥ v ∶ A) : (⟦ Γ ⟧ᶜ) ⊢ (⟦ v ⟧ᵛ) ∶ (⟦ A ⟧ᵀ)
   theorem Wt.preservation    {t} (h : Γ ⊢ₛ t ∶ A) : (⟦ Γ ⟧ᶜ) ⊢ (⟦ t ⟧ᵗ) ∶ .F (⟦ A ⟧ᵀ)
 by
   mutual_induction h, h
-  case var ih => exact .var (presIn ih)
+  case var mem => exact .var mem.presIn
   case unit => exact .unit
   case lam ih => exact .thunk (.lam ih)
   case inl ih => exact .inl ih
@@ -302,13 +303,14 @@ by
     exact .letin ihs (.case (.var .here) (wtWeakenCom₂ iht) (wtWeakenCom₂ ihu))
   case fst ih => exact .letin ih (.fst (.force (.var .here)))
   case snd ih => exact .letin ih (.snd (.force (.var .here)))
+
 end CBV
 
 /-* Translation commutes with renaming and substitution *-/
 
 joint {ξ : Nat → Nat}
-  theorem transRenameVal {v} : renameVal ξ (⟦ v ⟧ᵛ) = (⟦ CBV.renameVal ξ v ⟧ᵛ)
-  theorem transRenameCom {t} : renameCom ξ (⟦ t ⟧ᵗ) = (⟦ CBV.rename ξ t ⟧ᵗ)
+  theorem transRenameVal {v} : renameVal ξ (⟦ v ⟧ᵛ) = (⟦ .rename ξ v ⟧ᵛ)
+  theorem transRenameCom {t} : renameCom ξ (⟦ t ⟧ᵗ) = (⟦ .rename ξ t ⟧ᵗ)
 by
   mutual_induction v, t generalizing ξ
   case var n => cases n <;> rfl
@@ -339,7 +341,7 @@ by
 
 /-* Translation preserves machine semantics *-/
 
-theorem simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨⟦ t ⟧ᵗ, ⟦ k ⟧ᴷ⟩ ⤳⋆ ⟨⟦ u ⟧ᵗ, ⟦ k' ⟧ᴷ⟩ := by
+theorem CBV.simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨⟦ t ⟧ᵗ, ⟦ k ⟧ᴷ⟩ ⤳⋆ ⟨⟦ u ⟧ᵗ, ⟦ k' ⟧ᴷ⟩ := by
   generalize et : (t, k)  = ck  at r
   generalize eu : (u, k') = ck' at r
   induction r
@@ -347,47 +349,47 @@ theorem simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨⟦ t ⟧
   all_goals injection eu with eu ek; subst eu ek
   case β v =>
     calc
-      _ ⤳ _ := Step.ζ
-      _ ⤳ _ := by exact Step.app
-      _ ⤳ _ := Step.π
-      _ ⤳ _ := Step.β
+      _ ⤳ _ := .ζ
+      _ ⤳ _ := by exact .app
+      _ ⤳ _ := .π
+      _ ⤳ _ := .β
       _ = _ := by
         rw [← substUnion, substDropCom₂, ← transSubstCom, substComExt]
         intro n; cases n <;> rfl
   case ιl =>
     calc
       _ ⤳ _ := Step.ζ
-      _ ⤳ _ := by exact Step.ιl
+      _ ⤳ _ := by exact .ιl
       _ = _ := by
         rw [← substUnion, substDrop₂, ← transSubstCom, substComExt]
         intro n; cases n <;> rfl
   case ιr =>
     calc
-      _ ⤳ _ := Step.ζ
-      _ ⤳ _ := by exact Step.ιr
+      _ ⤳ _ := .ζ
+      _ ⤳ _ := by exact .ιr
       _ = _ := by
         rw [← substUnion, substDrop₂, ← transSubstCom, substComExt]
         intro n; cases n <;> rfl
   case π1 =>
     simp
     calc
-      _ ⤳ _ := Step.ζ
-      _ ⤳ _ := by exact Step.fst
-      _ ⤳ _ := Step.π
-      _ ⤳ _ := Step.π1
+      _ ⤳ _ := .ζ
+      _ ⤳ _ := by exact .fst
+      _ ⤳ _ := .π
+      _ ⤳ _ := .π1
   case π2 =>
     simp
     calc
-      _ ⤳ _ := Step.ζ
-      _ ⤳ _ := by exact Step.snd
-      _ ⤳ _ := Step.π
-      _ ⤳ _ := Step.π2
+      _ ⤳ _ := .ζ
+      _ ⤳ _ := by exact .snd
+      _ ⤳ _ := .π
+      _ ⤳ _ := .π2
   case app₁ => exact .once .letin
   case app₂ =>
     calc
-      _ ⤳ _ := Step.ζ
-      _ ⤳ _ := by exact Step.letin
-      _ = _ := by simp [up, ← substDropCom]
+      _ ⤳ _ := .ζ
+      _ ⤳ _ := by exact .letin
+      _ = _ := by simp [← substDropCom]; rfl
   case case => exact .once .letin
   case fst => exact .once .letin
   case snd => exact .once .letin

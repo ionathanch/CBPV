@@ -13,5 +13,6 @@ lean_lib «CBPV» where
   leanOptions := #[
     ⟨`autoImplicit, false⟩,
     ⟨`pp.fieldNotation, false⟩,
-    ⟨`pp.proofs, true⟩
+    ⟨`pp.proofs, true⟩,
+    ⟨`experimental.module, true⟩
   ]
