@@ -35,6 +35,14 @@ theorem SNup {Γ σ A B} {m : Com}
   rw [substVar] at qm
   exact (hB.snCom qm).antirenaming
 
+theorem SNup₂ {Γ σ A₁ A₂ B} {m : Com}
+  (hσ : Γ ⊨ σ) (h : Γ ∷ A₁ ∷ A₂ ⊨ m ∶ B) : SNCom (m⦃⇑ ⇑ σ⦄) := by
+  let ⟨P₁, hA₁⟩ := A₁.interp
+  let ⟨P₂, hA₂⟩ := A₂.interp
+  let ⟨Q, hB, qm⟩ := h (var 0 +: var 1 +: σ) (semCtxtCons hA₂ (hA₂.sneVal .var) (semCtxtCons hA₁ (hA₁.sneVal .var) hσ))
+  rw [substVar₂] at qm
+  exact (hB.snCom qm).antirenaming
+
 joint {Γ : Ctxt}
   theorem soundVal (v : Val) (A : ValType) (h : Γ ⊢ v ∶ A) : Γ ⊨ v ∶ A
   theorem soundCom (m : Com) (B : ComType) (h : Γ ⊢ m ∶ B) : Γ ⊨ m ∶ B
@@ -53,6 +61,10 @@ by
     let ⟨_, hA₁⟩ := A₁.interp
     let ⟨_, hA₂, pv⟩ := ih σ hσ
     exact ⟨_, .Sum hA₁ hA₂, .inr (.inr ⟨_, rfl, pv⟩)⟩
+  case pair ihv ihw =>
+    let ⟨_, hA₁, pv⟩ := ihv σ hσ
+    let ⟨_, hA₂, qw⟩ := ihw σ hσ
+    exact ⟨_, .Pair hA₁ hA₂, .inr ⟨_, _, rfl, pv, qw⟩⟩
   case thunk ih =>
     let ⟨_, hB, pm⟩ := ih σ hσ
     exact ⟨_, .U hB, hB.closure (.once .μ) pm⟩
@@ -124,6 +136,22 @@ by
           _ = case (inr w) (m⦃⇑ σ⦄) (n⦃⇑ σ⦄) := by simp only [substCom]; rw [e]
           _ ⤳ n⦃⇑ σ⦄⦃w⦄                      := .ι2 snv snm
           _ = (n⦃w +: σ⦄)                    := by rw [← substUnion]
+      exact ⟨R, hB, hB.closure (.once r') rm⟩
+  case unpair m _ _ B _ _ ihv ihm =>
+    let ⟨_, hPair, pv⟩ := ihv σ hσ
+    cases hPair with | Pair hA₁ hA₂ =>
+    let snm := SNup₂ hσ ihm
+    match pv with
+    | .inl sne =>
+      let ⟨P, hB⟩ := B.interp
+      exact ⟨P, hB, hB.sneCom (.unpair sne (SNup₂ hσ ihm))⟩
+    | .inr ⟨v, w, e, pv, qw⟩ =>
+      simp [e]
+      let ⟨R, hB, rm⟩ := ihm (_ +: _ +: σ) (semCtxtCons hA₂ qw (semCtxtCons hA₁ pv hσ))
+      let r' : unpair (pair v w) (m⦃⇑ ⇑ σ⦄) ⤳ m⦃w +: v +: σ⦄ := by
+        calc unpair (pair v w) (m⦃⇑ ⇑ σ⦄)
+          _ ⤳ m⦃⇑ ⇑ σ⦄⦃w +: v +: var⦄ := .π (hA₁.snVal pv) (hA₂.snVal qw)
+          _ = (m⦃w +: v +: σ⦄)        := by rw [← substUnion₂]
       exact ⟨R, hB, hB.closure (.once r') rm⟩
   case prod ihm ihn =>
     let ⟨_, hB₁, pm⟩ := ihm σ hσ

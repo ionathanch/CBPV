@@ -16,6 +16,8 @@ mutual
 inductive StepVal : Val → Val → Prop where
   | inl {v w} : v ⤳ᵛ w → inl v ⤳ᵛ inl w
   | inr {v w} : v ⤳ᵛ w → inr v ⤳ᵛ inr w
+  | pair₁ {v v' w} : v ⤳ᵛ v' → pair v w ⤳ᵛ pair v' w
+  | pair₂ {v w w'} : w ⤳ᵛ w' → pair v w ⤳ᵛ pair v w'
   | thunk {m n} : m ⤳ᶜ n → thunk m ⤳ᵛ thunk n
 
 inductive StepCom : Com → Com → Prop where
@@ -24,6 +26,7 @@ inductive StepCom : Com → Com → Prop where
   | ζ {v m} : letin (ret v) m ⤳ᶜ m⦃v⦄
   | ιl {v m n} : case (inl v) m n ⤳ᶜ m⦃v⦄
   | ιr {v m n} : case (inr v) m n ⤳ᶜ n⦃v⦄
+  | π {v w m} : unpair (pair v w) m ⤳ᶜ m⦃w +: v +: var⦄
   | π1 {m n} : fst (prod m n) ⤳ᶜ m
   | π2 {m n} : snd (prod m n) ⤳ᶜ n
   | force {v w} : v ⤳ᵛ w → force v ⤳ᶜ force w
@@ -57,6 +60,14 @@ inductive StepCom : Com → Com → Prop where
     n ⤳ᶜ n' →
     --------------------------
     case v m n ⤳ᶜ case v m n'
+  | unpair₁ {v v' m} :
+    v ⤳ᵛ v' →
+    -------------------------
+    unpair v m ⤳ᶜ unpair v' m
+  | unpair₂ {v m m'} :
+    m ⤳ᶜ m' →
+    -------------------------
+    unpair v m ⤳ᶜ unpair v m'
   | prod₁ {m m' n} :
     m ⤳ᶜ m' →
     ----------------------
@@ -95,6 +106,7 @@ joint (ξ : Nat → Nat)
 by
   mutual_induction r, r generalizing ξ
   all_goals try rw [← renameDist]
+  all_goals try rw [← renameDist₂]
   all_goals constructor
   all_goals apply_assumption
 
@@ -104,6 +116,7 @@ joint (σ : Nat → Val)
 by
   mutual_induction r, r generalizing σ
   all_goals try rw [← substDist]
+  all_goals try rw [← substDist₂]
   all_goals constructor
   all_goals apply_assumption
 
@@ -120,6 +133,19 @@ theorem StepVals.inr {v w} (r : v ⤳⋆ᵛ w) : inr v ⤳⋆ᵛ inr w := by
   induction r
   case refl => exact .refl
   case trans r₁ _ r₂ => exact .trans (.inr r₁) r₂
+
+theorem StepVals.pair₁ {v v' w} (r : v ⤳⋆ᵛ v') : pair v w ⤳⋆ᵛ pair v' w := by
+  induction r
+  case refl => exact .refl
+  case trans r₁ _ r₂ => exact .trans (.pair₁ r₁) r₂
+
+theorem StepVals.pair₂ {v w w'} (r : w ⤳⋆ᵛ w') : pair v w ⤳⋆ᵛ pair v w' := by
+  induction r
+  case refl => exact .refl
+  case trans r₁ _ r₂ => exact .trans (.pair₂ r₁) r₂
+
+theorem StepVals.pair {v v' w w'} (rv : v ⤳⋆ᵛ v') (rw : w ⤳⋆ᵛ w') : pair v w ⤳⋆ᵛ pair v' w' :=
+  Trans.trans (StepVals.pair₁ rv) (StepVals.pair₂ rw)
 
 theorem StepVals.thunk {m n} (r : m ⤳⋆ᶜ n) : thunk m ⤳⋆ᵛ thunk n := by
   induction r
@@ -185,6 +211,19 @@ theorem StepComs.case₂ {v m n n'} (r : n ⤳⋆ᶜ n') : case v m n ⤳⋆ᶜ 
 theorem StepComs.case {v w m m' n n'} (rv : v ⤳⋆ᵛ w) (rm : m ⤳⋆ᶜ m') (rn : n ⤳⋆ᶜ n') : case v m n ⤳⋆ᶜ case w m' n' :=
   Trans.trans (StepComs.case₀ rv) (Trans.trans (StepComs.case₁ rm) (StepComs.case₂ rn))
 
+theorem StepComs.unpair₁ {v v' m} (r : v ⤳⋆ᵛ v') : unpair v m ⤳⋆ᶜ unpair v' m := by
+  induction r
+  case refl => exact .refl
+  case trans r₁ _ r₂ => exact .trans (.unpair₁ r₁) r₂
+
+theorem StepComs.unpair₂ {v m m'} (r : m ⤳⋆ᶜ m') : unpair v m ⤳⋆ᶜ unpair v m' := by
+  induction r
+  case refl => exact .refl
+  case trans r₁ _ r₂ => exact .trans (.unpair₂ r₁) r₂
+
+theorem StepComs.unpair {v v' m m'} (rv : v ⤳⋆ᵛ v') (rm : m ⤳⋆ᶜ m') : unpair v m ⤳⋆ᶜ unpair v' m' :=
+  Trans.trans (StepComs.unpair₁ rv) (StepComs.unpair₂ rm)
+
 theorem StepComs.prod₁ {m m' n} (r : m ⤳⋆ᶜ m') : prod m n ⤳⋆ᶜ prod m' n := by
   induction r
   case refl => exact .refl
@@ -246,6 +285,7 @@ by
   case unit => exact .refl
   case inl ih => exact .inl (ih h)
   case inr ih => exact .inr (ih h)
+  case pair ihv ihw => exact .pair (ihv h) (ihw h)
   case thunk ih => exact .thunk (ih h)
   case force ih => exact .force (ih h)
   case lam ih => exact .lam (ih (.lift h))
@@ -253,6 +293,7 @@ by
   case ret ih => exact .ret (ih h)
   case letin ihm ihn => exact .letin (ihm h) (ihn (.lift h))
   case case ihv ihm ihn => exact .case (ihv h) (ihm (.lift h)) (ihn (.lift h))
+  case unpair ihv ihm => exact .unpair (ihv h) (ihm (.lift (.lift h)))
   case prod ihm ihn => exact .prod (ihm h) (ihn h)
   case fst ih => exact .fst (ih h)
   case snd ih => exact .snd (ih h)
@@ -261,4 +302,13 @@ theorem StepVal.replace {m : Com} {v w : Val} (r : v ⤳ᵛ w) : m⦃v⦄ ⤳⋆
   refine StepCom.replace' ?ext (m := m)
   intro n; cases n
   case zero => exact .once r
-  case succ => simp; exact .refl
+  case succ => exact .refl
+
+theorem StepVal.replace₂ {m : Com} {v₁ v₂ w₁ w₂: Val} (rv : v₁ ⤳⋆ᵛ v₂) (rw : w₁ ⤳⋆ᵛ w₂) : m⦃v₁ +: w₁ +: var⦄ ⤳⋆ᶜ m⦃v₂ +: w₂ +: var⦄ := by
+  refine StepCom.replace' ?ext (m := m)
+  intro n; cases n
+  case zero => exact rv
+  case succ n =>
+    cases n
+    case zero => exact rw
+    case succ => exact .refl

@@ -16,6 +16,7 @@ inductive Eval : Com → Com → Prop where
   | ζ {v m} : letin (ret v) m ⇒ m⦃v⦄
   | ιl {v m n} : case (inl v) m n ⇒ m⦃v⦄
   | ιr {v m n} : case (inr v) m n ⇒ n⦃v⦄
+  | π {v w m} : unpair (pair v w) m ⇒ m⦃w +: v +: var⦄
   | π1 {m n} : fst (prod m n) ⇒ m
   | π2 {m n} : snd (prod m n) ⇒ n
   | app {m m' v} :
@@ -101,7 +102,7 @@ end Evals
 @[simp]
 def nf : Com → Prop
   | lam _ | ret _ | prod _ _ => True
-  | force _ | app _ _ | letin _ _ | case _ _ _ | fst _ | snd _ => False
+  | force _ | app _ _ | letin _ _ | case _ _ _ | unpair _ _ | fst _ | snd _ => False
 
 theorem nf.stepn't {m n} (nfm : nf m) : ¬ m ⇒ n := by
   cases m <;> simp at *

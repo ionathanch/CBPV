@@ -21,6 +21,12 @@ inductive 𝒱 : ValType → (Val → Prop) → Prop where
     ⟦ Sum A₁ A₂ ⟧ᵛ ↘ (λ v ↦ SNeVal v ∨
       (∃ w, v = inl w ∧ P w) ∨
       (∃ w, v = inr w ∧ Q w))
+  | Pair {A₁ A₂ P Q} :
+    ⟦ A₁ ⟧ᵛ ↘ P →
+    ⟦ A₂ ⟧ᵛ ↘ Q →
+    ----------------------------------------
+    ⟦ Pair A₁ A₂ ⟧ᵛ ↘ (λ v ↦ SNeVal v ∨
+      ∃ w₁ w₂, v = pair w₁ w₂ ∧ P w₁ ∧ Q w₂)
   | U {B P} :
     ⟦ B ⟧ᶜ ↘ P →
     ------------------------------
@@ -57,6 +63,10 @@ by
     let ⟨_, hA⟩ := ihA
     let ⟨_, hB⟩ := ihB
     exact ⟨_, .Sum hA hB⟩
+  case Pair ihA ihB =>
+    let ⟨_, hA⟩ := ihA
+    let ⟨_, hB⟩ := ihB
+    exact ⟨_, .Pair hA hB⟩
   case U ih => let ⟨_, h⟩ := ih; exact ⟨_, .U h⟩
   case F ih => let ⟨_, h⟩ := ih; exact ⟨_, .F h⟩
   case Arr ihA ihB =>
@@ -84,6 +94,8 @@ by
   case Unit => intro h; cases h; rfl
   case Sum ihA ihB =>
     intro h; cases h with | Sum hA hB => rw [ihA hA, ihB hB]
+  case Pair ihA ihB =>
+    intro h; cases h with | Pair hA hB => rw [ihA hA, ihB hB]
   case U ih =>
     intro h; cases h with | U hB => rw [ih hB]
   case F ih =>
@@ -121,6 +133,11 @@ by
     | .inl h => let ⟨_, e⟩ := h; subst e; exact .var
     | .inr (.inl ⟨_, e, pv⟩) => subst e; exact .inl (ihl.right pv)
     | .inr (.inr ⟨_, e, qv⟩) => subst e; exact .inr (ihr.right qv)
+  case Pair ihv ihw =>
+    refine ⟨λ sne ↦ Or.inl sne, λ sne ↦ ?_⟩
+    match sne with
+    | .inl h => let ⟨_, e⟩ := h; subst e; exact .var
+    | .inr ⟨_, _, e, pv, qw⟩ => subst e; exact .pair (ihv.right pv) (ihw.right qw)
   case U ih =>
     let ⟨sneval, snval⟩ := @ih (force v)
     exact ⟨λ sne ↦ sneval (.force sne),

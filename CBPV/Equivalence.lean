@@ -14,6 +14,8 @@ def 𝒱 (A : ValType) (v : Val) (w : Val) : Prop :=
   | .Sum A₁ A₂ =>
     (∃ v' w', 𝒱 A₁ v' w' ∧ v = inl v' ∧ w = inl w') ∨
     (∃ v' w', 𝒱 A₂ v' w' ∧ v = inr v' ∧ w = inr w')
+  | .Pair A₁ A₂ => ∃ v₁ v₂ w₁ w₂,
+    𝒱 A₁ v₁ w₁ ∧ 𝒱 A₂ v₂ w₂ ∧ v = pair v₁ v₂ ∧ w = pair w₁ w₂
   | U B => ∃ m n, ℰ B m n ∧ v = thunk m ∧ w = thunk n
 
 def 𝒞 (B : ComType) (m : Com) (n : Com) : Prop :=
@@ -49,6 +51,8 @@ theorem 𝒞ℰ {m n A} (h : (m, n) ∈ ⟦A⟧ᶜ) : ℰ A m n := by
 theorem 𝒱.unit : 𝒱 Unit unit unit := by simp [𝒱]
 theorem 𝒱.inl {v w A₁ A₂} (h : (v, w) ∈ ⟦A₁⟧ᵛ) : (inl v, inl w) ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [𝒱, h]
 theorem 𝒱.inr {v w A₁ A₂} (h : (v, w) ∈ ⟦A₂⟧ᵛ) : (inr v, inr w) ∈ ⟦Sum A₁ A₂⟧ᵛ := by simp [𝒱, h]
+theorem 𝒱.pair {v₁ v₂ w₁ w₂ A₁ A₂} (h₁ : (v₁, w₁) ∈ ⟦A₁⟧ᵛ) (h₂ : (v₂, w₂) ∈ ⟦A₂⟧ᵛ) : (pair v₁ v₂, pair w₁ w₂) ∈ ⟦Pair A₁ A₂⟧ᵛ := by
+  unfold 𝒱; exact ⟨v₁, v₂, w₁, w₂, h₁, h₂, rfl, rfl⟩
 theorem 𝒱.thunk {m n B} (h : (m, n) ∈ ⟦B⟧ᵉ) : (thunk m, thunk n) ∈ ⟦U B⟧ᵛ := by simp [𝒱, h]
 
 namespace ℰ
@@ -113,8 +117,12 @@ by
   case Sum ihA₁ ihA₂ =>
     unfold 𝒱; unfold 𝒱 at h
     match h with
-    | .inl ⟨_, _, hA₁, ev, ew⟩ => refine .inl ⟨_, _, ihA₁ hA₁, ew, ev⟩
-    | .inr ⟨_, _, hA₂, ev, ew⟩ => refine .inr ⟨_, _, ihA₂ hA₂, ew, ev⟩
+    | .inl ⟨_, _, hA₁, ev, ew⟩ => exact .inl ⟨_, _, ihA₁ hA₁, ew, ev⟩
+    | .inr ⟨_, _, hA₂, ev, ew⟩ => exact .inr ⟨_, _, ihA₂ hA₂, ew, ev⟩
+  case Pair ihA₁ ihA₂ =>
+    unfold 𝒱; unfold 𝒱 at h
+    let ⟨_, _, _, _, hA₁, hA₂, ev, ew⟩ := h
+    exact ⟨_, _, _, _, ihA₁ hA₁, ihA₂ hA₂, ew, ev⟩
   case U ih =>
     unfold 𝒱 at *
     let ⟨_, _, hA, ev, ew⟩ := h
@@ -158,12 +166,18 @@ by
     match h₁₂, h₂₃ with
     | .inl ⟨_, _, hA₁₂, el₁, el₂⟩, .inl ⟨_, _, hA₂₃, er₂, er₃⟩ =>
       subst el₁ el₂ er₃; injection er₂ with e; subst e
-      refine .inl ⟨_, _, ihA₁ hA₁₂ hA₂₃, rfl, rfl⟩
+      exact .inl ⟨_, _, ihA₁ hA₁₂ hA₂₃, rfl, rfl⟩
     | .inr ⟨_, _, hA₁₂, el₁, el₂⟩, .inr ⟨_, _, hA₂₃, er₂, er₃⟩ =>
       subst el₁ el₂ er₃; injection er₂ with e; subst e
-      refine .inr ⟨_, _, ihA₂ hA₁₂ hA₂₃, rfl, rfl⟩
+      exact .inr ⟨_, _, ihA₂ hA₁₂ hA₂₃, rfl, rfl⟩
     | .inl ⟨_, _, _, _, er⟩, .inr ⟨_, _, _, _, _⟩ => subst er; contradiction
     | .inr ⟨_, _, _, _, er⟩, .inl ⟨_, _, _, _, _⟩ => subst er; contradiction
+  case Pair ihA₁ ihA₂ =>
+    unfold 𝒱; unfold 𝒱 at h₁₂ h₂₃
+    let ⟨_, _, _, _, hA₁₁, hA₁₂, el₁, el₂⟩ := h₁₂
+    let ⟨_, _, _, _, hA₂₁, hA₂₂, er₁, er₂⟩ := h₂₃
+    subst el₁ el₂ er₂; injection er₁ with e₁ e₂; subst e₁ e₂
+    exact ⟨_, _, _, _, ihA₁ hA₁₁ hA₂₁, ihA₂ hA₁₂ hA₂₂, rfl, rfl⟩
   case U ih =>
     unfold 𝒱 at *
     let ⟨_, _, hB₁₂, el₁, el₂⟩ := h₁₂
@@ -188,7 +202,7 @@ by
     let ⟨_, _, _, _, hA₁₁, hA₁₂, el₁, el₂⟩ := h₁₂
     let ⟨_, _, _, _, hA₂₁, hA₂₂, er₁, er₂⟩ := h₂₃
     subst el₁ el₂ er₂; injection er₁ with e₁ e₂; subst e₁ e₂
-    refine ⟨_, _, _, _, trans𝒞ℰ ihB₁ hA₁₁ hA₂₁, trans𝒞ℰ ihB₂ hA₁₂ hA₂₂, rfl, rfl⟩
+    exact ⟨_, _, _, _, trans𝒞ℰ ihB₁ hA₁₁ hA₂₁, trans𝒞ℰ ihB₂ hA₁₂ hA₂₂, rfl, rfl⟩
 
 def ℰ.trans {B} := @trans𝒞ℰ B 𝒞.trans
 
@@ -264,6 +278,7 @@ by
   case unit => exact 𝒱.unit
   case inl ih => exact 𝒱.inl (ih σ τ hστ)
   case inr ih => exact 𝒱.inr (ih σ τ hστ)
+  case pair ih₁ ih₂ => exact 𝒱.pair (ih₁ σ τ hστ) (ih₂ σ τ hστ)
   case thunk ih => exact 𝒱.thunk (ih σ τ hστ)
   case force ih =>
     simp [𝒱] at ih
@@ -295,6 +310,13 @@ by
       simp [ev, ew]
       refine ℰ.bwd ?_ ?_ (ihn (v +: σ) (w +: τ) (semCtxt.cons hA₂ hστ))
       all_goals rw [substUnion]; exact .ιr
+  case unpair ihv ihm =>
+    unfold semVal 𝒱 at ihv
+    let ⟨_, _, _, _, hA₁, hA₂, ev, ew⟩ := ihv σ τ hστ
+    simp [ev, ew]
+    refine ℰ.bwd .π .π ?_
+    rw [← substUnion₂, ← substUnion₂]
+    exact ihm (_ +: _ +: σ) (_ +: _ +: τ) (semCtxt.cons hA₂ (semCtxt.cons hA₁ hστ))
   case prod ihm ihn => exact ℰ.prod (ihm σ τ hστ) (ihn σ τ hστ)
   case fst ih =>
     let ⟨_, _, _, _, r₁, r₂, hB₁⟩ := (ih σ τ hστ).fst

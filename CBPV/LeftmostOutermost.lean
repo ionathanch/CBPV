@@ -3,7 +3,7 @@ import CBPV.NormalInd
 open Val Com
 
 /-*-----------------------------------------
-  Not a lambda/return/product/inl/inr
+  Not a lambda/return/product/inl/inr/pair
   (to restrict reduction in head position)
 -----------------------------------------*-/
 
@@ -13,8 +13,8 @@ def NotLamRetProd : Com → Prop
   | _ => True
 
 @[simp, reducible]
-def NotInlr : Val → Prop
-  | inl _ | inr _ => False
+def NotInlrPair : Val → Prop
+  | inl _ | inr _ | pair _ _ => False
   | _ => True
 
 /-*-------------------------
@@ -29,6 +29,7 @@ inductive NeCom : Com → Prop where
   | app {m v} : NeCom m → NfVal v → NeCom (app m v)
   | letin {m n} : NeCom m → NfCom n → NeCom (letin m n)
   | case {x m n} : NfCom m → NfCom n → NeCom (case (var x) m n)
+  | unpair {x m} : NfCom m → NeCom (unpair (var x) m)
   | fst {m} : NeCom m → NeCom (fst m)
   | snd {m} : NeCom m → NeCom (snd m)
 
@@ -37,6 +38,7 @@ inductive NfVal : Val → Prop where
   | unit : NfVal unit
   | inl {v} : NfVal v → NfVal (inl v)
   | inr {v} : NfVal v → NfVal (inr v)
+  | pair {v w} : NfVal v → NfVal w → NfVal (pair v w)
   | thunk {m} : NfCom m → NfVal (thunk m)
 
 inductive NfCom : Com → Prop where
@@ -62,6 +64,8 @@ mutual
 inductive RedVal : Val → Val → Prop where
   | inl {v w} : v ⤳ᵛ w → inl v ⤳ᵛ inl w
   | inr {v w} : v ⤳ᵛ w → inr v ⤳ᵛ inr w
+  | pair₁ {v v' w} : v ⤳ᵛ v' → pair v w ⤳ᵛ pair v' w
+  | pair₂ {v w w'} : NfVal v → w ⤳ᵛ w' → pair v w ⤳ᵛ pair v w'
   | thunk {m n} : m ⤳ᶜ n → thunk m ⤳ᵛ thunk n
 
 inductive RedCom : Com → Com → Prop where
@@ -70,6 +74,7 @@ inductive RedCom : Com → Com → Prop where
   | ζ {v m} : letin (ret v) m ⤳ᶜ m⦃v⦄
   | ιl {v m n} : case (inl v) m n ⤳ᶜ m⦃v⦄
   | ιr {v m n} : case (inr v) m n ⤳ᶜ n⦃v⦄
+  | π {v w m} : unpair (pair v w) m ⤳ᶜ m⦃w +: v +: var⦄
   | π1 {m n} : fst (prod m n) ⤳ᶜ m
   | π2 {m n} : snd (prod m n) ⤳ᶜ n
   | lam {m n} : m ⤳ᶜ n → lam m ⤳ᶜ lam n
@@ -80,9 +85,11 @@ inductive RedCom : Com → Com → Prop where
   | prod₂ {m n n'} : NfCom m → n ⤳ᶜ n' → prod m n ⤳ᶜ prod m n'
   | letin₁ {m m' n} : NotLamRetProd m → m ⤳ᶜ m' → letin m n ⤳ᶜ letin m' n
   | letin₂ {m n n'} : NeCom m → n ⤳ᶜ n' → letin m n ⤳ᶜ letin m n'
-  | case₀ {v w m n} : NotInlr v → v ⤳ᵛ w → case v m n ⤳ᶜ case w m n
+  | case₀ {v w m n} : NotInlrPair v → v ⤳ᵛ w → case v m n ⤳ᶜ case w m n
   | case₁ {x m m' n} : m ⤳ᶜ m' → case (var x) m n ⤳ᶜ case (var x) m' n
   | case₂ {x m n n'} : NfCom m → n ⤳ᶜ n' → case (var x) m n ⤳ᶜ case (var x) m n'
+  | unpair₁ {v w m} : NotInlrPair v → v ⤳ᵛ w → unpair v m ⤳ᶜ unpair w m
+  | unpair₂ {x m n} : m ⤳ᶜ n → unpair (var x) m ⤳ᶜ unpair (var x) n
   | fst {m m'} : NotLamRetProd m → m ⤳ᶜ m' → fst m ⤳ᶜ fst m'
   | snd {m m'} : NotLamRetProd m → m ⤳ᶜ m' → snd m ⤳ᶜ snd m'
 end
@@ -113,6 +120,8 @@ by
   case force | var | unit => cases r
   case inl ih | inr ih | thunk ih | lam ih | ret ih =>
     cases r; rename_i r; exact ih r
+  case pair ihv ihw =>
+    cases r with | pair₁ r => exact ihv r | pair₂ _ r => exact ihw r
   case app ihm ihv =>
     cases r
     case β nelam => cases nelam
@@ -128,6 +137,10 @@ by
     case case₀ r => cases r
     case case₁ r => exact ihm r
     case case₂ r => exact ihn r
+  case unpair ihv ihm =>
+    cases r
+    case unpair₁ r => cases r
+    case unpair₂ r => exact ihm r
   case fst neprod _ =>
     cases r
     case π1 => cases neprod
@@ -148,6 +161,14 @@ by
   mutual_induction r₁, r₁
   case inl r ih => cases r₂ with | _ r₂ => rw [ih r₂]
   case inr r ih => cases r₂ with | _ r₂ => rw [ih r₂]
+  case pair₁ r ih =>
+    cases r₂
+    case pair₁ r₂ => rw [ih r₂]
+    case pair₂ nfv _ => cases nfv.normality r
+  case pair₂ r ih =>
+    cases r₂
+    case pair₁ nfv _ r => cases nfv.normality r
+    case pair₂ r₂ => rw [ih r₂]
   case thunk r ih => cases r₂ with | _ r₂ => rw [ih r₂]
   case μ => cases r₂; rfl
   case β =>
@@ -160,6 +181,7 @@ by
     case letin₂ neret _ => cases neret
   case ιl => cases r₂; rfl; contradiction
   case ιr => cases r₂; rfl; contradiction
+  case π => cases r₂; rfl; contradiction
   case π1 => cases r₂; rfl; contradiction
   case π2 => cases r₂; rfl; contradiction
   case lam ih => cases r₂ with | lam r => rw [ih r]
@@ -203,6 +225,15 @@ by
     case case₀ r => cases r
     case case₁ nfm _ _ r => cases nfm.normality r
     case case₂ r => rw [ih r]
+  case unpair₁ ih =>
+    cases r₂
+    case π => contradiction
+    case unpair₁ r => rw [ih r]
+    case unpair₂ r _ => cases r
+  case unpair₂ ih =>
+    cases r₂
+    case unpair₁ r => cases r
+    case unpair₂ r => rw [ih r]
   case fst ih =>
     cases r₂; contradiction
     case fst r => rw [ih r]
@@ -217,7 +248,7 @@ by
 theorem RedCom.notLamRetProd {m n} (r : m ⤳ᶜ n) (nl : NotLamRetProd n) : NotLamRetProd m := by
   mutual_induction r generalizing nl <;> simp at *
 
-theorem RedVal.notInlr {v w} (r : v ⤳ᵛ w) (ni : NotInlr w) : NotInlr v := by
+theorem RedVal.notInlr {v w} (r : v ⤳ᵛ w) (ni : NotInlrPair w) : NotInlrPair v := by
   mutual_induction r generalizing ni <;> simp at *
 
 theorem RedComs.notLamRetProd {m n} (r : m ⤳⋆ᶜ n) (nl : NotLamRetProd n) : NotLamRetProd m := by
@@ -225,7 +256,7 @@ theorem RedComs.notLamRetProd {m n} (r : m ⤳⋆ᶜ n) (nl : NotLamRetProd n) :
   case refl => exact nl
   case trans r _ ih => exact r.notLamRetProd (ih nl)
 
-theorem RedVals.notInlr {v w} (r : v ⤳⋆ᵛ w) (ni : NotInlr w) : NotInlr v := by
+theorem RedVals.notInlrPair {v w} (r : v ⤳⋆ᵛ w) (ni : NotInlrPair w) : NotInlrPair v := by
   induction r
   case refl => exact ni
   case trans r _ ih => exact r.notInlr (ih ni)
@@ -243,6 +274,19 @@ theorem RedVals.inr {v w} (r : v ⤳⋆ᵛ w) : inr v ⤳⋆ᵛ inr w := by
   induction r
   case refl => exact .refl
   case trans r₁ _ r₂ => exact .trans (.inr r₁) r₂
+
+theorem RedVals.pair₁ {v v' w} (r : v ⤳⋆ᵛ v') : pair v w ⤳⋆ᵛ pair v' w := by
+  induction r
+  case refl => exact .refl
+  case trans r₁ _ r₂ => exact .trans (.pair₁ r₁) r₂
+
+theorem RedVals.pair₂ {v w w'} (nfv : NfVal v) (r : w ⤳⋆ᵛ w') : pair v w ⤳⋆ᵛ pair v w' := by
+  induction r
+  case refl => exact .refl
+  case trans r₁ _ r₂ => exact .trans (.pair₂ nfv r₁) r₂
+
+theorem RedVals.pair {v v' w w'} (nfv : NfVal v') (rv : v ⤳⋆ᵛ v') (rw : w ⤳⋆ᵛ w') : pair v w ⤳⋆ᵛ pair v' w' :=
+  Trans.trans (RedVals.pair₁ rv) (RedVals.pair₂ nfv rw)
 
 theorem RedVals.thunk {m n} (r : m ⤳⋆ᶜ n) : thunk m ⤳⋆ᵛ thunk n := by
   induction r
@@ -279,10 +323,10 @@ theorem RedComs.letin₂ {m n n'} (nem : NeCom m) (r : n ⤳⋆ᶜ n') : letin m
   case refl => exact .refl
   case trans r₁ _ r₂ => exact .trans (.letin₂ nem r₁) r₂
 
-theorem RedComs.case₀ {v w m n} (ni : NotInlr w) (r : v ⤳⋆ᵛ w) : case v m n ⤳⋆ᶜ case w m n := by
+theorem RedComs.case₀ {v w m n} (ni : NotInlrPair w) (r : v ⤳⋆ᵛ w) : case v m n ⤳⋆ᶜ case w m n := by
   induction r
   case refl => exact .refl
-  case trans r₁ r₂ ih => exact .trans (.case₀ (RedVals.notInlr (.trans r₁ r₂) ni) r₁) (ih ni)
+  case trans r₁ r₂ ih => exact .trans (.case₀ (RedVals.notInlrPair (.trans r₁ r₂) ni) r₁) (ih ni)
 
 theorem RedComs.case₁ {x m m' n} (r : m ⤳⋆ᶜ m') : case (var x) m n ⤳⋆ᶜ case (var x) m' n := by
   induction r
@@ -293,6 +337,11 @@ theorem RedComs.case₂ {x m n n'} (nem : NfCom m) (r : n ⤳⋆ᶜ n') : case (
   induction r
   case refl => exact .refl
   case trans r₁ _ r₂ => exact .trans (.case₂ nem r₁) r₂
+
+theorem RedComs.unpair₂ {x m n} (r : m ⤳⋆ᶜ n) : unpair (var x) m ⤳⋆ᶜ unpair (var x) n := by
+  induction r
+  case refl => exact .refl
+  case trans r₁ _ r₂ => exact .trans (.unpair₂ r₁) r₂
 
 theorem RedComs.prod₁ {m m' n} (r : m ⤳⋆ᶜ m') : prod m n ⤳⋆ᶜ prod m' n := by
   induction r
@@ -348,6 +397,10 @@ by
     let ⟨_, rm, nfm⟩ := ihm
     let ⟨_, rn, nfn⟩ := ihn
     exact ⟨_, Trans.trans (RedComs.case₁ rm) (RedComs.case₂ nfm rn), .case nfm nfn⟩
+  case unpair snev _ ihm =>
+    let ⟨_, e⟩ := snev; subst e
+    let ⟨_, rm, nfm⟩ := ihm
+    refine ⟨_, RedComs.unpair₂ rm, .unpair nfm⟩
   case fst ih =>
     let ⟨_, rm, nem⟩ := ih
     exact ⟨_, .fst (nem.NotLamRetProd) rm, .fst nem⟩
@@ -362,6 +415,10 @@ by
   case inr ih =>
     let ⟨_, r, nfv⟩ := ih
     exact ⟨_, .inr r, .inr nfv⟩
+  case pair ih₁ ih₂ =>
+    let ⟨_, rv, nfv⟩ := ih₁
+    let ⟨_, rw, nfw⟩ := ih₂
+    exact ⟨_, .pair nfv rv rw, .pair nfv nfw⟩
   case thunk ih =>
     let ⟨_, r, nfm⟩ := ih
     exact ⟨_, .thunk r, .thunk nfm⟩
@@ -386,6 +443,7 @@ by
   case ζ => exact .ζ
   case ι1 => exact .ιl
   case ι2 => exact .ιr
+  case π => exact .π
   case π1 => exact .π1
   case π2 => exact .π2
   case app sr r => exact .app₁ sr.NotLamRetProd r

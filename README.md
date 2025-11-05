@@ -5,13 +5,14 @@ which makes heavy use of mutual induction,
 since the syntax of terms is mutually defined.
 
 ```
-A ::= Unit | A + A | U B
+A ::= Unit | A + A | A × A | U B
 B ::= A → B | B & B | F A
 
-v ::= x | () | inl v | inr v | {v}
+v ::= x | () | inl v | inr v | (v, v) | {v}
 m ::= v! | λx. m | m v | return v | let x ← m in m
   | case v of {inl x => m; inr x => m}
-  | (m, m) | m.1 | m.2
+  | let (x, y) = v in m
+  | ⟨m, m⟩ | m.1 | m.2
 ```
 
 This means that everything from reduction to typing to the logical relation

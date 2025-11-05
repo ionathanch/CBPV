@@ -197,7 +197,7 @@ def CBV.VType.translate : CBV.VType → ValType
   | .Unit => .Unit
   | .Sum A₁ A₂ => .Sum (⟦ A₁ ⟧ᵀ) (⟦ A₂ ⟧ᵀ)
   | .Arr A B => .U (.Arr (⟦ A ⟧ᵀ) (.F (⟦ B ⟧ᵀ)))
-  | .Pair A₁ A₂ => .U (.Prod (.F (⟦ A₁ ⟧ᵀ)) (.F (⟦ A₂ ⟧ᵀ)))
+  | .Pair A₁ A₂ => .Pair (⟦ A₁ ⟧ᵀ) (⟦ A₂ ⟧ᵀ)
 end
 notation:40 "⟦" A:41 "⟧ᵀ" => CBV.VType.translate A
 
@@ -228,7 +228,7 @@ def CBV.Value.translate : CBV.Value → Val
   | .lam t => .thunk (.lam (⟦ t ⟧ᵗ))
   | .inl v => .inl (⟦ v ⟧ᵛ)
   | .inr v => .inr (⟦ v ⟧ᵛ)
-  | .pair v w => .thunk (.prod (.ret (⟦ v ⟧ᵛ)) (.ret (⟦ w ⟧ᵛ)))
+  | .pair v w => .pair (⟦ v ⟧ᵛ) (⟦ w ⟧ᵛ)
 
 @[simp]
 def CBV.Term.translate : CBV.Term → Com
@@ -242,8 +242,8 @@ def CBV.Term.translate : CBV.Term → Com
       (.case (.var 0)
         (renameCom (lift succ) (⟦ t ⟧ᵗ))
         (renameCom (lift succ) (⟦ u ⟧ᵗ)))
-  | .fst t => .letin (⟦ t ⟧ᵗ) (.fst (.force (.var 0)))
-  | .snd t => .letin (⟦ t ⟧ᵗ) (.snd (.force (.var 0)))
+  | .fst t => .letin (⟦ t ⟧ᵗ) (.unpair (.var 0) (.ret (.var 1)))
+  | .snd t => .letin (⟦ t ⟧ᵗ) (.unpair (.var 0) (.ret (.var 0)))
 end
 end
 
@@ -267,8 +267,8 @@ def CBV.K.translate : CBV.K → CK.K
   | .case t u :: k => .letin (.case (.var 0)
                         (renameCom (lift succ) (⟦ t ⟧ᵗ))
                         (renameCom (lift succ) (⟦ u ⟧ᵗ))) :: (⟦ k ⟧ᴷ)
-  | .fst :: k      => .letin (.fst (.force (.var 0))) :: (⟦ k ⟧ᴷ)
-  | .snd :: k      => .letin (.snd (.force (.var 0))) :: (⟦ k ⟧ᴷ)
+  | .fst :: k      => .letin (.unpair (.var 0) (.ret (.var 1))) :: (⟦ k ⟧ᴷ)
+  | .snd :: k      => .letin (.unpair (.var 0) (.ret (.var 0))) :: (⟦ k ⟧ᴷ)
 end
 notation:40 "⟦" k:41 "⟧ᴷ" => CBV.K.translate k
 
@@ -293,7 +293,7 @@ by
   case lam ih => exact .thunk (.lam ih)
   case inl ih => exact .inl ih
   case inr ih => exact .inr ih
-  case pair ihv ihw => exact (.thunk (.prod (.ret ihv) (.ret ihw)))
+  case pair ihv ihw => exact .pair ihv ihw
   case val ih => exact .ret ih
   case app iht ihu =>
     exact .letin iht
@@ -301,8 +301,8 @@ by
         (.app (.force (.var (.there .here))) (.var .here)))
   case case ihs iht ihu =>
     exact .letin ihs (.case (.var .here) (wtWeakenCom₂ iht) (wtWeakenCom₂ ihu))
-  case fst ih => exact .letin ih (.fst (.force (.var .here)))
-  case snd ih => exact .letin ih (.snd (.force (.var .here)))
+  case fst ih => exact .letin ih (.unpair (.var .here) (.ret (.var (.there .here))))
+  case snd ih => exact .letin ih (.unpair (.var .here) (.ret (.var .here)))
 
 end CBV
 
@@ -374,16 +374,12 @@ theorem CBV.simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨⟦ t
     simp
     calc
       _ ⤳ _ := .ζ
-      _ ⤳ _ := by exact .fst
-      _ ⤳ _ := .μ
-      _ ⤳ _ := .π1
+      _ ⤳ _ := by exact .π
   case π2 =>
     simp
     calc
       _ ⤳ _ := .ζ
-      _ ⤳ _ := by exact .snd
-      _ ⤳ _ := .μ
-      _ ⤳ _ := .π2
+      _ ⤳ _ := by exact .π
   case app₁ => exact .once .letin
   case app₂ =>
     calc

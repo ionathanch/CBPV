@@ -36,17 +36,18 @@ section
 set_option hygiene false
 local infix:40 "⤳" => Step
 inductive Step : CK → CK → Prop where
-  | β {m v k} :     ⟨lam m, app v :: k⟩   ⤳ ⟨m⦃v⦄, k⟩
-  | ζ {v m k} :     ⟨ret v, letin m :: k⟩ ⤳ ⟨m⦃v⦄, k⟩
-  | ιl {v m n k} :  ⟨case (inl v) m n, k⟩ ⤳ ⟨m⦃v⦄, k⟩
-  | ιr {v m n k} :  ⟨case (inr v) m n, k⟩ ⤳ ⟨n⦃v⦄, k⟩
-  | μ {m k} :       ⟨force (thunk m), k⟩  ⤳ ⟨m, k⟩
-  | π1 {m n k} :    ⟨prod m n, fst :: k⟩  ⤳ ⟨m, k⟩
-  | π2 {m n k} :    ⟨prod m n, snd :: k⟩  ⤳ ⟨n, k⟩
-  | app {m v k} :   ⟨app m v, k⟩          ⤳ ⟨m, app v :: k⟩
-  | letin {m n k} : ⟨letin m n, k⟩        ⤳ ⟨m, letin n :: k⟩
-  | fst {m k} :     ⟨fst m, k⟩            ⤳ ⟨m, fst :: k⟩
-  | snd {m k} :     ⟨snd m, k⟩            ⤳ ⟨m, snd :: k⟩
+  | β {m v k} :     ⟨lam m, app v :: k⟩      ⤳ ⟨m⦃v⦄, k⟩
+  | ζ {v m k} :     ⟨ret v, letin m :: k⟩    ⤳ ⟨m⦃v⦄, k⟩
+  | ιl {v m n k} :  ⟨case (inl v) m n, k⟩    ⤳ ⟨m⦃v⦄, k⟩
+  | ιr {v m n k} :  ⟨case (inr v) m n, k⟩    ⤳ ⟨n⦃v⦄, k⟩
+  | π {v w m k} :   ⟨unpair (pair v w) m, k⟩ ⤳ ⟨m⦃w +: v +: var⦄, k⟩
+  | μ {m k} :       ⟨force (thunk m), k⟩     ⤳ ⟨m, k⟩
+  | π1 {m n k} :    ⟨prod m n, fst :: k⟩     ⤳ ⟨m, k⟩
+  | π2 {m n k} :    ⟨prod m n, snd :: k⟩     ⤳ ⟨n, k⟩
+  | app {m v k} :   ⟨app m v, k⟩             ⤳ ⟨m, app v :: k⟩
+  | letin {m n k} : ⟨letin m n, k⟩           ⤳ ⟨m, letin n :: k⟩
+  | fst {m k} :     ⟨fst m, k⟩               ⤳ ⟨m, fst :: k⟩
+  | snd {m k} :     ⟨snd m, k⟩               ⤳ ⟨m, snd :: k⟩
 end
 infix:40 "⤳" => Step
 
@@ -86,6 +87,10 @@ inductive BStep : Com → Com → Prop where
     m₂⦃v⦄ ⇓ t →
     ----------------------
     case (inr v) m₁ m₂ ⇓ t
+  | π {v w m t} :
+    m⦃w +: v +: var⦄ ⇓ t →
+    -----------------------
+    unpair (pair v w) m ⇓ t
   | π1 {n t m₁ m₂} :
     n ⇓ prod m₁ m₂ →
     m₁ ⇓ t →
@@ -149,6 +154,7 @@ inductive EqVal : Val → Val → Prop
   | unit : unit ≡ unit
   | inl {v w : Val} : v ≡ w → inl v ≡ inl w
   | inr {v w : Val} : v ≡ w → inr v ≡ inr w
+  | pair {v₁ v₂ w₁ w₂ : Val} : v₁ ≡ w₁ → v₂ ≡ w₂ → pair v₁ v₂ ≡ pair w₁ w₂
   | thunk {m n : Com} : m ≡ n → thunk m ≡ thunk n
   | sym {v w : Val} : w ≡ v → v ≡ w
   | trans {u v w : Val} : u ≡ v → v ≡ w → u ≡ w
@@ -160,6 +166,7 @@ inductive EqCom : Com → Com → Prop
   | ret {v w : Val} : v ≡ w → ret v ≡ ret w
   | letin {n₁ n₂ m₁ m₂ : Com} : m₁ ≡ n₁ → m₂ ≡ n₂ → letin m₁ m₂ ≡ letin n₁ n₂
   | case {v w : Val} {m₁ n₁ m₂ n₂ : Com} : v ≡ w → m₁ ≡ n₁ → m₂ ≡ n₂ → case v m₁ m₂ ≡ case w n₁ n₂
+  | unpair {v w : Val} {m n : Com} : v ≡ w → m ≡ n → unpair v m ≡ unpair w n
   | prod {m₁ m₂ n₁ n₂ : Com} : m₁ ≡ n₁ → m₂ ≡ n₂ → prod m₁ m₂ ≡ prod n₁ n₂
   | fst {m n : Com} : m ≡ n → fst m ≡ fst n
   | snd {m n : Com} : m ≡ n → snd m ≡ snd n
@@ -167,6 +174,7 @@ inductive EqCom : Com → Com → Prop
   | ζ {m v} : letin (ret v) m ≡ m⦃v⦄
   | ιl {v m₁ m₂} : case (inl v) m₁ m₂ ≡ m₁⦃v⦄
   | ιr {v m₁ m₂} : case (inr v) m₁ m₂ ≡ m₂⦃v⦄
+  | π {v w m} : unpair (pair v w) m ≡ m⦃w +: v +: var⦄
   | μ {m} : force (thunk m) ≡ m
   | π1 {m₁ m₂} : fst (prod m₁ m₂) ≡ m₁
   | π2 {m₁ m₂} : snd (prod m₁ m₂) ≡ m₂
@@ -207,7 +215,7 @@ theorem stepEval {m n k₁ k₂} (r : ⟨m, k₁⟩ ⤳ ⟨n, k₂⟩) :
   induction r generalizing m n k₁ k₂
   all_goals injection e₁ with em ek₁; subst em ek₁
   all_goals injection e₂ with en ek₂; subst en ek₂
-  case β | ζ | ιl | ιr | μ | π1 | π2 => (try simp); left; apply evalCongK; constructor
+  case β | ζ | ιl | ιr | π | μ | π1 | π2 => (try simp); left; apply evalCongK; constructor
   case app | letin | fst | snd => right; rfl
 
 theorem stepEvals {m n k₁ k₂} (r : ⟨m, k₁⟩ ⤳⋆ ⟨n, k₂⟩) : dismantle m k₁ ⇒⋆ dismantle n k₂ := by
@@ -240,7 +248,7 @@ theorem bigStep {m n t k₁ k₂} (r : ⟨m, k₁⟩ ⤳ ⟨n, k₂⟩) : disman
   all_goals injection en with en ek; subst en ek
   all_goals apply bigCongK; (try simp) <;> intro t r
   case β | ζ | π1 | π2 => constructor; constructor; assumption
-  case ιl | ιr | μ => constructor; assumption
+  case ιl | ιr | π | μ => constructor; assumption
 
 theorem bigSteps {m n t k₁ k₂} (r : ⟨m, k₁⟩ ⤳⋆ ⟨n, k₂⟩) : dismantle n k₂ ⇓ t → dismantle m k₁ ⇓ t := by
   generalize em : (m, k₁) = mk at r
@@ -260,6 +268,7 @@ theorem stepBig {m n k} (r : m ⇓ n) : ⟨m, k⟩ ⤳⋆ ⟨n, k⟩ := by
   case μ ih => exact .trans .μ ih
   case ιl ih => exact .trans .ιl ih
   case ιr ih => exact .trans .ιr ih
+  case π ih => exact .trans .π ih
   case β n t m v _ _ ih₁ ih₂ =>
     calc ⟨app n v, k⟩
       _ ⤳  ⟨n, .app v :: k⟩     := .app
@@ -294,6 +303,7 @@ theorem evalBig {m n t} (r : m ⇒ n) : n ⇓ t → m ⇓ t := by
   case ζ => exact .ζ .ret r
   case ιl => exact .ιl r
   case ιr => exact .ιr r
+  case π => exact .π r
   case π1 => exact .π1 .prod r
   case π2 => exact .π2 .prod r
   case app ih =>

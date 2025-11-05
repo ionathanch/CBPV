@@ -15,6 +15,7 @@ inductive SNeCom : Com → Prop where
   | app {m v} : SNeCom m → SNVal v → SNeCom (app m v)
   | letin {m n} : SNeCom m → SNCom n → SNeCom (letin m n)
   | case {v m n} : SNeVal v → SNCom m → SNCom n → SNeCom (case v m n)
+  | unpair {v m} : SNeVal v → SNCom m → SNeCom (unpair v m)
   | fst {m} : SNeCom m → SNeCom (fst m)
   | snd {m} : SNeCom m → SNeCom (snd m)
 
@@ -23,6 +24,7 @@ inductive SNVal : Val → Prop where
   | unit : SNVal unit
   | inl {v} : SNVal v → SNVal (inl v)
   | inr {v} : SNVal v → SNVal (inr v)
+  | pair {v w} : SNVal v → SNVal w → SNVal (pair v w)
   | thunk {m} : SNCom m → SNVal (thunk m)
 
 inductive SNCom : Com → Prop where
@@ -38,6 +40,7 @@ inductive SR : Com → Com → Prop where
   | ζ {v m} : SNVal v → letin (ret v) m ⤳ m⦃v⦄
   | ι1 {v m n} : SNVal v → SNCom n → case (inl v) m n ⤳ m⦃v⦄
   | ι2 {v m n} : SNVal v → SNCom m → case (inr v) m n ⤳ n⦃v⦄
+  | π {v w m} : SNVal v → SNVal w → unpair (pair v w) m ⤳ m⦃w +: v +: var⦄
   | π1 {m n} : SNCom n → fst (prod m n) ⤳ m
   | π2 {m n} : SNCom m → snd (prod m n) ⤳ n
   | app {m n : Com} {v} : m ⤳ n → app m v ⤳ app n v
@@ -128,7 +131,14 @@ by
     case case v _ _ =>
     let ⟨_, e⟩ := snev; subst e
     cases v <;> try contradiction
-    refine .case .var (ihm em) (ihn en)
+    exact .case .var (ihm em) (ihn en)
+  case unpair snev snm ihm =>
+    cases m <;> try contradiction
+    injection e with ev em
+    case unpair v _ =>
+    let ⟨_, e⟩ := snev; subst e
+    cases v <;> try contradiction
+    exact .unpair .var (ihm em)
   case fst ih =>
     cases m <;> try contradiction
     injection e with e
@@ -149,6 +159,10 @@ by
     cases v <;> try contradiction
     injection e with e
     exact .inr (ih e)
+  case pair ihv ihw =>
+    cases v <;> try contradiction
+    injection e with ev ew
+    exact .pair (ihv ev) (ihw ew)
   case thunk ih =>
     cases v <;> try contradiction
     injection e with e
@@ -208,6 +222,14 @@ by
     injection ev with ev
     subst ev em en; rw [renameDist]
     exact ⟨_, rfl, .ι2 (ihv rfl) (ihm rfl)⟩
+  case π ihv ihw =>
+    cases m <;> try contradiction
+    injection e with ev em
+    rename Val => v
+    cases v <;> try contradiction
+    injection ev with ev ew
+    subst ev ew em; rw [renameDist₂]
+    exact ⟨_, rfl, .π (ihv rfl) (ihw rfl)⟩
   case π1 ihm =>
     cases m <;> try contradiction
     injection e with e

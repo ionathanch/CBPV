@@ -12,6 +12,7 @@ def 𝒱 (A : ValType) (v : Val) : Prop :=
   match A with
   | .Unit => v = unit
   | .Sum A₁ A₂ => (∃ w, 𝒱 A₁ w ∧ v = inl w) ∨ (∃ w, 𝒱 A₂ w ∧ v = inr w)
+  | .Pair A₁ A₂ => ∃ w₁ w₂, 𝒱 A₁ w₁ ∧ 𝒱 A₂ w₂ ∧ v = pair w₁ w₂
   | U B => ∃ m, ℰ B m ∧ v = thunk m
 
 def 𝒞 (B : ComType) (m : Com) : Prop :=
@@ -43,6 +44,7 @@ theorem 𝒞ℰ {B m} (h : m ∈ ⟦ B ⟧ᶜ) : m ∈ ⟦ B ⟧ᵉ :=
 theorem 𝒱.unit : 𝒱 Unit unit := by simp [𝒱]
 theorem 𝒱.inl {v A₁ A₂} (h : 𝒱 A₁ v) : 𝒱 (Sum A₁ A₂) (inl v) := by simp [𝒱]; assumption
 theorem 𝒱.inr {v A₁ A₂} (h : 𝒱 A₂ v) : 𝒱 (Sum A₁ A₂) (inr v) := by simp [𝒱]; assumption
+theorem 𝒱.pair {v w A₁ A₂} (h₁ : 𝒱 A₁ v) (h₂ : 𝒱 A₂ w) : 𝒱 (Pair A₁ A₂) (pair v w) := by simp [𝒱]; constructor <;> assumption
 theorem 𝒱.thunk {m B} (h : ℰ B m) : 𝒱 (U B) (thunk m) := by simp [𝒱]; assumption
 
 theorem ℰ.ret {v A} (h : 𝒱 A v) : ℰ (F A) (ret v) := by apply 𝒞ℰ; simp [𝒞]; assumption
@@ -93,6 +95,7 @@ by
   case unit => exact 𝒱.unit
   case inl ih => exact 𝒱.inl (ih σ hσ)
   case inr ih => exact 𝒱.inr (ih σ hσ)
+  case pair ih₁ ih₂ => exact 𝒱.pair (ih₁ σ hσ) (ih₂ σ hσ)
   case thunk ih => exact 𝒱.thunk (ih σ hσ)
   case force ih =>
     simp [𝒱] at ih
@@ -125,6 +128,12 @@ by
       let hn := ihn (v +: σ) (semCtxtCons hv hσ)
       simp only [substCom]; rw [e]; rw [substUnion] at hn
       exact ℰ.bwd (.once .ιr) hn
+  case unpair ihv ihm =>
+    simp [𝒱] at ihv
+    let ⟨_, ihv, _, ihw, e⟩ := ihv σ hσ; simp [e]
+    refine ℰ.bwd (.once .π) ?_
+    rw [← substUnion₂]
+    exact ihm (_ +: _ +: σ) (semCtxtCons ihw (semCtxtCons ihv hσ))
   case prod m n _ _ _ _ ihm ihn =>
     simp [ℰ] at ihm ihn
     let ⟨_, ⟨rm, _⟩, hm⟩ := ihm σ hσ
