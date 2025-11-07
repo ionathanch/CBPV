@@ -25,6 +25,7 @@ inductive Term : Type where
   | prod : Term → Term → Term
   | fst : Term → Term
   | snd : Term → Term
+  | letin : Term → Term → Term
 open Term
 
 /-* Renaming and substitution *-/
@@ -41,6 +42,7 @@ def rename (ξ : Nat → Nat) : Term → Term
   | prod t u => prod (rename ξ t) (rename ξ u)
   | fst t => fst (rename ξ t)
   | snd t => snd (rename ξ t)
+  | letin t u => letin (rename ξ t) (rename (lift ξ) u)
 
 def up (σ : Nat → Term) : Nat → Term :=
   var 0 +: (rename succ ∘ σ)
@@ -58,6 +60,7 @@ def subst (σ : Nat → Term) : Term → Term
   | prod t u => prod (subst σ t) (subst σ u)
   | fst t => fst (subst σ t)
   | snd t => snd (subst σ t)
+  | letin t u => letin (subst σ t) (subst (⇑ σ) u)
 
 /-* Contexts and membership *-/
 
@@ -118,6 +121,11 @@ inductive Wt : Ctxt → Term → SType → Prop where
     Γ ⊢ₛ t ∶ Prod B₁ B₂ →
     ---------------
     Γ ⊢ₛ snd t ∶ B₂
+  | letin {Γ t u B₁ B₂} :
+    Γ ⊢ₛ t ∶ B₁ →
+    Γ ∷ B₁ ⊢ₛ u ∶ B₂ →
+    -------------------
+    Γ ⊢ₛ letin t u ∶ B₂
 end
 notation:40 Γ:41 "⊢ₛ" v:41 "∶" A:41 => Wt Γ v A
 
@@ -128,6 +136,7 @@ inductive F : Type where
   | case : Term → Term → F
   | fst : F
   | snd : F
+  | letin : Term → F
 
 def K := List F
 def CK := Term × K
@@ -136,15 +145,20 @@ section
 set_option hygiene false
 local infix:40 "⤳ₙ" => Step
 inductive Step : CK → CK → Prop where
-  | β {t u k} :      ⟨lam t, .app u :: k⟩     ⤳ₙ ⟨subst (u +: var) t, k⟩
-  | ιl {s t u k} :   ⟨inl s, .case t u :: k⟩  ⤳ₙ ⟨subst (s +: var) t, k⟩
-  | ιr {s t u k} :   ⟨inr s, .case t u :: k⟩  ⤳ₙ ⟨subst (s +: var) u, k⟩
-  | π1 {m n k} :     ⟨.prod m n, .fst :: k⟩   ⤳ₙ ⟨m, k⟩
-  | π2 {m n k} :     ⟨.prod m n, .snd :: k⟩   ⤳ₙ ⟨n, k⟩
-  | app {t u k} :    ⟨app t u, k⟩             ⤳ₙ ⟨t, .app u :: k⟩
-  | case {s t u k} : ⟨case s t u, k⟩          ⤳ₙ ⟨s, .case t u :: k⟩
-  | fst {m k} :      ⟨.fst m, k⟩              ⤳ₙ ⟨m, .fst :: k⟩
-  | snd {m k} :      ⟨.snd m, k⟩              ⤳ₙ ⟨m, .snd :: k⟩
+  | β {t u k} :       ⟨lam t, .app u :: k⟩      ⤳ₙ ⟨subst (u +: var) t, k⟩
+  | ιl {s t u k} :    ⟨inl s, .case t u :: k⟩   ⤳ₙ ⟨subst (s +: var) t, k⟩
+  | ιr {s t u k} :    ⟨inr s, .case t u :: k⟩   ⤳ₙ ⟨subst (s +: var) u, k⟩
+  | π1 {s t k} :      ⟨prod s t, .fst :: k⟩     ⤳ₙ ⟨s, k⟩
+  | π2 {s t k} :      ⟨prod s t, .snd :: k⟩     ⤳ₙ ⟨t, k⟩
+  | ζlam {t u k} :    ⟨lam t, .letin u :: k⟩    ⤳ₙ ⟨subst (lam t +: var) u, k⟩
+  | ζinl {t u k} :    ⟨inl t, .letin u :: k⟩    ⤳ₙ ⟨subst (inl t +: var) u, k⟩
+  | ζinr {t u k} :    ⟨inr t, .letin u :: k⟩    ⤳ₙ ⟨subst (inr t +: var) u, k⟩
+  | ζprod {s t u k} : ⟨prod s t, .letin u :: k⟩ ⤳ₙ ⟨subst (prod s t +: var) u, k⟩
+  | app {t u k} :     ⟨app t u, k⟩              ⤳ₙ ⟨t, .app u :: k⟩
+  | case {s t u k} :  ⟨case s t u, k⟩           ⤳ₙ ⟨s, .case t u :: k⟩
+  | fst {t k} :       ⟨fst t, k⟩                ⤳ₙ ⟨t, .fst :: k⟩
+  | snd {t k} :       ⟨snd t, k⟩                ⤳ₙ ⟨t, .snd :: k⟩
+  | letin! {t u k} :  ⟨letin t u, k⟩            ⤳ₙ ⟨t, .letin u :: k⟩
 end
 infix:40 "⤳ₙ" => Step
 
@@ -198,6 +212,7 @@ def CBN.Term.translate : CBN.Term → Com
   | .prod t u => .prod (⟦ t ⟧ᴺ) (⟦ u ⟧ᴺ)
   | .fst t => .fst (⟦ t ⟧ᴺ)
   | .snd t => .snd (⟦ t ⟧ᴺ)
+  | .letin t u => .app (.lam (⟦ u ⟧ᴺ)) (.thunk (⟦ t ⟧ᴺ))
 end
 notation:40 "⟦" t:41 "⟧ᴺ" => CBN.Term.translate t
 
@@ -208,12 +223,13 @@ local notation:40 "⟦" k:41 "⟧ᴺ" => translate k
 @[simp]
 def CBN.K.translate : CBN.K → CK.K
   | [] => []
-  | .app u :: k   => .app (.thunk (⟦ u ⟧ᴺ)) :: (⟦ k ⟧ᴺ)
+  | .app u :: k => .app (.thunk (⟦ u ⟧ᴺ)) :: (⟦ k ⟧ᴺ)
   | .case t u :: k => .letin (.case (.var 0)
                         (renameCom (lift succ) (⟦ t ⟧ᴺ))
                         (renameCom (lift succ) (⟦ u ⟧ᴺ))) :: (⟦ k ⟧ᴺ)
   | .fst :: k => .fst :: (⟦ k ⟧ᴺ)
   | .snd :: k => .snd :: (⟦ k ⟧ᴺ)
+  | .letin u :: k => .letin (⟦ u ⟧ᴺ) :: (⟦ k ⟧ᴺ)
 end
 notation:40 "⟦" k:41 "⟧ᴺ" => CBN.K.translate k
 
@@ -237,6 +253,8 @@ inductive CBN.Term.expand : CBN.Term → Com → Prop where
   | prod {t u m n} : t ↦ₙ m → u ↦ₙ n → .prod t u ↦ₙ .prod m n
   | fst {t m} : t ↦ₙ m → .fst t ↦ₙ .fst m
   | snd {t m} : t ↦ₙ m → .snd t ↦ₙ .snd m
+  | letin {t u m n} : t ↦ₙ m → u ↦ₙ n →
+    .letin t u ↦ₙ .app (.lam n) (.thunk m)
   | ft {t m} : t ↦ₙ m → t ↦ₙ .force (.thunk m)
 end
 infix:40 "↦ₙ" => CBN.Term.expand
@@ -266,6 +284,7 @@ theorem preservation {Γ t A} (h : Γ ⊢ₛ t ∶ A) : (⟦ Γ ⟧ᴺ) ⊢ (⟦
   case prod iht ihu => exact .prod iht ihu
   case fst ih => exact .fst ih
   case snd ih => exact .snd ih
+  case letin iht ihu => exact .app (.lam ihu) (.thunk iht)
 
 /-* Translation commutes with renaming and substitution *-/
 
@@ -286,11 +305,10 @@ theorem expandUp {σ : Nat → CBN.Term} {σ' : Nat → Val}
 theorem expandSubst {σ σ' t} (h : ∀ x, σ x ↦ₙ .force (σ' x)) : CBN.subst σ t ↦ₙ substCom σ' (⟦t⟧ᴺ) := by
   induction t generalizing σ σ'
   case var => exact h _
-  case lam ih => exact .lam (ih (expandUp h))
   case case ihs iht ihu =>
     simp [CBN.Term.translate]; rw [← renameUpLiftSubst, ← renameUpLiftSubst]
     exact .case (ihs h) (iht (expandUp h)) (ihu (expandUp h))
-  all_goals constructor <;> apply_rules
+  all_goals constructor <;> apply_rules [expandUp]
 
 theorem expandSubstSingle {t u} : CBN.subst (u +: .var) t ↦ₙ (⟦t⟧ᴺ) ⦃ Val.thunk (⟦ u ⟧ᴺ) +: .var ⦄ := by
   refine expandSubst (λ n ↦ ?_); cases n <;> constructor; exact transExpand
@@ -322,3 +340,6 @@ theorem CBN.simulation {t u k k'} (r : ⟨t, k⟩ ⤳ₙ ⟨u, k'⟩) : ∃ m, �
   case case => exact ⟨_, .once .letin, transExpand⟩
   case fst => exact ⟨_, .once .fst, transExpand⟩
   case snd => exact ⟨_, .once .snd, transExpand⟩
+  -- rules letin!, ζlam, ζinl, ζinr, ζprod describe the behaviour of letin strictly,
+  -- so the simulation proofs for a CBN translation will never go through
+  all_goals sorry

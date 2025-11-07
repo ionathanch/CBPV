@@ -57,6 +57,8 @@ Remaining proof files show interesting properties of CBPV.
   with respect to evaluation (subsumes the unary logical relation).
 * CBV.lean, CBN.lean: Translations from STLC with fine-grained CBV and CBN semantics,
   along with proofs that they preserve well-typedness and CK machine semantics.
+* Lazy.lean: Levy's "lazy" translation, but directly to CBPV,
+  as outlined in [this blog post](https://ionathan.ch/2025/11/06/strict-let.html)
 * Antisubstitution.lean (fails checking): An unused substitution lemma,
   similar to the antirenaming lemma.
 
@@ -69,7 +71,7 @@ Evaluation    Typing    NormalInd    Reduction
   │   │       │ │  │        │  │         │    
   │   ╽       ╽ │  │        ╽  ╰─────────│────╼ LeftmostOutermost
   │   CK ─╼ CBV │  │  OpenSemantics      │      Antisubstitution
-  │         CBN │  │    │                │
+  │ Lazy ╾─ CBN │  │    │                │
   ╽             ╽  ╽    ╽                ╽
   ClosedSemantics  Soundness         NormalAcc
   Equivalence             │           │
