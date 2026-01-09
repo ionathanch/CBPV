@@ -3,8 +3,8 @@
 
 % acmart now uses unicode-math, and mathtools needs to be loaded before it
 \RequirePackage{mathtools}
-\documentclass[acmsmall,screen,review,anonymous,nonacm]{acmart}
-\settopmatter{printacmref=false, printccs=false, printfolios=true}
+\documentclass[acmsmall,screen]{acmart}
+\settopmatter{printacmref=true, printccs=true, printfolios=true}
 
 \ifarxiv
 \pdfoutput=1
@@ -24,10 +24,9 @@
 \usepackage[format=plain,justification=centering]{caption}
 \usepackage{enumitem,booktabs,subcaption,xspace,doi}
 \usepackage{mathpartir,stmaryrd,colonequals}
-\usepackage[bottom,flushmargin,multiple,para]{footmisc} % para spacing is weird and ugly
+\usepackage[bottom,flushmargin,para]{footmisc} % `multiple` option interferes with ACM footers
 
-%\newcommand{\repo}{https://github.com/ionathanch/CBPV/tree/join}
-\newcommand{\repo}{https://github.com/anonymous/CBPV/tree/join}
+\newcommand{\repo}{https://github.com/ionathanch/CBPV/tree/join}
 \newcommand{\thmref}[2]{\textnormal{[\texttt{\href{\repo/CBPV/#1.lean}{#1}:#2}]}}
 \newcommand{\titlebreak}{\texorpdfstring{\\}{}}
 \newcommand{\TODO}{\textcolor{red}{\textbf{\textsf{TODO}}}\@\xspace}
@@ -80,35 +79,54 @@
 \citestyle{acmauthoryear}
 \bibliographystyle{ACM-Reference-Format}
 
-\title[]{Commuting Conversions and Join Points \titlebreak for Call-By-Push-Value}
+\title[Commuting Conversions \& Join Points for CBPV]
+  {Commuting Conversions and Join Points \titlebreak for Call-By-Push-Value}
 
 \author{Jonathan Chan}
 \orcid{0000-0003-0830-3180}
-\affiliation{University of Pennsylvania}
+\affiliation{%
+  \institution{University of Pennsylvania}
+  \city{Philadelphia}
+  \state{PA}
+  \country{USA}}
 \email{jcxz@seas.upenn.edu}
 
 \author{Madi Gudin}
-\affiliation{Amherst College}
+\affiliation{%
+  \institution{Amherst College}
+  \city{Amherst}
+  \state{MA}
+  \country{USA}}
 \email{mgudin27@amherst.edu}
 
 \author{Annabel Levy}
-\affiliation{University of Maryland, Baltimore County}
+\affiliation{%
+  \institution{University of Maryland, Baltimore County}
+  \city{Catonsville}
+  \state{MD}
+  \country{USA}}
 \email{alevy2@umbc.edu}
 
 \author{Stephanie Weirich}
 \orcid{0000-0002-6756-9168}
-\affiliation{University of Pennsylvania}
+\affiliation{%
+  \institution{University of Pennsylvania}
+  \city{Philadelphia}
+  \state{PA}
+  \country{USA}}
 \email{sweirich@seas.upenn.edu}
 
 \acmJournal{PACMPL}
-\acmConference[short]{name}{date}{venue}
-\acmVolume{}
-\acmNumber{}
-\acmArticle{}
-\acmYear{}
-\acmMonth{}
-\acmISBN{}
-\acmDOI{}
+\acmVolume{10}
+\acmNumber{OOPSLA1}
+\acmArticle{0}
+\acmYear{2026}
+\acmMonth{4}
+\acmDOI{10.1145/37nnnnn}
+\setcopyright{cc}
+\setcctype{by}
+\copyrightyear{2026}
+\keywords{commuting conversions, join points, call-by-push-value}
 
 \begin{CCSXML}
 <ccs2012>
