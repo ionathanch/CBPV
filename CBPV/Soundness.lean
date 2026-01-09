@@ -343,6 +343,15 @@ theorem retGround {m n A} (mj : m.joinless) (h : ⬝ ∣ ⬝ ⊢ m ∶ F A) (g :
   rw [← hA.ground g] at ra'
   rwa [← (r'.merge nm).ret_inv]
 
+theorem retGroundVal {m A} (mj : m.joinless) (h : ⬝ ∣ ⬝ ⊢ m ∶ F A) (g : isGround A) : ∃ v, m ⇒⋆ ret v ∧ ⟦m⟧ₘ ⇒⋆ ret v := by
+  let ⟨n, ⟨r, nfm⟩⟩ := safety h
+  let hm := soundCCnil mj h semCtxt.nil .nil
+  rw [substComId, substComId] at hm
+  unfold ℰ 𝒞 at hm
+  let ⟨_, _, ⟨r', _⟩, ⟨ra', _⟩, ⟨v, _, hA, eret₁, eret₂⟩⟩ := hm
+  subst eret₁ eret₂; simp at r' ra'
+  rw [← hA.ground g] at ra'; exists v
+
 theorem retGroundCK {m n A} (mj : m.joinless) (h : ⬝ ∣ ⬝ ⊢ m ∶ F A) (g : isGround A) (nm : nf n) :
   ⟨0, m, .nil⟩ ⤳⋆ ⟨0, n, .nil⟩ → ⟨0, ⟦m⟧ₘ, .nil⟩ ⤳⋆ ⟨0, n, .nil⟩ :=
   λ r ↦ evalStep nm (retGround mj h g ⟨stepEvalsNil r, nm⟩)
