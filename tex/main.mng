@@ -457,7 +457,7 @@ since it's never passed to a function or stored in another thunk;
 all that we want to do is jump to the $[[m]]$ within and pop an argument $[[x]]$.
 Its purpose is only to join up branches of a computation,
 and should be compiled to a local code block.
-%
+
 \begin{figure}[h]
   \begin{align}
     m &\dblcolon= \dots \mid [[join j x = m in m]] \mid [[jump j v]]
@@ -503,7 +503,7 @@ showing \aposteriori in \cref{sec:ccnf} that the output of the translation satis
 In \cref{sec:proof}, we reason about equivalence between a CBPV term and its translation,
 which requires both sides of the equivalence to belong to the same syntactic category.
 
-\begin{figure}[h]
+\begin{figure}
   \begin{align}
     [[A]] &\dblcolon= [[⊤]] \mid [[A + A]] \mid [[U B]] \tag{value types} \\
     [[B]] &\dblcolon= [[A → B]] \mid [[B & B]] \mid [[F A]] \tag{computation types} \\
@@ -591,7 +591,7 @@ The binding is also discarded when a terminal is reached in \rref{E-drop}.
 To illustrate, consider the following reduction sequence for three join points.
 Intuitively, we jump to $[[j3]]$ which jumps to $[[j1]]$ which is $[[m1]]$, so we end up at $[[m1{x ↦ v}]]$;
 the reductions that apply to get there are first to jump, then to skip, then to jump.
-%
+
 \begin{align}
   &[[join j1 x = m1 in join j2 x = m2 in join j3 x = jump j1 x in jump j3 v]] \nonumber \\
   &[[_ ⇝ join j1 x = m1 in join j2 x = m2 in jump j1 v]] \tag{\rref*{E-jump}} \\
@@ -983,7 +983,7 @@ For example, from $[[let x ← (if v then n1 else (if w then n2 else n3)) in m]]
 %
 rather than another extraneous join point $[[j' x = jump j x]]$ in the outer false branch.
 
-\begin{figure}
+\begin{figure}[t]
   \begin{multline*}
     [[⟦case v of inl x ⇒ m1 ; inr y ⇒ m2⟧ K]] \coloneqq \\
     \begin{cases}
@@ -1177,7 +1177,7 @@ and \cref{sec:proof:end} covers \cref{item:end}.
 
 \subsection{Logical equivalence and the fundamental theorem} \label{sec:proof:logrel}
 
-\begin{figure}[h]
+\begin{figure}
   \begin{align*}
     \mathclap{\fbox{$[[(v, w) ∈ A]]$} \quad \fbox{$[[(m, n) ∈ B]]$} \quad \fbox{$[[(m, n) ∈* B]]$}} \hfill \\
     [[((), ()) ∈ ⊤]] & \\
