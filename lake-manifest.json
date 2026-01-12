@@ -5,7 +5,7 @@
    "type": "git",
    "subDir": null,
    "scope": "ionathanch",
-   "rev": "96be82a5ecf219950b04a68cb47255d5a28052d9",
+   "rev": "db01eb84ca5a71f0655ebfc0ce6d4a8102d30792",
    "name": "MutualInduction",
    "manifestFile": "lake-manifest.json",
    "inputRev": "main",
