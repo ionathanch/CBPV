@@ -92,6 +92,7 @@
 \email{jcxz@seas.upenn.edu}
 
 \author{Madi Gudin}
+\authornote{Both authors contributed equally to this work.}
 \affiliation{%
   \institution{Amherst College}
   \city{Amherst}
@@ -100,6 +101,7 @@
 \email{mgudin27@amherst.edu}
 
 \author{Annabel Levy}
+\authornotemark[1]
 \affiliation{%
   \institution{University of Maryland, Baltimore County}
   \city{Catonsville}
