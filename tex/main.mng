@@ -787,14 +787,13 @@ for now, we ignore issues of renaming de Bruijn indices, as they are standard.
 
 \begin{lemma}[Weakening (value contexts)] \label{lem:wk:val} \thmref{Typing}{wtWeakenVal,wtWeakenCom} \leavevmode \\
   Suppose $[[x]]$ is not free in $[[v]]$, $[[m]]$.
-  If $[[G1, G2 ⊢ v : A]]$, then $[[G1, x : A', G2 ⊢ v : A]]$,
-  and if $[[G1, G2 | D ⊢ m : B]]$, then $[[G1, x : A, G2 | D ⊢ m : B]]$.
+  If \/ $[[G1, G2 ⊢ v : A]]$, then \/ $[[G1, x : A', G2 ⊢ v : A]]$,
+  and if \/ $[[G1, G2 | D ⊢ m : B]]$, then \/ $[[G1, x : A, G2 | D ⊢ m : B]]$.
 \end{lemma}
 
 \begin{lemma}[Weakening (jump contexts)] \label{lem:wk:jump} \thmref{Typing}{wtWeakenJ} \leavevmode \\
   Suppose $[[j]]$ is not free in $[[m]]$.
-  If $[[G | D1, D2 ⊢ m : B]]$, then $[[G | D1, j : A ↗ B', D2 ⊢ m : B]]$.
-
+  If \/ $[[G | D1, D2 ⊢ m : B]]$, then \/ $[[G | D1, j : A ↗ B', D2 ⊢ m : B]]$.
 \end{lemma}
 
 \section{Commuting Conversion Normalization} \label{sec:ccnf}
@@ -1074,8 +1073,8 @@ which is used in the proof of type preservation.
 We also need an inversion lemma for continuations that end in let continuations.
 
 \begin{lemma}[Plugging preserves typing] \label{lem:preservation:plug} \thmref{CCNF}{wtK.plug} \leavevmode \\
-  If $[[G | D ⊢ K : B1 ⇒ B2]]$ and $[[G | • ⊢ n : B1]]$,
-  then $[[G | D ⊢ K[n] : B2]]$.
+  If \/ $[[G | D ⊢ K : B1 ⇒ B2]]$ and \/ $[[G | • ⊢ n : B1]]$,
+  then \/ $[[G | D ⊢ K[n] : B2]]$.
 \end{lemma}
 
 \begin{proof}
@@ -1085,10 +1084,10 @@ We also need an inversion lemma for continuations that end in let continuations.
 
 \begin{lemma}[Let continuation inversion] \label{lem:k-let:inv} \thmref{CCNF}{wtK.jumpify}
   If $[[K]] = [[(let x ← □ in m)]][ [[k1]] ] \dots [ [[ki]] ]$
-  and $[[G | D ⊢ K : B1 ⇒ B2]]$,
+  and \/ $[[G | D ⊢ K : B1 ⇒ B2]]$,
   then there exists some $[[A]]$ such that
-  $[[G | D, j : A ↗ B2 ⊢ K' : B1 ⇒ B2]]$
-  and $[[G, x : A | D ⊢ m : B2]]$,
+  \/ $[[G | D, j : A ↗ B2 ⊢ K' : B1 ⇒ B2]]$
+  and \/ $[[G, x : A | D ⊢ m : B2]]$,
   where $[[K']] = [[(let x ← □ in jump j x)]][ [[k1]] ] \dots [ [[ki]] ]$.
 \end{lemma}
 
@@ -1099,9 +1098,9 @@ We also need an inversion lemma for continuations that end in let continuations.
 \begin{lemma}[Type preservation] \label{lem:preservation} \thmref{CCNF}{preservation}
   Suppose $[[v]]$ and $[[m]]$ are plain CBPV terms
   (and thus have no join points or jumps).
-  If $[[G ⊢ v : A]]$, then $[[G ⊢ ⟦v⟧ : A]]$,
-  and if $[[G | • ⊢ m : B1]]$ and $[[G | D ⊢ K : B1 ⇒ B2]]$,
-  then $[[G | D ⊢ ⟦m⟧ K : B2]]$.
+  If \/ $[[G ⊢ v : A]]$, then \/ $[[G ⊢ ⟦v⟧ : A]]$,
+  and if \/ $[[G | • ⊢ m : B1]]$ and \/ $[[G | D ⊢ K : B1 ⇒ B2]]$,
+  then \/ $[[G | D ⊢ ⟦m⟧ K : B2]]$.
 \end{lemma}
 
 \begin{proof}
@@ -1324,10 +1323,10 @@ In all proofs that follow, we freely use symmetry and transitivity without expli
 
 \begin{lemma}[Symmetry and transitivity (semantic equivalence)] \leavevmode
   \begin{itemize}
-    \item If $[[G ⊧ v ~ w : A]]$ then $[[G ⊧ w ~ v : A]]$. \thmref{Equivalence}{semVal.sym}
-    \item If $[[G | D ⊧ m ~ n : B]]$ then $[[G | D ⊧ n ~ m : B]]$. \thmref{Equivalence}{semCom.sym}
-    \item If $[[G ⊧ v1 ~ v2 : A]]$ and $[[G ⊧ v2 ~ v3 : A]]$ then $[[G ⊧ v1 ~ v3 : A]]$. \thmref{Equivalence}{semVal.trans}
-    \item If $[[G | D ⊧ m1 ~ m2 : B]]$ and $[[G | D ⊧ m2 ~ m3 : B]]$ then $[[G | D ⊧ m1 ~ m3 : B]]$. \thmref{Equivalence}{semCom.trans}
+    \item If \/ $[[G ⊧ v ~ w : A]]$ then \/ $[[G ⊧ w ~ v : A]]$. \thmref{Equivalence}{semVal.sym}
+    \item If \/ $[[G | D ⊧ m ~ n : B]]$ then \/ $[[G | D ⊧ n ~ m : B]]$. \thmref{Equivalence}{semCom.sym}
+    \item If \/ $[[G ⊧ v1 ~ v2 : A]]$ and \/ $[[G ⊧ v2 ~ v3 : A]]$ then \/ $[[G ⊧ v1 ~ v3 : A]]$. \thmref{Equivalence}{semVal.trans}
+    \item If \/ $[[G | D ⊧ m1 ~ m2 : B]]$ and \/ $[[G | D ⊧ m2 ~ m3 : B]]$ then \/ $[[G | D ⊧ m1 ~ m3 : B]]$. \thmref{Equivalence}{semCom.trans}
   \end{itemize}
 \end{lemma}
 
@@ -1335,8 +1334,8 @@ Finally, we show the fundamental theorem of semantic equivalence:
 well-typed terms are semantically equivalent to themselves.
 
 \begin{theorem}[Fundamental theorem of semantic equivalence] \label{thm:semeq} \thmref{Equivalence}{soundness} \leavevmode \\
-  If $[[G ⊢ v : A]]$ then $[[G ⊧ v ~ v : A]]$,
-  and if $[[G | D ⊢ m : B]]$ then $[[G | D ⊧ m ~ m : B]]$.
+  If \/ $[[G ⊢ v : A]]$ then \/ $[[G ⊧ v ~ v : A]]$,
+  and if \/ $[[G | D ⊢ m : B]]$ then \/ $[[G | D ⊧ m ~ m : B]]$.
 \end{theorem}
 
 \begin{proof}
@@ -1548,7 +1547,7 @@ as well as congruence of evaluating under plugging.
 \end{lemma}
 
 \begin{theorem}[Fundamental theorem of semantic equivalence of continuations] \label{thm:semeq:K} \leavevmode \\
-  If $[[G | D ⊢ K : B1 ⇒ B2]]$ then $[[G | D ⊧ K ~ K : B1 ⇒ B2]]$. \thmref{Soundness}{soundK}
+  If \/ $[[G | D ⊢ K : B1 ⇒ B2]]$ then \/ $[[G | D ⊧ K ~ K : B1 ⇒ B2]]$. \thmref{Soundness}{soundK}
 \end{theorem}
 
 \begin{proof}
@@ -1570,14 +1569,14 @@ as long as substitution commutes with plugging.
 \end{lemma}
 
 \begin{lemma}[Semantic equivalence of plugging] \label{lem:semeq:plug} \thmref{Soundness}{semK.plug} \leavevmode \\
-  If $[[G | D ⊧ K1 ~ K2 : B1 ⇒ B2]]$ and $[[G | • ⊧ n1 ~ n2 : B1]]$,
-  then $[[G | D ⊧ K1[n1] ~ K2[n2] : B2]]$, \linebreak[0]
+  If \/ $[[G | D ⊧ K1 ~ K2 : B1 ⇒ B2]]$ and \/ $[[G | • ⊧ n1 ~ n2 : B1]]$,
+  then \/ $[[G | D ⊧ K1[n1] ~ K2[n2] : B2]]$, \linebreak[0]
   trivially after rewriting by \cref{lem:subst-plug}.
 \end{lemma}
 
 \begin{corollary} \label{cor:semeq:plug} \thmref{Soundness}{semPlug}
-  If $[[G | D ⊢ K : B1 ⇒ B2]]$ and $[[G | • ⊧ n1 ~ n2 : B1]]$,
-  then $[[G | D ⊧ K[n1] ~ K[n2] : B2]]$,
+  If \/ $[[G | D ⊢ K : B1 ⇒ B2]]$ and \/ $[[G | • ⊧ n1 ~ n2 : B1]]$,
+  then \/ $[[G | D ⊧ K[n1] ~ K[n2] : B2]]$,
   using \cref{lem:semeq:plug} and \cref{thm:semeq:K}.
 \end{corollary}
 
@@ -1587,8 +1586,8 @@ Now that we have both semantic equivalence of commuting conversions and of plugg
 we use them together to show that plugging commutes with tail contexts.
 
 \begin{lemma}[Semantic equivalence of plugging let expressions] \label{lem:plug-let} \thmref{Soundness}{semKletin} \leavevmode \\
-  If $[[G | D ⊢ K : B1 ⇒ B2]]$ and $[[G | • ⊢ let x ← n in m : B1]]$, \\
-  then $[[G | D ⊧ K[let x ← n in m] ~ let x ← n in K[m] : B2]]$.
+  If \/ $[[G | D ⊢ K : B1 ⇒ B2]]$ and \/ $[[G | • ⊢ let x ← n in m : B1]]$, \\
+  then \/ $[[G | D ⊧ K[let x ← n in m] ~ let x ← n in K[m] : B2]]$.
 \end{lemma}
 
 \begin{proof}
@@ -1606,8 +1605,8 @@ we use them together to show that plugging commutes with tail contexts.
 \end{proof}
 
 \begin{lemma}[Semantic equivalence of plugging case expressions] \label{lem:plug-case} \thmref{Soundness}{semKcase} \leavevmode \\
-  If $[[G | D ⊢ K : B1 ⇒ B2]]$ and $[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : B1]]$, \\
-  then $[[G | D ⊧ K[case v of inl x ⇒ m1; inr y ⇒ m2] ~ case v of inl x ⇒ K[m1]; inr y ⇒ K[m2] : B2]]$.
+  If \/ $[[G | D ⊢ K : B1 ⇒ B2]]$ and \/ $[[G | • ⊢ case v of inl x ⇒ m1; inr y ⇒ m2 : B1]]$, \\
+  then \/ $[[G | D ⊧ K[case v of inl x ⇒ m1; inr y ⇒ m2] ~ case v of inl x ⇒ K[m1]; inr y ⇒ K[m2] : B2]]$.
 \end{lemma}
 
 \begin{proof}
@@ -1623,9 +1622,9 @@ To handle join points, we need one more lemma that gives an equivalence
 between a translation that doesn't use a join point and one that does.
 
 \begin{lemma}[Jump equivalence of plugging] \label{lem:plug-jump} \thmref{Soundness}{semKjoin} \leavevmode \\
-  If $[[G | D ⊢ K : B1 ⇒ B2]]$, $[[G | • ⊢ n : B1]]$,
+  If \/ $[[G | D ⊢ K : B1 ⇒ B2]]$, $[[G | • ⊢ n : B1]]$,
   and $[[K]] \equiv [[ (let x ← □ in m) [k1] - [ki] ]]$,
-  then $[[G | D ⊧ K[n] ~ join j x = m in K'[n] : B2 ]]$,
+  then \/ $[[G | D ⊧ K[n] ~ join j x = m in K'[n] : B2 ]]$,
   where $[[K']] \equiv [[ (let x ← □ in jump j x) [k1] - [ki] ]]$.
 \end{lemma}
 
@@ -1640,9 +1639,9 @@ between a translation that doesn't use a join point and one that does.
 
 \begin{lemma}[Jump equivalence of the translation] \label{lem:plug-ccnf} \thmref{Soundness}{soundCCjoin} \leavevmode \\
   Suppose that $[[m]]$ contains no join points or jumps.
-  If $[[G | D ⊢ K : B1 ⇒ B2]]$, $[[G | D ⊢ m : B1]]$,
+  If \/ $[[G | D ⊢ K : B1 ⇒ B2]]$, $[[G | D ⊢ m : B1]]$,
   and $[[K]] \equiv [[ (let x ← □ in m') [k1] - [ki] ]]$,
-  then $[[G | D ⊧ ⟦m⟧K ~ join j x = m' in ⟦m⟧K' : B2 ]]$,
+  then \/ $[[G | D ⊧ ⟦m⟧K ~ join j x = m' in ⟦m⟧K' : B2 ]]$,
   where $[[K']] \equiv [[ (let x ← □ in jump j x) [k1] - [ki] ]]$.
 \end{lemma}
 
@@ -1696,11 +1695,11 @@ The equivalence we want follows from instantiating by the empty continuation.
   Suppose that $[[v]]$ and $[[m]]$ are terms containing no join points and jumps,
   and $[[K1]], [[K2]]$ are continuations that may contain join points and jumps.
   \begin{itemize}
-    \item If $[[G ⊢ v : A]]$ then $[[G ⊧ v ~ ⟦v⟧ : A]]$.
-    \item If \mbox{$[[G | • ⊢ m : B1]]$}, \mbox{$[[G | D ⊢ K1 : B1 ⇒ B2]]$},
-      \mbox{$[[G | D ⊢ K2 : B1 ⇒ B2]]$}, \\ and
+    \item If \/ $[[G ⊢ v : A]]$ then $[[G ⊧ v ~ ⟦v⟧ : A]]$.
+    \item If \/ \mbox{$[[G | • ⊢ m : B1]]$}, \mbox{$[[G | D ⊢ K1 : B1 ⇒ B2]]$},
+      \mbox{$[[G | D ⊢ K2 : B1 ⇒ B2]]$}, \\ and \/
       \mbox{$[[G | D ⊧ K1 ~ K2 : B1 ⇒ B2]]$}, then
-      $[[G | D ⊧ K1[m] ~ ⟦m⟧ K2 : B2]]$.
+      \/ $[[G | D ⊧ K1[m] ~ ⟦m⟧ K2 : B2]]$.
   \end{itemize}
 \end{theorem}
 
@@ -1757,7 +1756,7 @@ The equivalence we want follows from instantiating by the empty continuation.
 
 \begin{corollary} \label{cor:semeq-ccnf} \thmref{Soundness}{soundCCnil}
   Suppose $[[m]]$ contains no join points and jumps. \\
-  If \mbox{$[[G | • ⊢ m : B]]$} then \mbox{$[[G | • ⊧ m ~ ⟦m⟧ □ : B]]$}.
+  If \/ \mbox{$[[G | • ⊢ m : B]]$} then \/ \mbox{$[[G | • ⊧ m ~ ⟦m⟧ □ : B]]$}.
 \end{corollary}
 
 At last we are able to prove \cref{thm:ground-run}, restated below,
@@ -1860,7 +1859,7 @@ and we recover the desired case-of-case transformation.
     \item $[[G, y3 : A3 | • ⊢ m3 : F (A1 + A2)]]$
     \item $[[G, y4 : A4 | • ⊢ m4 : F (A1 + A2)]]$
   \end{itemize}
-  Then under contexts $[[G]], [[D]]$, the computation
+  Then under contexts \/ $[[G]], [[D]]$, the computation
   \begin{align*}
     &[[join j x = case x of inl y1 ⇒ m1; inr y2 ⇒ m2 in _]] \\
     &\quad [[case v of inl y3 ⇒ (let x ← m3 in jump j x); inr y4 ⇒ (let x ← m3 in jump j x)]]
