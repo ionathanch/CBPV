@@ -856,7 +856,20 @@ The mutual definitions of the translation of values \fbox{$[[⟦v⟧]]$} and com
 in \cref{fig:CC-norm} show how they are used;
 we delay the translation of case expressions for the moment.
 
-\begin{figure}[b]
+\begin{figure}[h]
+  \begin{align*}
+    [[ (let x ← □ in m)[n] ]] &\coloneqq [[let x ← n in m]]
+    & [[ (K[fst □])[n] ]] &\coloneqq [[ K[fst n] ]]
+    & [[ □[n] ]] &\coloneqq [[n]] \\
+    [[ (K[□ v])[n] ]] &\coloneqq [[ K[n v] ]]
+    & [[ (K[snd □])[n] ]] &\coloneqq [[ K[snd n] ]]
+  \end{align*}
+  \caption{Plugging a computation in a continuation \thmref{CCNF}{plug}}
+  \Description[]{}
+  \label{fig:plug}
+\end{figure}
+
+\begin{figure}[h]
   \begin{subfigure}{0.35\textwidth}
     \begin{align*}
       % \mathclap{\fbox{$[[⟦v⟧]] \coloneqq v$} \hfill} \\
@@ -900,18 +913,6 @@ with the translation of thunks being the thunk
 of the translated computation using the empty continuation,
 since there's no computation left to do inside the thunk.
 
-\begin{figure}[h]
-  \begin{align*}
-    [[ (let x ← □ in m)[n] ]] &\coloneqq [[let x ← n in m]]
-    & [[ (K[fst □])[n] ]] &\coloneqq [[ K[fst n] ]]
-    & [[ □[n] ]] &\coloneqq [[n]] \\
-    [[ (K[□ v])[n] ]] &\coloneqq [[ K[n v] ]]
-    & [[ (K[snd □])[n] ]] &\coloneqq [[ K[snd n] ]]
-  \end{align*}
-  \caption{Plugging a computation in a continuation \thmref{CCNF}{plug}}
-  \Description[]{}
-  \label{fig:plug}
-\end{figure}
 
 To define the translation of computations,
 we need a plugging operation \fbox{$[[ K[n] ]]$}
@@ -1377,7 +1378,7 @@ As a corollary, we have type safety and normalization:
 a closed, well-typed computation never evaluates to a stuck term,
 and moreover evaluates to a terminal.
 
-\begin{corollary}[Normalization] \thmref{Equivalence}{safety}
+\begin{corollary}[Normalization] \thmref{Equivalence}{safety} \label{cor:safety}
   If $[[• | • ⊢ m : B]]$ then $\exists [[tm]], [[m ⇝* tm]]$.
 \end{corollary}
 
