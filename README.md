@@ -33,13 +33,13 @@ m ::= n | let x ← n in m | case v of {inl x ⇒ m; inr x ⇒ m}
 
 The structure of the proofs begins with the usual basics.
 
-* RTC.lean: Reflexive, transitive closure of binary relations
-* Syntax.lean: Syntax, renaming, substitution, and contexts
-* Typing.lean: Typing rules, renaming, and weakening
+* RTC.lean: Reflexive, transitive closure of binary relations.
+* Syntax.lean: Syntax, renaming, substitution, and contexts.
+* Typing.lean: Typing rules, renaming, and weakening.
 * Evaluation.lean: Small-step evaluation of (closed) computations,
-  which doesn't evaluate under binders and branches
+  which doesn't evaluate under binders and branches.
 * CK.lean: CK machine semantics, with soundness and completeness
-  with respect to small-step, big-step, and equivalence
+  with respect to small-step, big-step, and equivalence.
 
 Showing that commuting conversions are valid is done
 through a logical equivalence.
@@ -56,8 +56,7 @@ that resembles A-normalization, taking an auxiliary continuation `K`.
 K ::= □ | let x ← □ in m | K :: □ v | K :: fst □ | K :: snd □
 ```
 
-* CCNF.lean: CC-normalization and showing that it produces CCNF
-  and that it preserves typing.
+* CCNF.lean: CC-normalization and showing that it produces CCNF and preserves typing.
 * Soundness.lean: Semantic equivalence of continuations,
   and showing that plugging a term into a continuation
   is semantically equivalent to translating it with an equivalent continuation.
