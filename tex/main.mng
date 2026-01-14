@@ -170,11 +170,12 @@
   Such transformations syntactically rearrange computations without affecting evaluation order,
   and can reveal new opportunities for inlining.
 
+  \hspace{\parindent}
   In this work, we identify the commuting conversions of CBPV,
   define a \emph{commuting conversion normal form} (CCNF) for CBPV,
   present a single-pass transformation into CCNF based on A-normalization,
   and prove that well-typed, translated programs evaluate to the same result.
-  To avoid the usual code duplication issues that also arise with ANF,
+  To avoid the usual code duplication issues that also arise with A-normal form,
   we adapt the explicit join point constructs by \citet{join}.
   Our results are all mechanized in Lean 4.
 \end{abstract}
@@ -192,7 +193,7 @@ as a result, CBPV subsumes call-by-name (CBN) and call-by-value (CBV) evaluation
 
 CBPV's distinction of pure values from effectful computations
 makes it a suitable compiler intermediate representation (IR)
-because it makes explicit many low-level considerations of compilers
+because it makes explicit many low-level considerations
 such as closures and control flow.
 Existing work covers CBPV as an IR to compile to, compile from,
 and perform compiler optimizations on.
@@ -247,11 +248,11 @@ This work presents a normal form for CBPV with respect to commuting conversions,
 and a single-pass transformation into this normal form using join points.
 We prove that this transformation is type-preserving and evaluation-preserving:
 it does not change the meaning of CBPV programs.
-These proofs are mechanized in Lean 4 \citep{lean}, v4.23.0-rc1.
-The proof development is provided in the supplementary materials;
+These proofs are mechanized in Lean 4 \citep{lean} (v4.26.0),
+which are provided in the supplementary materials;
 definitions and theorems in this paper are accompanied
-by their corresponding file in the \texttt{CBPV} directory and name in the file within brackets.
-In the next section, we give an overview of the language, the transformation, and its motivation,
+by their corresponding file in the \texttt{CBPV} directory and by their name in the file.
+In the next section, we give an overview of the language and the transformation,
 leading to the following contributions.
 
 \begin{itemize}
@@ -295,8 +296,9 @@ whose execution mirrors that of the original evaluation strategy.
 \end{figure}
 
 CBPV syntactically distinguishes values and computations, listed in \cref{fig:syntax},
-using explicit thunks to turn suspended computations into values
+using explicit thunks $[[{m}]]$ and forcing $[[v!]]$ to turn suspended computations into values and back,
 and explicit returns to embed values into computations,
+which can then be bound to a variable in a let expression.
 The CBN and CBV translations use thunks in different ways to enforce when computation occurs.
 Alongside the thunk and return constructs,
 we include the unit value, value sums, functions, and computation pairs.%
@@ -318,16 +320,16 @@ which translates to the following two CBPV terms.
 
 While both terms evaluate to the same final value $[[z]]$,
 their evaluation sequences are different.
-In the CBN translation, function arguments are thunked ($[[{λx. return x}]]$) and passed wholesale,
-then forced ($[[f!]]$) as they are needed.
+In the CBN translation, function arguments are thunked and passed wholesale,
+then forced as they are needed.
 In the CBV translation, the function and the argument are evaluated in order
 before carrying out the function application,
 using let bindings to express the explicit sequencing.
-First $f$ is evaluated, followed by $g$, then $a$, before the final application occurs.
+First $f$ is evaluated, followed by $g$, then by $a$, before the final application occurs.
 
 Even though translating to CBPV has made control flow explicit,
 computations may still be arbitrarily nested,
-while hides some compiler optimizations.
+which hides some compiler optimizations.
 We look at commuting conversions next to handle such computations.
 
 \subsection{Commuting conversions}
@@ -339,7 +341,7 @@ that is, subexpressions that can be $\beta$-reduced to simplify code.
 For instance, we can commute a let-bound conditional
 by pushing the outer let expression into the inner conditional
 to reveal direct bindings of returned values.
-%
+
 \usetagform{brack}
 \begin{align}
   \nonumber
@@ -363,6 +365,9 @@ that push elimination forms inside of tail positions,
 as shown below, we can also push let bindings into other let bindings,
 as well as function applications into let bindings and conditionals,
 to expose those inlining opportunities.
+Here, we use Barendregt's variable convention
+and assume that free variables in subterms are distinct from the variable bindings they get pushed under,
+noting that $[[x]]$ and $[[y]]$ are distinct variables.
 %
 \usetagform{brack}
 \begin{align}
@@ -371,7 +376,7 @@ to expose those inlining opportunities.
   \label{eq:app-let}
   [[(let x ← n in λy. m) v]] &\Longrightarrow [[let x ← n in (λy. m) v]] \\
   \label{eq:app-if}
-  [[(if w then (λx. m1) else (λx. m2)) v]] &\Longrightarrow [[if w then (λx. m1) v else (λx. m2) v]]
+  [[(if w then (λx. m1) else (λy. m2)) v]] &\Longrightarrow [[if w then (λx. m1) v else (λy. m2) v]]
 \end{align}
 \usetagform{default}
 
@@ -494,6 +499,22 @@ so we only need join points and jumps that take a single argument.
   [[case' v of inl y1 ⇒ (let x ← m1 in jump j x) ; inr y2 ⇒ (let x ← m2 in jump j x)]]
 \end{align}
 \usetagform{default}
+
+\paragraph{What about duplicated values?}
+The commuting conversion in \cref{eq:app-if},
+which pushes applications into case expressions,
+similarly duplicates the application argument.
+However, values can be easily deduplicated using the existing let binding.
+%
+\usetagform{brack}
+\begin{equation}
+  [[(if w then m1 else m2) v]] \Longrightarrow [[let x ← return v in (if w then m1 x else m2 x)]]
+\end{equation}
+\usetagform{default}
+
+Deduplicating values potentially optimizes allocations,
+but as this is orthogonal to control flow,
+we consider it outside the scope of this work.
 
 \section{CBPV with Join Points} \label{sec:cbpv}
 
@@ -732,7 +753,7 @@ $[[D]] \dblcolon= [[•]] \mid [[D, j : A ↗ B]]$ for jump contexts.
   \label{fig:typing}
 \end{figure}
 
-Without the jump contexts, rules \rref*{T-var} through \rref*{T-snd}
+Without the jump contexts, rules \rref*{T-var} through \rref*{T-snd} in \cref{fig:typing}
 are the usual typing rules for the values and computations of plain CBPV.
 When we include jump contexts, they are either threaded through rules unchanged,
 or they are explicitly empty in some premises.
@@ -769,6 +790,9 @@ which may jump to the join point $[[m1]]$.
 Both have the same type $[[B]]$ because jumping in tail position doesn't change the type,
 and \rref{T-jump} indicates that jumping to the join point at $[[j]]$
 with a value of type $[[A]]$ indeed has the same $[[B]]$.
+This is why the jump context tracks the type $[[B]]$,
+and having the same type will be crucial later for the logical equivalence in \cref{sec:proof:logrel}.
+
 We can then, for example, jump to a join point in only one branch of a case expression
 so long as the join point has the same type as the other branch,
 as in the following derivable judgement, which we typeset with a dashed bar.
@@ -786,6 +810,8 @@ as in the following derivable judgement, which we typeset with a dashed bar.
 The important typing lemmas that we need are weakening lemmas for both value and jump contexts.
 In the mechanization, they are proven by induction on the typing derivation via renaming lemmas;
 for now, we ignore issues of renaming de Bruijn indices, as they are standard.
+We don't need syntactic progress and preservation lemmas,
+as type safety will follow from our semantic proofs as \cref{cor:safety}.
 
 \begin{lemma}[Weakening (value contexts)] \label{lem:wk:val} \thmref{Typing}{wtWeakenVal,wtWeakenCom} \leavevmode \\
   Suppose $[[x]]$ is not free in $[[v]]$, $[[m]]$.
@@ -839,9 +865,8 @@ To transform a plain CBPV program to one in CCNF,
 we follow \citet{ANF} and define a compiler using a continuation $[[K]]$,
 whose forms are given below.
 As usual, it can be the empty continuation $[[□]]$,
-or it can be the let continuation $[[let x ← □ in m]]$:
-a let expression is compiled by first translating the let-bound expression,
-then binding its result to $[[x]]$, and finally continuing on with a configuration $[[m]]$.
+or it can be the let continuation $[[let x ← □ in m]]$,
+which expects to bind some \Acom{} and continues on with a configuration $[[m]]$.
 %
 \begin{align*}
   [[K]] &\dblcolon= [[□]] \mid [[let x ← □ in m]] \mid [[ K[k] ]] &
@@ -851,12 +876,9 @@ then binding its result to $[[x]]$, and finally continuing on with a configurati
 
 However, we have three more continuation forms corresponding to each of the remaining three evaluation contexts:
 application, first projection, and second projection.
-They are needed because in contrast to ANF for the lambda calculus,
+In contrast to ANF for the lambda calculus,
 functions and computation pairs are \emph{computations} and not \emph{values},
 so they can't be let-bound and their elimination forms can take arbitrary \Acom{}s.
-The mutual definitions of the translation of values \fbox{$[[⟦v⟧]]$} and computations \fbox{$[[⟦m⟧ K]]$}
-in \cref{fig:CC-norm} show how they are used;
-we delay the translation of case expressions for the moment.
 
 \begin{figure}[h]
   \begin{align*}
@@ -870,6 +892,15 @@ we delay the translation of case expressions for the moment.
   \Description[]{}
   \label{fig:plug}
 \end{figure}
+
+A continuation $[[K]]$ can be combined with a computation $[[n]]$
+by the plugging operation \fbox{$[[ K[n] ]]$},
+which collapses the stack of $[[k]]$s in the continuation
+and replaces the final hole $[[□]]$ by $[[n]]$,
+defined in \cref{fig:plug}.
+Although the operation is defined over all computations,
+as the holes only appear in $[[n]]$ positions,
+we can only plug \Acom{}s into continuations if we want to produce a configuration.
 
 \begin{figure}[h]
   \begin{subfigure}{0.35\textwidth}
@@ -908,27 +939,15 @@ we delay the translation of case expressions for the moment.
   \label{fig:CC-norm}
 \end{figure}
 
+The translation of values \fbox{$[[⟦v⟧]]$} and computations \fbox{$[[⟦m⟧ K]]$}
+are mutually defined in \cref{fig:CC-norm};
+we delay the translation of case expressions for the moment.
 The translation of computations takes a continuation as a second argument,
 representing the rest of the computation that expects the result of the translated computation.
 The translation of values is directly recursive on the term,
 with the translation of thunks being the thunk
 of the translated computation using the empty continuation,
 since there's no computation left to do inside the thunk.
-
-
-To define the translation of computations,
-we need a plugging operation \fbox{$[[ K[n] ]]$}
-that collapses the stack of $[[k]]$s in the continuation
-and replaces the final hole $[[□]]$ by the given computation $[[n]]$,
-defined in \cref{fig:plug}.
-Although the operation is defined over all computations,
-as the holes only appear in $[[n]]$ positions,
-we can only plug \Acom{}s into continuations if we want to produce a configuration.
-This is the case for the translations of forcing thunks, returning values, functions, and computation pairs:
-we translate their subterms---%
-using empty continuations if needed, since we don't commute into introduction forms---%
-and plug them directly into the continuation.
-(\Cref{sec:discuss:constr} discusses why we don't commute.)
 
 In the translation of let expressions,
 the evaluation order would first compute $[[m1]]$, then $[[m2]]$,
@@ -947,10 +966,10 @@ and using the fact that $[[⟦n⟧ K]] = [[ K[n] ]]$.
 %
 \begin{align}
   &  [[⟦let x ← (let y ← n in return v) in m⟧ □]]             \tag{\cref{eq:let-let}} \\
-  &= [[⟦let x ← n in return v⟧ (let y ← □ in ⟦m⟧ □)]]         \tag{\textit{let}} \\
-  &= [[⟦n⟧ (let x ← □ in ⟦return v⟧ (let y ← □ in ⟦m⟧ □))]]   \tag{\textit{let}} \\
-  &= [[ (let x ← □ in (let y ← □ in ⟦m⟧ □)[return ⟦v⟧])[n] ]] \tag{\textit{$[[n]]$, ret}} \\
-  &= [[let x ← n in (let y ← return ⟦v⟧ in ⟦m⟧ □)]]           \tag{\textit{plug}} \\
+  &= [[⟦let y ← n in return v⟧ (let x ← □ in ⟦m⟧ □)]]         \tag{\textit{let}} \\
+  &= [[⟦n⟧ (let y ← □ in ⟦return v⟧ (let x ← □ in ⟦m⟧ □))]]   \tag{\textit{let}} \\
+  &= [[ (let y ← □ in (let x ← □ in ⟦m⟧ □)[return ⟦v⟧])[n] ]] \tag{\textit{$[[n]]$, ret}} \\
+  &= [[let y ← n in (let x ← return ⟦v⟧ in ⟦m⟧ □)]]           \tag{\textit{plug}} \\
   &  [[⟦(let x ← n in λy. m) v⟧ □]]                           \tag{\cref{eq:app-let}} \\
   &= [[⟦let x ← n in λy. m⟧ (□ ⟦v⟧)]]                         \tag{\textit{app}} \\
   &= [[⟦n⟧ (let x ← □ in ⟦λy. m⟧ (□ ⟦v⟧))]]                   \tag{\textit{let}} \\
@@ -1139,11 +1158,12 @@ such as the following statement, unfortunately doesn't work.
 \end{fail}
 \begin{proof}[Counterexample]
   Suppose we have \Acom{}s $[[n1]]$, $[[n2]]$ and configuration $[[m]]$.
-  Consider the term $[[let x ← {let y ← n1 in n2}! in m]]$,
-  which reduces to $[[let x ← (let y ← n1 in n2) in m]]$.
-  The left-hand side translates to itself, since it's already in CCNF,
-  while the right-hand side translates to $[[let y ← n1 in let x ← n2 in m]]$.
-  By transitivity, it remains to show that
+  Consider the term $m_{L} \coloneqq [[let x ← {let y ← n1 in n2}! in m]]$,
+  which reduces to $m_{R} \coloneqq [[let x ← (let y ← n1 in n2) in m]]$.
+  The left-hand side translates to itself $m'_{L} \coloneqq m_{L}$, since it's already in CCNF,
+  while the right-hand side translates to $m'_{R} \coloneqq [[let y ← n1 in let x ← n2 in m]]$.
+  The goal is to show that $m'_{L}$ reduces to $m'_{R}$.
+  We must then show that
   $[[let x ← (let y ← n1 in n2) in m ⇝* let y ← n1 in let x ← n2 in m]]$,
   but there is no such reduction sequence since there is no reduction step that commutes let bindings.
 \end{proof}
@@ -1184,13 +1204,13 @@ and \cref{sec:proof:end} covers \cref{item:end}.
   \begin{align*}
     \mathclap{\fbox{$[[(v, w) ∈ A]]$} \quad \fbox{$[[(m, n) ∈ B]]$} \quad \fbox{$[[(m, n) ∈* B]]$}} \hfill \\
     [[((), ()) ∈ ⊤]] & \\
-    [[(inl v, inl w) ∈ A1 + A2]]       &\textit{ iff } [[(v, w) ∈ A1]] \\
-    [[(inr v, inr w) ∈ A1 + A2]]       &\textit{ iff } [[(v, w) ∈ A2]] \\
-    [[({m}, {n}) ∈ U B]]               &\textit{ iff } [[(m, n) ∈* B]] \\
-    [[(return v, return w) ∈ F A]]     &\textit{ iff } [[(v, w) ∈ A]] \\
-    [[(λx. m, λx. n) ∈ A → B]]         &\textit{ iff } \forall [[v]], [[w]] \mathpunct{.} [[(v, w) ∈ A]] ⇒ [[(m{x ↦ v}, n{x ↦ w}) ∈* B]] \\
-    [[(⟨m1, m2⟩, ⟨n1, n2⟩) ∈ B1 & B2]] &\textit{ iff } [[(m1, n1) ∈* B1]] \wedge [[(m2, n2) ∈* B2]] \\
-    [[(m, n) ∈* B]]                    &\textit{ iff } \exists [[tm1]], [[tm2]] \mathpunct{.} ([[m ⇓ tm1]]) \wedge ([[n ⇓ tm2]]) \wedge [[(tm1, tm2) ∈ B]]
+    [[(inl v, inl w) ∈ A1 + A2]]       &\textit{ iff\/ } [[(v, w) ∈ A1]] \\
+    [[(inr v, inr w) ∈ A1 + A2]]       &\textit{ iff\/ } [[(v, w) ∈ A2]] \\
+    [[({m}, {n}) ∈ U B]]               &\textit{ iff\/ } [[(m, n) ∈* B]] \\
+    [[(return v, return w) ∈ F A]]     &\textit{ iff\/ } [[(v, w) ∈ A]] \\
+    [[(λx. m, λx. n) ∈ A → B]]         &\textit{ iff\/ } \forall [[v]], [[w]] \mathpunct{.} [[(v, w) ∈ A]] ⇒ [[(m{x ↦ v}, n{x ↦ w}) ∈* B]] \\
+    [[(⟨m1, m2⟩, ⟨n1, n2⟩) ∈ B1 & B2]] &\textit{ iff\/ } [[(m1, n1) ∈* B1]] \wedge [[(m2, n2) ∈* B2]] \\
+    [[(m, n) ∈* B]]                    &\textit{ iff\/ } \exists [[tm1]], [[tm2]] \mathpunct{.} ([[m ⇓ tm1]]) \wedge ([[n ⇓ tm2]]) \wedge [[(tm1, tm2) ∈ B]]
   \end{align*}
   \caption{Logical equivalence of terms over CBPV types \thmref{Equivalence}{$\mathcal{V},\mathcal{C},\mathcal{E}$}}
   \Description[]{}
@@ -1199,7 +1219,7 @@ and \cref{sec:proof:end} covers \cref{item:end}.
 
 Our logical relation relates two closed values or computations at a value or computation type, respectively.
 We equivalently say that a pair of terms are in the interpretation of some type.
-Following the presentation by \citet{CBPV-Coq},
+Following \citet{CBPV-Coq},
 we use an auxiliary interpretation $[[⟦B⟧*]]$ which relates computations
 that normalize to terminals related at $[[B]]$.
 It follows that if $[[(m, n) ∈ B]]$, then $[[(m, n) ∈* B]]$.
@@ -1213,7 +1233,9 @@ and pairs are related when their first and second components are respectively re
 
 The first property we need of logical equivalence is backward closure under evaluation of $[[⟦B⟧*]]$,
 which holds by unfolding its definition and transitivity of evaluation.
-A helpful corollary adds congruence under join points.
+A helpful corollary adds weakening by join points;
+the join points themselves need not be equivalent,
+as they get dropped during evaluation.
 
 \begin{lemma}[Backward closure] \label{lem:logeq:bwds} \thmref{Equivalence}{bwds} \leavevmode \\
   If $[[m1 ⇝* m2]]$ and $[[n1 ⇝* n2]]$ and $[[(m2, n2) ∈* B]]$,
@@ -1222,12 +1244,12 @@ A helpful corollary adds congruence under join points.
 
 \begin{lemma}[Backward closure under join points] \label{lem:logeq:bwds-joins} \thmref{Equivalence}{bwdsRejoin} \leavevmode \\
   If $[[m1 ⇝* m2]]$ and $[[n1 ⇝* n2]]$ and $[[(m2, n2) ∈* B]]$,
-  then $[[(join j x = m' in m1, join j x = n' in m2) ∈* B]]$,
+  then $[[(join j x = m' in m1, join j x = n' in n1) ∈* B]]$,
   using \rref{E-join,E-drop}.
 \end{lemma}
 
 The second property is symmetry and transitivity,
-making it a partial equivalence relation over all terms.
+making it a partial equivalence relation (PER) over all terms.
 These lemmas are proven by induction over the type and unfolding definitions.
 
 \begin{lemma}[Symmetry and transitivity (logical equivalence)] \label{lem:logeq:PER} \leavevmode
@@ -1243,7 +1265,7 @@ These lemmas are proven by induction over the type and unfolding definitions.
 
 To work with equivalence of well-typed terms,
 which may be open with respect to value and jump contexts,
-we need close over value and jump variables
+we need to close over value and jump variables
 using substitution maps $[[s]]$ and join stacks $[[p]]$,
 defined below.
 Applying a substitution map $[[v{s}]]$, $[[m{s}]]$
@@ -1274,7 +1296,7 @@ corresponding to the term $[[join j1 x1 = m1 in _]] \dots [[join ji xi = mi in m
     \inferrule[\ottdrulename{J-nil}]{~}{(•, •) ∈ •}
     \and
     \inferrule[\ottdrulename{J-cons}]
-      {[[(p, q) ∈ D]] \and \forall [[v]], [[w]] \mathpunct{.} [[(v, w) ∈ A]] ⇒ [[(joins p in m{x ↦ v}, joins q in n{x ↦ w}) ∈ B]]}
+      {[[(p, q) ∈ D]] \and \forall [[v]], [[w]] \mathpunct{.} [[(v, w) ∈ A]] ⇒ [[(joins p in m{x ↦ v}, joins q in n{x ↦ w}) ∈* B]]}
       %-----------------------------------------------%
       {[[((p, j x = m), (q, j x = n)) ∈ D, j : A ↗ B]]}
   \end{mathpar}
@@ -1293,8 +1315,10 @@ by join points $[[m]]$ and $[[n]]$ of type $[[A ↗ B]]$
 when the join points themselves are related at $[[B]]$ given arguments related at $[[A]]$
 \emph{and} closed over by $[[p]]$ and $[[q]]$.
 They need to be closed over since $[[m]]$ and $[[n]]$ themselves may jump to earlier join points.
-We can show that substitution maps and join stacks are partial equivalence relations
-by induction on their derivations.
+We also need to track $[[B]]$ in the jump context
+to later prove that jumps to related join points are themselves related at the same $[[B]]$.
+
+We show that substitution maps and join stacks are PERs by induction on their derivations.
 
 \begin{lemma}[Symmetry and transitivity (logical equivalence at contexts)] \label{lem:logeq-subst:PER} \leavevmode
   \begin{itemize}
@@ -1321,7 +1345,7 @@ In all proofs that follow, we freely use symmetry and transitivity without expli
   Computations $[[m]]$ and $[[n]]$ are semantically equivalent under contexts $[[G]]$ and $[[D]]$ at type $[[B]]$,
   written \fbox{$[[G | D ⊧ m ~ n : B]]$},
   when for all substitution maps $[[(s, t) ∈ G]]$ and join stacks $[[(p, q) ∈ D]]$,
-  $[[(joins p in m{s}, joins q in n{t}) ∈ B]]$ holds.
+  $[[(joins p in m{s}, joins q in n{t}) ∈* B]]$ holds.
 \end{definition}
 
 \begin{lemma}[Symmetry and transitivity (semantic equivalence)] \leavevmode
@@ -1349,7 +1373,7 @@ well-typed terms are semantically equivalent to themselves.
   \begin{itemize}
     \item \textbf{Case} \rref*{T-var}: Holds by $[[(s, t) ∈ G]]$ on the variable.
     \item \textbf{Cases} \rref*{T-unit,T-left,T-right,T-thunk}:
-      Hold by definition of the logical relation,
+      Hold by definition of the logical equivalence,
       using the induction hypotheses on any subterms.
     \item \textbf{Cases} \rref*{T-fun,T-ret,T-prod}:
       Hold by \cref{lem:logeq:bwds-joins} with no reduction,
@@ -1512,9 +1536,10 @@ stated in \cref{fig:semeq:join-join}.
   \label{fig:semeq:join-join}
 \end{figure}
 
-On the right-hand side, $[[m]]$ can't directly jump to $[[j1]]$,
-since it isn't in scope in its typing,
-so if $[[m]]$ doesn't jump to $[[j2]]$, then both join points can be dropped.
+Only the join point $[[j1]]$ is in scope in $[[m2]]$,
+while only the join point $[[j2]]$ is in scope in $[[m]]$.
+If $[[m]]$ jumps to $[[j2]]$, then both sides reduce to the same computation.
+If $[[m]]$ doesn't jump to $[[j2]]$, then both join points can be dropped.
 In the mechanization, this isn't so easy to prove,
 since we're using de Bruijn indexed jump variables.
 Consequently, $[[m]]$ must be explicitly weakened on the right-hand side,
@@ -1778,8 +1803,8 @@ with one more minor lemma.
 \begin{proof}
   From \cref{cor:semeq-ccnf}, we have $[[• | • ⊧ m ~ ⟦m⟧ □ : F T]]$.
   Instantiating with empty substitution maps and empty join stacks,
-  we have $(m, ⟦m⟧ □) ∈* F T$.
-  By inversion, we know that there exists some $([[w1]], [[w2]]) ∈ T$
+  we have $[[(m, ⟦m⟧ □) ∈* F T]]$.
+  By inversion, we know that there exists some $[[(w1, w2) ∈ T]]$
   such that $[[m ⇓ return w1]]$ and $[[⟦m⟧ □ ⇓ return w2]]$.
   By \cref{lem:norm:det}, we have $[[v]] = [[w1]]$,
   and by \cref{lem:logeq:gval}, we have $[[w1]] = [[w2]]$.
@@ -1803,7 +1828,7 @@ duplicating the code in its branches.
 \end{align}
 \usetagform{default}
 %
-Let-binding the outer branches avoids this duplication.
+Let-binding the outer branches to $[[x]] = [[e4]]$ and $[[y]] = [[e5]]$ avoids this duplication.
 Notably, doing so doesn't touch the direct scrutinization of $[[e2]]$ and $[[e3]]$,
 so if they are literal $[[true]]$ or $[[false]]$ values,
 then those branches can be inlined to just $[[x]]$ or $[[y]]$.
@@ -1862,7 +1887,7 @@ and we recover the desired case-of-case transformation.
     \item $[[G, y3 : A3 | • ⊢ m3 : F (A1 + A2)]]$
     \item $[[G, y4 : A4 | • ⊢ m4 : F (A1 + A2)]]$
   \end{itemize}
-  Then under contexts \/ $[[G]], [[D]]$, the computation
+  Then under contexts \/ $[[G]] \mid [[D]]$, the computation
   \begin{align*}
     &[[join j x = case x of inl y1 ⇒ m1; inr y2 ⇒ m2 in _]] \\
     &\quad [[case v of inl y3 ⇒ (let x ← m3 in jump j x); inr y4 ⇒ (let x ← m3 in jump j x)]]
@@ -1870,8 +1895,8 @@ and we recover the desired case-of-case transformation.
   is semantically equivalent at type $[[B]]$ to the computation
   \begin{align*}
     &[[join j1 y1 = m1 in join j2 y2 = m2 in _]] \\
-    &\quad [[case' v of inl y3 ⇒ (let x ← m3 in case x of inl y1 ⇒ jump j1 y1; inr y2 ⇒ jump j2 y2);
-                        inr y4 ⇒ (let x ← m4 in case x of inl y1 ⇒ jump j1 y1; inr y2 ⇒ jump j2 y2)]]
+    &\quad [[case' v of inl y3 ⇒ (let x ← m3 in case x of inl y1 ⇒ jump j1 y1; inr y2 ⇒ (# jump j2 y2 #));
+                        inr y4 ⇒ (let x ← m4 in case x of inl y1 ⇒ jump j1 y1; inr y2 ⇒ (# jump j2 y2 #))]]
   \end{align*}
 \end{lemma}
 
@@ -2088,7 +2113,7 @@ Our results are entirely mechanized in Lean 4.
 
 \section{Data-Availability Statement}
 
-We will submit an artifact for evaluation consisting of our Lean 4 proof development,
+We have submitted an artifact for evaluation consisting of our Lean 4 proof development,
 provided as supplementary materials for the paper submission.
 
 \bibliography{main}

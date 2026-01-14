@@ -231,7 +231,7 @@ K :: 'Kont_' ::= {{ com continuations }}
   | k :: M :: Kont
     {{ tex [[k]] }}
   | K [ k1 ] - [ ki ] :: M :: Kontsi
-    {{ tex [[K]] \mathbin{\dblcolon} [[k1]] \mathbin{\dblcolon} \dots \mathbin{\dblcolon} [[ki]] }}
+    {{ tex [[K]] \mathbin{\dblcolon} \dots \mathbin{\dblcolon} [[ki]] }}
   | _ :: :: Hole
     {{ com hole }}
     {{ tex \relax }}
