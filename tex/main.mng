@@ -2111,10 +2111,14 @@ using a logical equivalence to prove that
 the translation of a term is equivalent to itself.
 Our results are entirely mechanized in Lean 4.
 
-\section{Data-Availability Statement}
+\begin{acks}
+This work was supported by the National Science Foundation under Grant No. 2327738.
+\end{acks}
 
-We have submitted an artifact for evaluation consisting of our Lean 4 proof development,
-provided as supplementary materials for the paper submission.
+\section*{Data-Availability Statement}
+
+Our Lean 4 proof development has been submitted for artifact evaluation
+and is available as supplementary material \citep{CCNF-artifact}.
 
 \bibliography{main}
 
