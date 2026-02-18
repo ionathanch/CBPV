@@ -35,16 +35,8 @@
 \newcommand{\etal}{\textit{et al.}\@\xspace}
 \newcommand{\opcit}{\textit{op. cit.}\@\xspace}
 \newcommand{\vs}{\textit{vs.}\@\xspace}
-\newcommand{\ala}{\textit{\`a la}\@\xspace}
 \newcommand{\apriori}{\textit{a priori}\@\xspace}
 \newcommand{\aposteriori}{\textit{a posteriori}\@\xspace}
-\newcommand{\fstar}{F$^\star$\@\xspace}
-\newcommand{\welltyped}{well-\hspace{0pt}typed\@\xspace}
-\newcommand{\wellfounded}{well-\hspace{0pt}founded\@\xspace}
-\newcommand{\wellfoundedness}{well-\hspace{0pt}foundedness\@\xspace}
-\newcommand{\wellformedness}{well-\hspace{0pt}formedness\@\xspace}
-\newcommand{\welldefinedness}{well-\hspace{0pt}definedness\@\xspace}
-\newcommand{\crude}{crude-\hspace{0pt}but-\hspace{0pt}effective\@\xspace}
 \newcommand{\Acom}{tail-free computation\@\xspace}
 \newcommand{\highlight}[1]{\colorbox{pink}{#1}}
 
