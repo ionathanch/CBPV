@@ -85,6 +85,7 @@
 
 \author{Madi Gudin}
 \authornote{Both authors contributed equally to this work.}
+\orcid{}
 \affiliation{%
   \institution{Amherst College}
   \city{Amherst}
@@ -94,9 +95,10 @@
 
 \author{Annabel Levy}
 \authornotemark[1]
+\orcid{0009-0002-3695-6891}
 \affiliation{%
   \institution{University of Maryland, Baltimore County}
-  \city{Catonsville}
+  \city{Baltimore}
   \state{MD}
   \country{USA}}
 \email{alevy2@umbc.edu}
@@ -113,10 +115,10 @@
 \acmJournal{PACMPL}
 \acmVolume{10}
 \acmNumber{OOPSLA1}
-\acmArticle{0}
+\acmArticle{}
 \acmYear{2026}
 \acmMonth{4}
-\acmDOI{10.1145/37nnnnn}
+\acmDOI{10.1145/3798210}
 \setcopyright{cc}
 \setcctype{by}
 \copyrightyear{2026}
@@ -324,7 +326,7 @@ computations may still be arbitrarily nested,
 which hides some compiler optimizations.
 We look at commuting conversions next to handle such computations.
 
-\subsection{Commuting conversions}
+\subsection{Commuting Conversions}
 
 Commuting conversions are syntactic transformations
 that swap nested eliminators while preserving evaluation order.
@@ -415,7 +417,7 @@ Because commuting conversions push computations only into tail positions,
 \emph{new} opportunities for inlining only occur in $[[m]]$ positions,
 so performing those new inlinings won't violate CCNF.
 
-\subsection{Join points}
+\subsection{Join Points}
 
 Generalizing \cref{eq:let-if} to case expressions and arbitrary computations,
 the corresponding commuting conversion pushes let bindings into case branches.
@@ -543,7 +545,7 @@ The syntax and related definitions in the mechanization are also intrinsically w
 with respect to jump variables, which we omit here,
 and freely use jump well-scopedness throughout the proofs.
 
-\subsection{Evaluation semantics}
+\subsection{Evaluation Semantics}
 
 The purpose of join points is best explained by what they do;
 their single-step evaluation rules are listed in \cref{fig:eval},
@@ -643,7 +645,7 @@ and multi-step evaluations always evaluate to the same terminal.
   then $[[m' ⇓ tm]]$.
 \end{corollary}
 
-\subsection{Typing rules}
+\subsection{Typing Rules}
 
 By adding join points, we now have two different forms of bindings:
 value variables $[[x]]$ bind values and have value types,
@@ -1034,7 +1036,7 @@ which holds by inspection, \ie mutual induction over the syntax.
   then $[[⟦v⟧]]$ and $[[⟦m⟧ K]]$ are in CCNF.
 \end{lemma}
 
-\subsection{Commuting conversion preserves typing}
+\subsection{Commuting Conversion Preserves Typing}
 
 With \cref{lem:ccnf-preservation},
 we know that the translation performs all the commuting conversions
@@ -1190,7 +1192,7 @@ The theorem then holds by instantiating with the empty continuation.
 \cref{sec:proof:plug} covers \crefrange{item:kont}{item:plug},
 and \cref{sec:proof:end} covers \cref{item:end}.
 
-\subsection{Logical equivalence and the fundamental theorem} \label{sec:proof:logrel}
+\subsection{Logical Equivalence and the Fundamental Theorem} \label{sec:proof:logrel}
 
 \begin{figure}
   \begin{align*}
@@ -1400,7 +1402,7 @@ and moreover evaluates to a terminal.
   If $[[• | • ⊢ m : B]]$ then $\exists [[tm]], [[m ⇝* tm]]$.
 \end{corollary}
 
-\subsection{Semantic equivalence of commuting conversions} \label{sec:proof:cc}
+\subsection{Semantic Equivalence of Commuting Conversions} \label{sec:proof:cc}
 
 As the translation normalizes with respect to all commuting conversions,
 to show that semantic equivalence of the translation,
@@ -1539,7 +1541,7 @@ and to show that join points can be dropped,
 we first need to show that evaluation preserves weakening.
 These technical details aside, the proof proceeds similarly to those for the commuting conversions.
 
-\subsection{Semantic equivalence of plugging continuations} \label{sec:proof:plug}
+\subsection{Semantic Equivalence of Plugging Continuations} \label{sec:proof:plug}
 
 Just as the \nameref{thm:semeq} requires related substitution maps and related join stacks,
 for the final proof in the next section, we need a notion of related continuations.
@@ -1600,7 +1602,7 @@ as long as substitution commutes with plugging.
   using \cref{lem:semeq:plug} and \cref{thm:semeq:K}.
 \end{corollary}
 
-\subsection{Commuting conversion normalization is semantically equivalent to plugging} \label{sec:proof:end}
+\subsection{Commuting Conversion Normalization is Semantically Equivalent to Plugging} \label{sec:proof:end}
 
 Now that we have both semantic equivalence of commuting conversions and of plugging,
 we use them together to show that plugging commutes with tail contexts.
@@ -1805,7 +1807,7 @@ with one more minor lemma.
 
 \section{Discussion} \label{sec:discuss}
 
-\subsection{Case-of-case} \label{sec:discuss:case-case}
+\subsection{Case-of-Case} \label{sec:discuss:case-case}
 
 In the lambda calculus with conditional expressions,
 the \emph{case-of-case} transformation commutes
@@ -1958,7 +1960,7 @@ we end up with a nested let expression, which isn't in CCNF.
 Therefore, renormalization may be required only after forcing thunks
 that appear in $[[n]]$ positions as a result of inlining.
 
-\subsection{Commuting constructors} \label{sec:discuss:constr}
+\subsection{Commuting Constructors} \label{sec:discuss:constr}
 
 Our notion of commuting conversions only involves elimination forms,
 as they make up evaluation contexts $[[E]]$ and tail contexts $[[L]]$.
@@ -1989,7 +1991,7 @@ Going right to left, the pair equations only apply when the projections both eli
 Either way, they are sensitive to slight syntactic variation, \eg permuted let bindings.
 Furthermore, neither direction appears to reveal optimization opportunities.
 
-\subsection{Extensions and future work} \label{sec:future}
+\subsection{Extensions and Future Work} \label{sec:future}
 
 \paragraph{Effects}
 Like \citet{CBPV-Coq}, the CBPV we consider doesn't include effects.
@@ -2062,11 +2064,12 @@ while they permit jumps in evaluation contexts.
 They perform their optimizations equation by equation,
 which yields intermediate steps that require this permissiveness,
 such as the following.
-%
+
 \begin{align*}
   [[(join j x = m in jump j v) w]] &\Longrightarrow [[join j x = m w in (jump j v) w]] \\
                                    &\Longrightarrow [[join j x = m w in jump j v]]
 \end{align*}
+%
 Because we present instead a single-pass algorithm,
 we never produce such intermediate steps that need to be typeable,
 so we are able to eliminate them from our syntax outright.
@@ -2109,8 +2112,7 @@ This work was supported by the National Science Foundation under Grant No. 23277
 
 \section*{Data-Availability Statement}
 
-Our Lean 4 proof development has been submitted for artifact evaluation
-and is available as supplementary material \citep{CCNF-artifact}.
+Our Lean 4 proof development is available as supplementary material \citep{CCNF-artifact}.
 
 \bibliography{main}
 
