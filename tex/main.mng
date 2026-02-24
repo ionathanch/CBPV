@@ -72,7 +72,7 @@
 \bibliographystyle{ACM-Reference-Format}
 
 \title[Commuting Conversions \& Join Points for CBPV]
-  {Commuting Conversions and Join Points \titlebreak for Call-By-Push-Value}
+  {Commuting Conversions and Join Points \titlebreak for Call-by-Push-Value}
 
 \author{Jonathan Chan}
 \orcid{0000-0003-0830-3180}
@@ -85,7 +85,7 @@
 
 \author{Madi Gudin}
 \authornote{Both authors contributed equally to this work.}
-\orcid{}
+\orcid{0009-0009-7424-4917}
 \affiliation{%
   \institution{Amherst College}
   \city{Amherst}
@@ -112,17 +112,17 @@
   \country{USA}}
 \email{sweirich@seas.upenn.edu}
 
+\setcopyright{cc}
+\setcctype{by}
+\acmDOI{10.1145/3798210}
+\acmYear{2026}
 \acmJournal{PACMPL}
 \acmVolume{10}
 \acmNumber{OOPSLA1}
-\acmArticle{}
-\acmYear{2026}
+\acmArticle{102}
 \acmMonth{4}
-\acmDOI{10.1145/3798210}
-\setcopyright{cc}
-\setcctype{by}
-\copyrightyear{2026}
-\keywords{commuting conversions, join points, call-by-push-value}
+\received{2025-10-10}
+\received[accepted]{2026-02-17}
 
 \begin{CCSXML}
 <ccs2012>
@@ -141,6 +141,8 @@
 
 \ccsdesc[500]{Software and its engineering~Functional languages}
 \ccsdesc[500]{Software and its engineering~Control structures}
+
+\keywords{commuting conversions, join points, call-by-push-value}
 
 \inputott{rules}
 
@@ -1098,13 +1100,13 @@ We also need an inversion lemma for continuations that end in let continuations.
   using \cref{lem:wk:jump} in the \rref*{K-hole} case.
 \end{proof}
 
-\begin{lemma}[Let continuation inversion] \label{lem:k-let:inv} \thmref{CCNF}{wtK.jumpify}
-  If $[[K]] = [[(let x ← □ in m)]][ [[k1]] ] \dots [ [[ki]] ]$
+\begin{lemma}[Let continuation inversion] \label{lem:k-let:inv} \thmref{CCNF}{wtK.jumpify} \leavevmode \\
+  If $[[K]] = [[ (let x ← □ in m)[k1] - [ki] ]]$
   and \/ $[[G | D ⊢ K : B1 ⇒ B2]]$,
   then there exists some $[[A]]$ such that
   \/ $[[G | D, j : A ↗ B2 ⊢ K' : B1 ⇒ B2]]$
   and \/ $[[G, x : A | D ⊢ m : B2]]$,
-  where $[[K']] = [[(let x ← □ in jump j x)]][ [[k1]] ] \dots [ [[ki]] ]$.
+  where $[[K']] = [[ (let x ← □ in jump j x)[k1] - [ki] ]]$.
 \end{lemma}
 
 \begin{proof}

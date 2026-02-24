@@ -15,7 +15,7 @@ OTT_FLAGS = -tex_wrap false -tex_show_meta false -merge true $(OTTFILES)
 
 MAKEDEPS  := Makefile
 LATEXDEPS := main.bib
-MOREDEPS := listproc.sty ottalt.sty
+MOREDEPS := listproc.sty ottalt.sty acmart.cls ACM-Reference-Format.bst
 GENERATED := $(RULES).tex $(MAIN).tex
 
 all: $(MAIN).pdf
