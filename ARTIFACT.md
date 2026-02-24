@@ -27,7 +27,7 @@ while the jump variables are (Fin δ).
 
 1. Install Lean 4 following the [installation guide](https://lean-lang.org/install/manual/).
 2. In the root directory (containing `lakefile.lean`), run `lake build`.
-   This will download and install the correct Lean version (v4.26.0).
+   This will download and install the correct Lean version (v4.28.0).
 3. Run `lake build` to typecheck all files in the CBPV directory.
 
 ## Development Structure
