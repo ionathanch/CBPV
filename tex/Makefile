@@ -42,12 +42,12 @@ zip: $(MAIN).pdf
 	zip -o submit.zip $(MAIN).bbl $(LATEXDEPS) $(MOREDEPS) $(GENERATED)
 	rm $(MAIN).bbl
 
-# N.B. https://github.com/ionathanch/ltex-ls-plus fixes issue with `hiddenFalsePositives`. To use custom LTeX+:
+# To use custom LTeX+:
 # 1. Compile `ltex-ls-plus` with `mvn -B -Dmaven.test.skip=true package`
 # 2. Copy output files in `ltex-ls-plus/target/ltex-ls-plus-<VERSION>.tar.gz/ltex-ls-plus-<VERSION>` to `~/.local/share/ltex`
-# 3. Create simlink with `ln -sf ~/.local/share/ltex/bin/ltex-cli-plus ~/.local/bin/ltex`
+# 3. Create simlink with `ln -sf ~/.local/share/ltex/bin/ltex-cli-plus ~/.local/bin/ltex-cli-plus`
 check: $(MAIN).tex
-	ltex --client-configuration=$(LTEX).json $(MAIN).tex > latex.out/$(LTEX).log \
+	ltex-cli-plus --client-configuration=$(LTEX).json $(MAIN).tex > latex.out/$(LTEX).log \
 	&& echo "No LTeX errors found." || echo "LTeX errors written to latex.out/$(LTEX).log."
 
 .PHONY: count
