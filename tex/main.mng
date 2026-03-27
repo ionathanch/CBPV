@@ -1886,7 +1886,7 @@ and we recover the desired case-of-case transformation.
   Then under contexts \/ $[[G]] \mid [[D]]$, the computation
   \begin{align*}
     &[[join j x = case x of inl y1 ⇒ m1; inr y2 ⇒ m2 in _]] \\
-    &\quad [[case v of inl y3 ⇒ (let x ← m3 in jump j x); inr y4 ⇒ (let x ← m3 in jump j x)]]
+    &\quad [[case v of inl y3 ⇒ (let x ← m3 in jump j x); inr y4 ⇒ (let x ← m4 in jump j x)]]
   \end{align*}
   is semantically equivalent at type $[[B]]$ to the computation
   \begin{align*}
