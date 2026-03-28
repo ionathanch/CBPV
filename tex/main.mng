@@ -1233,12 +1233,12 @@ A helpful corollary adds weakening by join points;
 the join points themselves need not be equivalent,
 as they get dropped during evaluation.
 
-\begin{lemma}[Backward closure] \label{lem:logeq:bwds} \thmref{Equivalence}{bwds} \leavevmode \\
+\begin{lemma}[Backward closure] \label{lem:logeq:bwds} \thmref{Equivalence}{$\mathcal{E}$.bwds} \leavevmode \\
   If $[[m1 ⇝* m2]]$ and $[[n1 ⇝* n2]]$ and $[[(m2, n2) ∈* B]]$,
   then $[[(m1, n1) ∈* B]]$.
 \end{lemma}
 
-\begin{lemma}[Backward closure under join points] \label{lem:logeq:bwds-joins} \thmref{Equivalence}{bwdsRejoin} \leavevmode \\
+\begin{lemma}[Backward closure under join points] \label{lem:logeq:bwds-joins} \thmref{Equivalence}{$\mathcal{E}$.bwdsRejoin} \leavevmode \\
   If $[[m1 ⇝* m2]]$ and $[[n1 ⇝* n2]]$ and $[[(m2, n2) ∈* B]]$,
   then $[[(join j x = m' in m1, join j x = n' in n1) ∈* B]]$,
   using \rref{E-join,E-drop}.

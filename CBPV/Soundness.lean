@@ -333,7 +333,7 @@ theorem 𝒱.ground {v w A} (h : (v, w) ∈ ⟦A⟧ᵛ) (g : isGround A) : v = w
     | .inr ⟨_, _, hA₂, ev, ew⟩ => subst ev ew; simp; exact ihA₂ hA₂ g.right
   case U => simp at g
 
-theorem retGround {m n A} (mj : m.joinless) (h : ⬝ ∣ ⬝ ⊢ m ∶ F A) (g : isGround A) (nm : m ⇓ₙ n) : ⟦m⟧ₘ ⇒⋆ n := by
+theorem retGround {m v A} (mj : m.joinless) (h : ⬝ ∣ ⬝ ⊢ m ∶ F A) (g : isGround A) (nm : m ⇓ₙ ret v) : ⟦m⟧ₘ ⇓ₙ ret v := by
   let ⟨r, nfm⟩ := nm
   let hm := soundCCnil mj h semCtxt.nil .nil
   rw [substComId, substComId] at hm
@@ -341,7 +341,8 @@ theorem retGround {m n A} (mj : m.joinless) (h : ⬝ ∣ ⬝ ⊢ m ∶ F A) (g :
   let ⟨_, _, ⟨r', _⟩, ⟨ra', _⟩, ⟨v₁, v₂, hA, eret₁, eret₂⟩⟩ := hm
   subst eret₁ eret₂; simp at r' ra'
   rw [← hA.ground g] at ra'
-  rwa [← (r'.merge nm).ret_inv]
+  rw [← (r'.merge nm).ret_inv]
+  exact ⟨ra', nfm⟩
 
 theorem retGroundVal {m A} (mj : m.joinless) (h : ⬝ ∣ ⬝ ⊢ m ∶ F A) (g : isGround A) : ∃ v, m ⇒⋆ ret v ∧ ⟦m⟧ₘ ⇒⋆ ret v := by
   let ⟨n, ⟨r, nfm⟩⟩ := safety h
@@ -352,6 +353,6 @@ theorem retGroundVal {m A} (mj : m.joinless) (h : ⬝ ∣ ⬝ ⊢ m ∶ F A) (g 
   subst eret₁ eret₂; simp at r' ra'
   rw [← hA.ground g] at ra'; exists v
 
-theorem retGroundCK {m n A} (mj : m.joinless) (h : ⬝ ∣ ⬝ ⊢ m ∶ F A) (g : isGround A) (nm : nf n) :
-  ⟨0, m, .nil⟩ ⤳⋆ ⟨0, n, .nil⟩ → ⟨0, ⟦m⟧ₘ, .nil⟩ ⤳⋆ ⟨0, n, .nil⟩ :=
-  λ r ↦ evalStep nm (retGround mj h g ⟨stepEvalsNil r, nm⟩)
+theorem retGroundCK {m v A} (mj : m.joinless) (h : ⬝ ∣ ⬝ ⊢ m ∶ F A) (g : isGround A)
+  (r : ⟨0, m, .nil⟩ ⤳⋆ ⟨0, ret v, .nil⟩) : ⟨0, ⟦m⟧ₘ, .nil⟩ ⤳⋆ ⟨0, ret v, .nil⟩ :=
+  evalStep ⟨⟩ (retGround mj h g ⟨stepEvalsNil r, ⟨⟩⟩).left
