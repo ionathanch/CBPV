@@ -68,7 +68,7 @@ end
 infix:40 "⤳" => Step
 
 @[reducible] def Steps := RTC Step
-infix:40 "⤳⋆"  => Steps
+infix:40 "⤳⋆" => Steps
 
 end CK
 
