@@ -2,7 +2,7 @@ import Lake
 
 open Lake DSL
 
-require MutualInduction @ git "v0.1.0"
+require "ionathanch" / "MutualInduction" @ git "v0.1.0"
 
 package «CBPV» where
 
