@@ -132,8 +132,7 @@ theorem Jump.repeat {δ k' m'} {k : K δ} (e : k.jumpify = yes k' m') : ∃ k'',
   CC-normal translation of CBPV
 ------------------------------*-/
 
-@[reducible]
-def Fin.raiseLE {δ δ'} (le : δ ≤ δ') (j : Fin δ) : Fin δ' :=
+abbrev Fin.raiseLE {δ δ'} (le : δ ≤ δ') (j : Fin δ) : Fin δ' :=
   cast (congrArg Fin (add_sub_of_le le)) (j.addNat (δ' - δ))
 
 theorem Fin.raiseLE1 {δ} (le : δ ≤ δ + 1) (j : Fin δ) : j.raiseLE le = Fin.succ j :=

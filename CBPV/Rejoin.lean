@@ -113,7 +113,7 @@ private theorem Eval.wkJoin₂ {δ} {φ : J δ} {m₁ m₂ m₃ m} (r : .rejoin 
       simp [liftJ] at ej; subst ej ev
       have ej : Fin.mk (j + 1) lt = Fin.succ (Fin.mk j (lt_of_succ_lt_succ lt)) := by rfl
       rw [ej] at e; subst e
-      refine .inr (.inl ⟨jump (Fin.mk j (lt_of_succ_lt_succ lt)) v, rfl, .rejoin .join't⟩)
+      exact .inr (.inl ⟨jump (Fin.mk j (lt_of_succ_lt_succ lt)) v, rfl, .rejoin .join't⟩)
 
 theorem Norm.wkJoin {δ} {φ : J δ} {m₁ m₂ n} (r : rejoin (.join m₁ (renameJCom Fin.succ m₂)) φ ⇓ₙ n) :
   ∃ m₂', m₂ ⇒⋆ m₂' ∧ rejoin (.join m₁ (renameJCom Fin.succ m₂)) φ ⇒⋆ rejoin m₂' φ ∧ rejoin m₂' φ ⇒⋆ n := by
@@ -132,7 +132,7 @@ theorem Norm.wkJoin {δ} {φ : J δ} {m₁ m₂ n} (r : rejoin (.join m₁ (rena
     | .inr ⟨n, rn, en⟩ =>
       subst en
       have ⟨_, rn', rjoin, rs⟩ := ih nfn rfl
-      refine ⟨_, .trans rn rn', .trans (.rejoin (.join rn.renameJ)) rjoin, rs⟩
+      exact ⟨_, .trans rn rn', .trans (.rejoin (.join rn.renameJ)) rjoin, rs⟩
 
 theorem Norm.wkJoin₂ {δ} {φ : J δ} {m₁ m₂ m₃ n} (r : rejoin (.join m₁ (.join m₂ (renameJCom (liftJ .succ) m₃))) φ ⇓ₙ n) :
   (∃ (v : Val),
@@ -158,7 +158,7 @@ theorem Norm.wkJoin₂ {δ} {φ : J δ} {m₁ m₂ m₃ n} (r : rejoin (.join m�
       case trans r'' rs =>
         rw [Eval.det r'' r'] at rs; subst e
         let ⟨_, r, e⟩ := r.rejoin_inv; subst e
-        refine .inr ⟨_, .refl, .trans r (.once r'), rs⟩
+        exact .inr ⟨_, .refl, .trans r (.once r'), rs⟩
     | .inr (.inr ⟨_, rm₃, e⟩) =>
       subst e
       match ih nfn rfl with

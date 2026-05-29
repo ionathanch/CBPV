@@ -113,8 +113,8 @@ theorem sym𝒱𝒞 :
   case Sum ihA₁ ihA₂ =>
     unfold 𝒱; unfold 𝒱 at h
     match h with
-    | .inl ⟨_, _, hA₁, ev, ew⟩ => refine .inl ⟨_, _, ihA₁ hA₁, ew, ev⟩
-    | .inr ⟨_, _, hA₂, ev, ew⟩ => refine .inr ⟨_, _, ihA₂ hA₂, ew, ev⟩
+    | .inl ⟨_, _, hA₁, ev, ew⟩ => exact .inl ⟨_, _, ihA₁ hA₁, ew, ev⟩
+    | .inr ⟨_, _, hA₂, ev, ew⟩ => exact .inr ⟨_, _, ihA₂ hA₂, ew, ev⟩
   case U ih =>
     unfold 𝒱 at *
     let ⟨_, _, hA, ev, ew⟩ := h
@@ -160,10 +160,10 @@ theorem trans𝒱𝒞 :
     match h₁₂, h₂₃ with
     | .inl ⟨_, _, hA₁₂, el₁, el₂⟩, .inl ⟨_, _, hA₂₃, er₂, er₃⟩ =>
       subst el₁ el₂ er₃; injection er₂ with e; subst e
-      refine .inl ⟨_, _, ihA₁ hA₁₂ hA₂₃, rfl, rfl⟩
+      exact .inl ⟨_, _, ihA₁ hA₁₂ hA₂₃, rfl, rfl⟩
     | .inr ⟨_, _, hA₁₂, el₁, el₂⟩, .inr ⟨_, _, hA₂₃, er₂, er₃⟩ =>
       subst el₁ el₂ er₃; injection er₂ with e; subst e
-      refine .inr ⟨_, _, ihA₂ hA₁₂ hA₂₃, rfl, rfl⟩
+      exact .inr ⟨_, _, ihA₂ hA₁₂ hA₂₃, rfl, rfl⟩
     | .inl ⟨_, _, _, _, er⟩, .inr ⟨_, _, _, _, _⟩ => subst er; contradiction
     | .inr ⟨_, _, _, _, er⟩, .inl ⟨_, _, _, _, _⟩ => subst er; contradiction
   case U ih =>
@@ -291,9 +291,9 @@ theorem semCom.sym {Γ δ Δ} {m n : Com δ} {B : ComType} (h : Γ ∣ Δ ⊨ m 
   λ hστ _ _ hφψ ↦ (h hστ.sym hφψ.sym).sym
 
 theorem semVal.trans {Γ v₁ v₂ v₃} {A : ValType} (h₁₂ : Γ ⊨ v₁ ~ v₂ ∶ A) (h₂₃ : Γ ⊨ v₂ ~ v₃ ∶ A) : Γ ⊨ v₁ ~ v₃ ∶ A :=
-  λ hστ ↦ by refine 𝒱.trans (h₁₂ hστ) (h₂₃ (semCtxt.trans hστ.sym hστ))
+  λ hστ ↦ by exact 𝒱.trans (h₁₂ hστ) (h₂₃ (semCtxt.trans hστ.sym hστ))
 theorem semCom.trans {Γ δ Δ} {m₁ m₂ m₃ : Com δ} {B : ComType} (h₁₂ : Γ ∣ Δ ⊨ m₁ ~ m₂ ∶ B) (h₂₃ : Γ ∣ Δ ⊨ m₂ ~ m₃ ∶ B) : Γ ∣ Δ ⊨ m₁ ~ m₃ ∶ B :=
-  λ hστ _ _ hφψ ↦ by refine ℰ.trans (h₁₂ hστ hφψ) (h₂₃ (semCtxt.trans hστ.sym hστ) (semDtxt.trans hφψ.sym hφψ))
+  λ hστ _ _ hφψ ↦ by exact ℰ.trans (h₁₂ hστ hφψ) (h₂₃ (semCtxt.trans hστ.sym hστ) (semDtxt.trans hφψ.sym hφψ))
 
 /-*---------------------------------------------
   Fundamental theorem of soundness

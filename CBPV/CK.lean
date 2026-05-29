@@ -20,7 +20,7 @@ inductive K : Nat → Type where
   | snd {δ} : K δ → K 0
   | join {δ} : Com δ → K δ → K (δ + 1)
 
-@[implicit_reducible] def CK := Σ δ, Com δ × K δ
+abbrev CK := Σ δ, Com δ × K δ
 
 @[simp]
 def K.renameK {δ} (ξ : Nat → Nat) : K δ → K δ
@@ -67,7 +67,7 @@ inductive Step : CK → CK → Prop where
 end
 infix:40 "⤳" => Step
 
-@[reducible] def Steps := RTC Step
+abbrev Steps := RTC Step
 infix:40 "⤳⋆" => Steps
 
 end CK

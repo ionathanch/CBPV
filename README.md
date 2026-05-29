@@ -78,7 +78,7 @@ Equivalence ╾──╯  CCNF
 Commutation ──╼ Soundness
 ```
 
-## When to `@[simp]` and `@[reducible]`
+## When to `@[simp]`
 
 Not all definitions are added to the default `simp` set.
 As a general rule, a definition should be added if it is not a type-level term
@@ -104,9 +104,3 @@ The definitions should be explicitly unfolded as needed,
 corresponding with invoking `cases` on the corresponding inductives.
 Otherwise, simplification may again reduce too far
 and prevent theorems from applying.
-
-Type-level definitions which are just type aliases
-should be marked as `@[reducible]` so that instances for typeclasses
-on the aliased types can be used.
-In particular, definitions consisting of applications of `RTC.RTC`
-need to be `@[reducible]` so that `calc` can find the `Trans` instances.

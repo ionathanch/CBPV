@@ -24,7 +24,7 @@ theorem letLet {Γ δ} {Δ : Dtxt δ} {A n m m'} {B : ComType}
     _ ⇒⋆ letin (ret v₂) (m'⦃⇑τ⦄) := .letin (rlet.merge ⟨rv₂, ⟨⟩⟩)
     _ ⇒ m'⦃v₂ +: τ⦄ := by rw [← substUnion]; exact .ζ
   have goal := soundCom hm' (semCtxt.cons hA hστ) hφψ
-  refine ℰ.bwds (.rejoin r₁') (.rejoin r₂') goal
+  exact ℰ.bwds (.rejoin r₁') (.rejoin r₂') goal
 
 theorem appLet {Γ δ} {Δ : Dtxt δ} {n m v A B}
   (hlet : Γ ∣ ⬝ ⊢ letin n m ∶ Arr A B)

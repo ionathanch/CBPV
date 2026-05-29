@@ -231,8 +231,7 @@ theorem renameJComp {δ₁ δ₂ δ₃ m} (ξ : Fin δ₂ → Fin δ₃) (ζ : F
     . exact ih (liftJ ξ) (liftJ ζ)
     . intro j; exact Eq.symm (liftJComp ξ ζ (ξ ∘ ζ) (λ _ ↦ rfl) j)
 
-@[reducible]
-def weakenJCom {δ} δ' : Com δ → Com (δ' + δ) := renameJCom (Fin.castLE (le_add_left δ δ'))
+abbrev weakenJCom {δ} δ' : Com δ → Com (δ' + δ) := renameJCom (Fin.castLE (le_add_left δ δ'))
 
 theorem weakenJCom0 {m : Com 0} : weakenJCom 0 m = m :=
   trans (renameJExt _ _ (λ _ ↦ rfl) m) (renameJId m)
@@ -514,7 +513,7 @@ theorem renameDropSubst {δ} σ (m : Com δ) v : ((renameCom (lift succ) m)⦃�
   calc (renameCom (lift succ) m)⦃⇑⇑ σ⦄⦃⇑ (v +: var)⦄
     _ = (renameCom (lift succ) (m ⦃⇑ σ⦄)⦃⇑ (v +: var)⦄) := by rw [renameUpUpSubst]
     _ = (renameCom (lift succ) (m ⦃⇑ σ⦄)⦃var 0 +: renameVal succ v +: var ∘ succ⦄)
-      := by rw [substComExt]; intro n; cases n with | zero => rfl | succ n => cases n <;> rfl
+      := by rw [substComExt]; intro n; rcases n with ⟨⟩ | ⟨⟩ | _ <;> rfl
     _ = (m⦃⇑ σ⦄⦃var 0 +: var ∘ succ⦄)                   := by rw [substDrop₂]
     _ = (m⦃⇑ σ⦄⦃var⦄)                                   := by rw [substComExt]; intro n; cases n <;> rfl
     _ = (m⦃⇑ σ⦄)                                        := by rw [substComId]

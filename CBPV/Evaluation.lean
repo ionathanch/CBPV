@@ -151,7 +151,7 @@ end Eval
   Multi-step evaluation
 ----------------------*-/
 
-@[reducible] def Evals {δ} := RTC (@Eval δ)
+abbrev Evals {δ} := RTC (@Eval δ)
 infix:40 "⇒⋆" => Evals
 
 namespace Evals
