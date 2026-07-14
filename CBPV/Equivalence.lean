@@ -104,10 +104,10 @@ theorem sym𝒞ℰ {B} (𝒞sym : ∀ {δ} {m n : Com δ}, (m, n) ∈ ⟦B⟧ᶜ
   let ⟨_, _, nm, nn, hB⟩ := h
   exact ⟨_, _, nn, nm, 𝒞sym hB⟩
 
-theorem sym𝒱𝒞 :
-  (∀ {A v w}, (v, w) ∈ ⟦A⟧ᵛ → (w, v) ∈ ⟦A⟧ᵛ) ∧
-  (∀ {δ B} {m n : Com δ}, (m, n) ∈ ⟦B⟧ᶜ → (n, m) ∈ ⟦B⟧ᶜ) := by
-  refine ⟨λ {A v w} h ↦ ?val, λ {δ B m n} h ↦ ?com⟩
+joint
+  theorem 𝒱.sym {A v w} (h : (v, w) ∈ ⟦A⟧ᵛ) : (w, v) ∈ ⟦A⟧ᵛ
+  theorem 𝒞.sym {δ B} {m n : Com δ} (h : (m, n) ∈ ⟦B⟧ᶜ) : (n, m) ∈ ⟦B⟧ᶜ
+by
   mutual_induction A, B
   case Unit => unfold 𝒱 at *; simp [h]
   case Sum ihA₁ ihA₂ =>
@@ -132,9 +132,7 @@ theorem sym𝒱𝒞 :
     let ⟨_, _, _, _, hB₁, hB₂, em, en⟩ := h
     exact ⟨_, _, _, _, sym𝒞ℰ ihB₁ hB₁, sym𝒞ℰ ihB₂ hB₂, en, em⟩
 
-def 𝒱.sym := @sym𝒱𝒞.left
-def 𝒞.sym := @sym𝒱𝒞.right
-def ℰ.sym {B} := @sym𝒞ℰ B 𝒞.sym
+theorem ℰ.sym {B} : ∀ {δ} {m n : Com δ}, (m, n) ∈ ⟦B⟧ᵉ → (n, m) ∈ ⟦B⟧ᵉ := @sym𝒞ℰ B 𝒞.sym
 
 theorem trans𝒞ℰ {B} (𝒞trans : ∀ {δ} {m₁ m₂ m₃ : Com δ}, (m₁, m₂) ∈ ⟦B⟧ᶜ → (m₂, m₃) ∈ ⟦B⟧ᶜ → (m₁, m₃) ∈ ⟦B⟧ᶜ) :
   ∀ {δ} {m₁ m₂ m₃ : Com δ}, (m₁, m₂) ∈ ⟦B⟧ᵉ → (m₂, m₃) ∈ ⟦B⟧ᵉ → (m₁, m₃) ∈ ⟦B⟧ᵉ := by
@@ -145,10 +143,10 @@ theorem trans𝒞ℰ {B} (𝒞trans : ∀ {δ} {m₁ m₂ m₃ : Com δ}, (m₁,
   rw [Norm.join nm' nn'] at hB₁₂
   exact ⟨m, n, nm, nn, 𝒞trans hB₁₂ hB₂₃⟩
 
-theorem trans𝒱𝒞 :
-  (∀ {A v₁ v₂ v₃}, (v₁, v₂) ∈ ⟦A⟧ᵛ → (v₂, v₃) ∈ ⟦A⟧ᵛ → (v₁, v₃) ∈ ⟦A⟧ᵛ) ∧
-  (∀ {δ B} {m₁ m₂ m₃ : Com δ}, (m₁, m₂) ∈ ⟦B⟧ᶜ → (m₂, m₃) ∈ ⟦B⟧ᶜ → (m₁, m₃) ∈ ⟦B⟧ᶜ) := by
-  refine ⟨λ {A v₁ v₂ v₃} h₁₂ h₂₃ ↦ ?val, λ {δ B m₁ m₂ m₃} h₁₂ h₂₃ ↦ ?com⟩
+joint
+  theorem 𝒱.trans {A v₁ v₂ v₃} (h₁₂ : (v₁, v₂) ∈ ⟦A⟧ᵛ) (h₂₃ : (v₂, v₃) ∈ ⟦A⟧ᵛ) : (v₁, v₃) ∈ ⟦A⟧ᵛ
+  theorem 𝒞.trans {δ B} {m₁ m₂ m₃ : Com δ} (h₁₂ : (m₁, m₂) ∈ ⟦B⟧ᶜ) (h₂₃ : (m₂, m₃) ∈ ⟦B⟧ᶜ) : (m₁, m₃) ∈ ⟦B⟧ᶜ
+by
   mutual_induction A, B
   case Unit =>
     unfold 𝒱 at *
@@ -192,9 +190,7 @@ theorem trans𝒱𝒞 :
     subst el₁ el₂ er₂; injection er₁ with _ e₁ e₂; subst e₁ e₂
     refine ⟨_, _, _, _, trans𝒞ℰ ihB₁ hA₁₁ hA₂₁, trans𝒞ℰ ihB₂ hA₁₂ hA₂₂, rfl, rfl⟩
 
-def 𝒱.trans := @trans𝒱𝒞.left
-def 𝒞.trans := @trans𝒱𝒞.right
-def ℰ.trans {B} := @trans𝒞ℰ B 𝒞.trans
+theorem ℰ.trans {B} : ∀ {δ} {m₁ m₂ m₃ : Com δ}, (m₁, m₂) ∈ ⟦B⟧ᵉ → (m₂,m₃) ∈ ⟦B⟧ᵉ → (m₁, m₃) ∈ ⟦B⟧ᵉ := @trans𝒞ℰ B 𝒞.trans
 
 /-*-----------------------------
   LE evals are backward closed
@@ -321,10 +317,10 @@ theorem semCom.jump {Γ : Ctxt} {δ} {Δ : Dtxt δ} {φ ψ j A B} (mem : Δ ∋ 
       intro σ τ v w hστ hvw; simp
       exact .bwd (.rejoin .join't) (.rejoin .join't) (ih mem hστ hvw)
 
-theorem soundness {Γ} :
-  (∀ (v : Val) A, Γ ⊢ v ∶ A → Γ ⊨ v ~ v ∶ A) ∧
-  (∀ {δ Δ} (m : Com δ) B, Γ ∣ Δ ⊢ m ∶ B → Γ ∣ Δ ⊨ m ~ m ∶ B) := by
-  refine ⟨λ v A h ↦ ?val, λ m B h ↦ ?com⟩
+joint {Γ : Ctxt}
+  theorem soundVal {A} {v : Val} (h : Γ ⊢ v ∶ A) : Γ ⊨ v ~ v ∶ A
+  theorem soundCom {δ Δ B} {m : Com δ} (h : Γ ∣ Δ ⊢ m ∶ B) : Γ ∣ Δ ⊨ m ~ m ∶ B
+by
   mutual_induction h, h
   all_goals intro σ τ hστ
   case var mem => exact hστ mem
@@ -373,9 +369,6 @@ theorem soundness {Γ} :
     exact ℰ.bwdsRejoin0 (.trans' (Evals.snd r₁) (.once .π2)) (.trans' (Evals.snd r₂) (.once .π2)) hB₂
   case join m n _ _ _ _ ihm ihn => exact semCom.join ihm ihn hστ hφψ
   case jump mem _ ihv => exact semCom.jump mem hφψ hστ (ihv hστ)
-
-def soundVal {Γ v} {A : ValType} : Γ ⊢ v ∶ A → Γ ⊨ v ~ v ∶ A := soundness.left v A
-def soundCom {Γ δ} {Δ : Dtxt δ} {m} {B : ComType} : Γ ∣ Δ ⊢ m ∶ B → Γ ∣ Δ ⊨ m ~ m ∶ B := soundness.right m B
 
 theorem safety {m B} (h : ⬝ ∣ ⬝ ⊢ m ∶ B) : ∃ n, m ⇓ₙ n := by
   have hB := soundCom h semCtxt.nil semDtxt.nil

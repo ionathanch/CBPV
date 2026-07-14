@@ -292,12 +292,12 @@ theorem isK.plug {δ n} {k : K δ} (isk : isK k) (isc : isCom n) : isCfg (k [ n 
   case letin => simp [isk, isc]
   case app ih | fst ih | snd ih => apply ih <;> simp [isk, isc]
 
-theorem isRenameValCfg {ξ} :
-  (∀ v, isVal v → isVal (renameVal ξ v)) ∧
-  (∀ {δ} (m : Com δ),
+joint {ξ : Nat → Nat}
+  theorem isVal.rename {v} (isv : isVal v) : isVal (renameVal ξ v)
+  theorem isRenameCfg {δ} (m : Com δ) :
     (isCom m → isCom (renameCom ξ m)) ∧
-    (isCfg m → isCfg (renameCom ξ m))) := by
-  refine ⟨λ v isv ↦ ?val, λ m ↦ ?com⟩
+    (isCfg m → isCfg (renameCom ξ m))
+by
   mutual_induction v, m generalizing ξ
   all_goals simp at *
   case thunk ih => let ⟨_, ih⟩ := @ih ξ; exact ih isv
@@ -330,9 +330,8 @@ theorem isRenameValCfg {ξ} :
     exact ⟨ihn isn, ihm ism⟩
   case jump ih => exact ih
 
-def isVal.rename {ξ v} : isVal v → isVal (renameVal ξ v) := isRenameValCfg.left v
-def isCom.rename {ξ δ} {m : Com δ} : isCom m → isCom (renameCom ξ m) := (isRenameValCfg.right m).left
-def isCfg.rename {ξ δ} {m : Com δ} : isCfg m → isCfg (renameCom ξ m) := (isRenameValCfg.right m).right
+theorem isCom.rename {ξ δ} {m : Com δ} : isCom m → isCom (renameCom ξ m) := (isRenameCfg m).left
+theorem isCfg.rename {ξ δ} {m : Com δ} : isCfg m → isCfg (renameCom ξ m) := (isRenameCfg m).right
 
 theorem isCfg.renameJ {δ δ'} {ξ : Fin δ → Fin δ'} : ∀ m, isCfg m → isCfg (renameJCom ξ m) := by
   intro m ism; mutual_induction m generalizing δ' ism
@@ -375,9 +374,10 @@ theorem isK.jumpify {δ k k'} {m : Com δ} (isk : isK k) (e : k.jumpify = .yes k
       let ⟨isk, ism⟩ := ih isk e'
       exact ⟨isk, ism⟩
 
-theorem isCCNF : (∀ v, isVal ⟦v⟧ᵥ) ∧
-  (∀ {δ δ'} (m : Com δ') (k : K δ) (le : δ' ≤ δ), isK k → isCfg (⟦m⟧ₘ k # le)) := by
-  refine ⟨λ v ↦ ?val, λ {δ δ'} m k le ↦ ?com⟩
+joint
+  theorem Val.CCNF v : isVal ⟦v⟧ᵥ
+  theorem Com.CCNF {δ δ'} (m : Com δ') (k : K δ) (le : δ' ≤ δ) : isK k → isCfg (⟦m⟧ₘ k # le)
+by
   mutual_induction v, m
   all_goals simp
   case thunk ih => exact ih .nil .refl ⟨⟩
@@ -396,9 +396,6 @@ theorem isCCNF : (∀ v, isVal ⟦v⟧ᵥ) ∧
     case _ e =>
       let ⟨isk, ism⟩ := isk.jumpify e
       exact ⟨ism, isc₁ _ (.step le) (isk.rename), isc₂ _ (.step le) (isk.rename)⟩
-
-def Val.CCNF : ∀ v, isVal ⟦v⟧ᵥ := isCCNF.left
-def Com.CCNF : ∀ m, isCfg ⟦m⟧ₘ := λ m ↦ isCCNF.right m .nil .refl ⟨⟩
 
 /-*-------------------------------------------
   Type preservation of CC-normal translation
@@ -478,10 +475,14 @@ theorem jumpify {Γ δ Δ k' m B₁ B₂} {k : K δ}
 
 end wtK
 
-theorem preservation {Γ} :
-  (∀ {v} {A : ValType}, v.joinless → Γ ⊢ v ∶ A → Γ ⊢ ⟦ v ⟧ᵥ ∶ A) ∧
-  (∀ {δ δ'} {Δ : Dtxt δ} {Δ' : Dtxt δ'} {k m} {B₁ B₂ : ComType} le, m.joinless → Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂ → Γ ∣ Δ' ⊢ m ∶ B₁ → Γ ∣ Δ ⊢ ⟦ m ⟧ₘ k # le ∶ B₂) := by
-  refine ⟨λ {v A} vj h ↦ ?val, λ {δ δ' Δ Δ' k m B₁ B₂} le mj hk h ↦ ?com⟩
+joint {Γ : Ctxt}
+  theorem ValWt.preservation {v} {A : ValType}
+    (vj : v.joinless) (h : Γ ⊢ v ∶ A) :
+    Γ ⊢ ⟦ v ⟧ᵥ ∶ A
+  theorem ComWt.preservation {δ δ'} {Δ : Dtxt δ} {Δ' : Dtxt δ'} {k m} {B₁ B₂ : ComType} le
+    (mj : m.joinless) (hk : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂) (h : Γ ∣ Δ' ⊢ m ∶ B₁) :
+    Γ ∣ Δ ⊢ ⟦ m ⟧ₘ k # le ∶ B₂
+by
   mutual_induction h, h
   case var mem => exact .var mem
   case unit => exact .unit
@@ -505,6 +506,3 @@ theorem preservation {Γ} :
     case _ e =>
       let ⟨_, hk, hm⟩ := hk.jumpify e
       exact (.join hm (.case (hv vj) (hm₁ (.step le) mj₁ (wtK.weaken hk)) (hm₂ (.step le) mj₂ (wtK.weaken hk))))
-
-def ValWt.preservation {Γ} := @(@_root_.preservation Γ).left
-def ComWt.preservation {Γ} := @(@_root_.preservation Γ).right

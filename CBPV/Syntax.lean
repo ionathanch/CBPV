@@ -1,4 +1,7 @@
 import MutualInduction
+import Joint
+
+set_option linter.defProp false
 
 open Nat
 

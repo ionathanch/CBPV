@@ -27,10 +27,10 @@ theorem weaken {Γ δ} {Δ : Dtxt δ} {k₁ k₂ A B₁ B₂} (h : Γ ∣ Δ ⊨
   Fundamental theorem for semantic equivalence of continuations
 --------------------------------------------------------------*-/
 
-def nil {Γ δ B} {Δ : Dtxt δ} : Γ ∣ Δ ⊨ .nil ~ .nil ∶ B ⇒ B :=
+theorem nil {Γ δ B} {Δ : Dtxt δ} : Γ ∣ Δ ⊨ .nil ~ .nil ∶ B ⇒ B :=
   λ _ _ _ _ ↦ ℰ.bwdsRejoin .refl .refl
 
-def fst {Γ δ} {Δ : Dtxt δ} {k₁ k₂ B₁ B₂ B₃} (h : Γ ∣ Δ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₃) : Γ ∣ Δ ⊨ .fst k₁ ~ .fst k₂ ∶ Prod B₁ B₂ ⇒ B₃ := by
+theorem fst {Γ δ} {Δ : Dtxt δ} {k₁ k₂ B₁ B₂ B₃} (h : Γ ∣ Δ ⊨ k₁ ~ k₂ ∶ B₁ ⇒ B₃) : Γ ∣ Δ ⊨ .fst k₁ ~ .fst k₂ ∶ Prod B₁ B₂ ⇒ B₃ := by
   intro σ τ hστ φ ψ hφψ n₁ n₂ hn; simp
   have ⟨n₁₁, n₁₂, n₂₁, n₂₂, rn₁, rn₂, hn₁⟩ := hn.fst
   refine ℰ.bwds ?left ?right (h hστ hφψ hn₁)
@@ -38,7 +38,7 @@ def fst {Γ δ} {Δ : Dtxt δ} {k₁ k₂ B₁ B₂ B₃} (h : Γ ∣ Δ ⊨ k�
   case left  => rw [← @weakenJCom0 n₁₁]; exact .trans' (Evals.fst rn₁) (.once .π1)
   case right => rw [← @weakenJCom0 n₂₁]; exact .trans' (Evals.fst rn₂) (.once .π1)
 
-def snd {Γ δ} {Δ : Dtxt δ} {k₁ k₂ B₁ B₂ B₃} (h : Γ ∣ Δ ⊨ k₁ ~ k₂ ∶ B₂ ⇒ B₃) : Γ ∣ Δ ⊨ .snd k₁ ~ .snd k₂ ∶ Prod B₁ B₂ ⇒ B₃ := by
+theorem snd {Γ δ} {Δ : Dtxt δ} {k₁ k₂ B₁ B₂ B₃} (h : Γ ∣ Δ ⊨ k₁ ~ k₂ ∶ B₂ ⇒ B₃) : Γ ∣ Δ ⊨ .snd k₁ ~ .snd k₂ ∶ Prod B₁ B₂ ⇒ B₃ := by
   intro σ τ hστ φ ψ hφψ n₁ n₂ hn; simp
   have ⟨n₁₁, n₁₂, n₂₁, n₂₂, rn₁, rn₂, hn₂⟩ := hn.snd
   refine ℰ.bwds ?left ?right (h hστ hφψ hn₂)
