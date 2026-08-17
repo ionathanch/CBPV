@@ -382,11 +382,11 @@ by
   all_goals simp
   case thunk ih => exact ih .nil .refl ⟨⟩
   all_goals intro isk
-  case force isv => apply isk.plug; simp [isv]
-  case lam ih | ret ih => apply isk.plug; simp [ih]
+  case force isv | ret isv => apply isk.plug; simp [isv]
+  case lam ih => apply isk.plug; simp [ih .nil _ ⟨⟩]
   case app isc isv => apply isc; simp [isv, isk]
   case letin isc₁ isc₂ => apply isc₁; apply isc₂; simp [isk.rename]
-  case prod isc₁ isc₂ => apply isk.plug; simp [isc₁, isc₂]
+  case prod isc₁ isc₂ => apply isk.plug; simp [isc₁ .nil _ ⟨⟩, isc₂ .nil _ ⟨⟩]
   case fst isc | snd isc => apply isc; simp [isk]
   case join isc₁ isc₂ => exact ⟨isc₁ _ le (isk.rename), isc₂ _ (succ_le_succ le) isk.renameJ⟩
   case jump ih => exact ih
