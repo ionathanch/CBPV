@@ -1009,10 +1009,10 @@ rather than another extraneous join point $[[j' x = jump j x]]$ in the outer fal
       &\textit{or} ~{}~ [[K]] \equiv [[(let x ← □ in jump j x) [k1] - [ki] ]] \\
       \: [[join j x = m in _]] &\textit{if} ~{}~ [[K]] \equiv [[ (let x ← □ in m) [k1] - [ki] ]] \\[1.2\baselineskip]
       \: \quad [[case ⟦v⟧ of inl y ⇒ ⟦m1⟧ K' ; inr z ⇒ ⟦m2⟧ K']]
-      &\textit{and} ~{}~ [[m]] \not\equiv [[jump j x]]
+      &\textit{and} ~{}~ [[m]] \not\equiv [[jump j' x']]
     \end{cases}
     \\
-    \textit{where} ~{}~ [[K']] \coloneqq [[(let x ← □ in jump j x) [k1] - [ki] ]]
+    \textit{where} ~{}~ [[K']] \coloneqq [[(let x ← □ in jump j x) [k1] - [ki] ]] \\
   \end{multline*}
   \caption{Translation of case expressions to CCNF with join points \thmref{CCNF}{CCcom,K.jumpify}}
   \Description[]{}
