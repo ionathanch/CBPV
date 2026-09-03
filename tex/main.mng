@@ -20,7 +20,7 @@
 \let\newlist\relax
 \let\renewlist\relax
 \usepackage{thmtools} % fix cref lemma/corollary names; load BEFORE cleveref
-\usepackage[capitalize,nameinlink,noabbrev]{cleveref}
+\usepackage{zref-clever}
 \usepackage[format=plain,justification=centering]{caption}
 \usepackage{enumitem,booktabs,subcaption,xspace,doi}
 \usepackage{mathpartir,stmaryrd,colonequals}
@@ -58,14 +58,29 @@
 \mathtoolsset{showmanualtags}
 \newtagform{brack}{[}{]}
 
-\crefformat{enumi}{#2step~#1#3}
-\Crefformat{enumi}{#2step~#1#3}
-\crefrangeformat{enumi}{step~#3#1#4 to #5#2#6}
-\Crefrangeformat{enumi}{step~#3#1#4 to #5#2#6}
-\crefformat{equation}{#2Equation~#1#3}
-\Crefformat{equation}{#2Equation~#1#3}
-\crefmultiformat{equation}{Equations~#2#1#3}{ and #2#1#3}{, #2#1#3}{ and #2#1#3}
-\Crefmultiformat{equation}{Equations~#2#1#3}{ and #2#1#3}{, #2#1#3}{ and #2#1#3}
+\zcsetup{cap=true}
+\zcRefTypeSetup{equation}{
+  Name-sg = Equation,
+  name-sg = equation,
+  Name-pl = Equations,
+  name-pl = equations,
+  Name-sg-ab = Eqn,
+  name-sg-ab = eqn,
+  Name-pl-ab = Eqns,
+  name-pl-ab = eqns,
+  refbounds = {{},[,],{}}
+}
+\zcRefTypeSetup{item}{
+  Name-sg = Step,
+  name-sg = step,
+  Name-pl = Steps,
+  name-pl = steps,
+  Name-sg-ab = Step,
+  name-sg-ab = step,
+  Name-pl-ab = Steps,
+  name-pl-ab = steps,
+  refbounds = {{},{},{},{}}
+}
 
 \citestyle{acmauthoryear}
 \bibliographystyle{ACM-Reference-Format}
@@ -254,22 +269,22 @@ leading to the following contributions.
   \item We identify a subset of CBPV that is normal with respect to all commuting conversions.
     To this subset, we add join point and jump constructs,
     and design a type system enforcing non-escaping join points and tail-only jumps.
-    $\hookrightarrow$~\cref{sec:cbpv}
+    $\hookrightarrow$~\zcref{sec:cbpv}
   \item We define a single-pass transformation from CBPV into our extended normal form,
     using joins and jumps to avoid duplicating computations.
     This transformation preserves well-typedness,
     proven straightforwardly by induction.
-    $\hookrightarrow$~\cref{sec:ccnf}
+    $\hookrightarrow$~\zcref{sec:ccnf}
   \item We show that the transformation preserves evaluation behaviour:
     a closed term returning a value with no thunks
     and its transformation must return the same terminal value.
     This is proven via a logical equivalence on terms,
     and requires showing that commuting conversions are logically equivalent.
-    $\hookrightarrow$~\cref{sec:proof}
+    $\hookrightarrow$~\zcref{sec:proof}
 \end{itemize}
 %
-We discuss some other program equivalences and future work in \cref{sec:discuss},
-and compare with related work in \cref{sec:related}.
+We discuss some other program equivalences and future work in \zcref{sec:discuss},
+and compare with related work in \zcref{sec:related}.
 
 \section{Overview} \label{sec:overview}
 
@@ -290,7 +305,7 @@ whose execution mirrors that of the original evaluation strategy.
   \label{fig:syntax}
 \end{figure}
 
-CBPV syntactically distinguishes values and computations, listed in \cref{fig:syntax},
+CBPV syntactically distinguishes values and computations, listed in \zcref{fig:syntax},
 using explicit thunks $[[{m}]]$ and forcing $[[v!]]$ to turn suspended computations into values and back,
 and explicit returns to embed values into computations,
 which can then be bound to a variable in a let expression.
@@ -356,7 +371,7 @@ and is a well-known technique \citep{join}.
 Following \citet{join}, we define commuting conversions as all transformations
 that push elimination forms inside of tail positions,
 \ie the bodies of let expressions and the branches of case expressions.
-\Cref{eq:let-if} pushes let bindings into conditionals;
+\zcref[S]{eq:let-if} pushes let bindings into conditionals;
 as shown below, we can also push let bindings into other let bindings,
 as well as function applications into let bindings and conditionals,
 to expose those inlining opportunities.
@@ -379,7 +394,7 @@ Another benefit of commuting conversions is that they unnest expressions,
 moving multiple steps of computation out of evaluation contexts,
 which brings them closer to lower-level code.
 Commuted code is easier to compile because control flow follows the shape of the syntax.
-In \cref{eq:let-let}, finding the next computation to execute on the left-hand side requires
+In \zcref{eq:let-let}, finding the next computation to execute on the left-hand side requires
 traversing into the $[[x]]$ binding, then evaluating the $[[y]]$ binding,
 and finally popping back out to evaluate the body $[[m]]$.
 In contrast, the right-hand side makes it explicit that we first evaluate the $[[y]]$ binding,
@@ -394,7 +409,7 @@ Translations from the lambda calculus to CBPV already bind intermediate computat
 so what remains is to sequentialize them via commuting conversions.
 Rather than performing commuting conversions one by one,
 which examines the whole program each time,
-we present a single-pass transformation into commuting conversion normal form (CCNF) in \cref{sec:ccnf}
+we present a single-pass transformation into commuting conversion normal form (CCNF) in \zcref{sec:ccnf}
 that resembles the usual single-pass transformation into ANF.
 %
 \begin{figure}[h]
@@ -410,7 +425,7 @@ that resembles the usual single-pass transformation into ANF.
 In ANF, terms are divided into values, computations, and configurations,
 where computations are a subset of configurations that don't include
 let expressions and conditionals (or case expressions generally).
-\Cref{fig:ccnf} makes the same distinction for CBPV, where values remain unchanged;
+\zcref[S]{fig:ccnf} makes the same distinction for CBPV, where values remain unchanged;
 to avoid confusion, we also call the latter \emph{configurations},
 while we call the former \emph{\Acom{}s},
 which are both subsets of CBPV \emph{computations}.
@@ -420,7 +435,7 @@ so performing those new inlinings won't violate CCNF.
 
 \subsection{Join Points}
 
-Generalizing \cref{eq:let-if} to case expressions and arbitrary computations,
+Generalizing \zcref{eq:let-if} to case expressions and arbitrary computations,
 the corresponding commuting conversion pushes let bindings into case branches.
 %
 \usetagform{brack}
@@ -432,7 +447,7 @@ the corresponding commuting conversion pushes let bindings into case branches.
 \end{align}
 \usetagform{default}
 
-There is a code optimization issue with \cref{eq:let-if,eq:let-case}:
+There is a code optimization issue with \zcref{eq:let-if,eq:let-case}:
 the let body $[[m]]$ gets duplicated across the branches.
 If the size of $[[m]]$ is very large, this can cause code bloat,
 especially if the branches contain further case expressions.
@@ -472,15 +487,15 @@ and should be compiled to a local code block.
 
 Inspired by \citet{join},
 who tackle the same issue with commuting conversions in System F with case expressions,
-we add explicit join point and jump constructs to CBPV in \cref{fig:join}.
+we add explicit join point and jump constructs to CBPV in \zcref{fig:join}.
 They are accompanied by typing rules that restrict where join points may be used,
-which we cover in \cref{sec:cbpv}.
+which we cover in \zcref{sec:cbpv}.
 In contrast to \opcit,
 our jumps aren't \Acom{}s and may only appear in tail position,
 which simplifies both the evaluation semantics and our proofs.
-\Cref{sec:related} discusses why we can make this restriction.
+\zcref[S]{sec:related} discusses why we can make this restriction.
 
-Coming back to the commuting conversion of \cref{eq:let-join},
+Coming back to the commuting conversion of \zcref{eq:let-join},
 we use join points in place of the bound thunk,
 jumping to them after binding the branches.
 Let expressions only bind a single variable,
@@ -496,7 +511,7 @@ so we only need join points and jumps that take a single argument.
 \usetagform{default}
 
 \paragraph{What about duplicated values?}
-The commuting conversion in \cref{eq:app-if},
+The commuting conversion in \zcref{eq:app-if},
 which pushes applications into case expressions,
 similarly duplicates the application argument.
 However, values can be easily deduplicated using the existing let binding.
@@ -513,12 +528,12 @@ we consider it outside the scope of this work.
 
 \section{CBPV with Join Points} \label{sec:cbpv}
 
-While \cref{sec:overview} presents the source (plain CBPV) and target (CCNF CBPV with join points)
+While \zcref{sec:overview} presents the source (plain CBPV) and target (CCNF CBPV with join points)
 languages with distinct syntactic forms,
 in our mechanization (and thus our technical presentation here),
 we use a single unified syntax and treat CC-normalization as a source-to-source translation,
-showing \aposteriori in \cref{sec:ccnf} that the output of the translation satisfies \cref{fig:ccnf,fig:join}.
-In \cref{sec:proof}, we reason about equivalence between a CBPV term and its translation,
+showing \aposteriori in \zcref{sec:ccnf} that the output of the translation satisfies \zcref{fig:ccnf,fig:join}.
+In \zcref{sec:proof}, we reason about equivalence between a CBPV term and its translation,
 which requires both sides of the equivalence to belong to the same syntactic category.
 
 \begin{figure}
@@ -535,7 +550,7 @@ which requires both sides of the equivalence to belong to the same syntactic cat
   \label{fig:syntax-full}
 \end{figure}
 
-\Cref{fig:syntax-full} lists the full syntax of values and computations,
+\zcref[S]{fig:syntax-full} lists the full syntax of values and computations,
 along with value types and computation types.
 The new syntactic forms not found in plain CBPV are highlighted in salmon.
 For clarity, although the mechanization uses de Bruijn indexing and simultaneous substitutions,
@@ -549,7 +564,7 @@ and freely use jump well-scopedness throughout the proofs.
 \subsection{Evaluation Semantics}
 
 The purpose of join points is best explained by what they do;
-their single-step evaluation rules are listed in \cref{fig:eval},
+their single-step evaluation rules are listed in \zcref{fig:eval},
 alongside rules for the usual CBPV constructs.
 We write \fbox{$[[m ⇝* m']]$} for the reflexive, transitive closure of evaluation.
 The names of the rules involving join points and jumps not found in plain CBPV are highlighted in salmon.
@@ -748,7 +763,7 @@ $[[D]] \dblcolon= [[•]] \mid [[D, j : A ↗ B]]$ for jump contexts.
   \label{fig:typing}
 \end{figure}
 
-Without the jump contexts, rules \rref*{T-var} through \rref*{T-snd} in \cref{fig:typing}
+Without the jump contexts, rules \rref*{T-var} through \rref*{T-snd} in \zcref{fig:typing}
 are the usual typing rules for the values and computations of plain CBPV.
 When we include jump contexts, they are either threaded through rules unchanged,
 or they are explicitly empty in some premises.
@@ -786,7 +801,7 @@ Both have the same type $[[B]]$ because jumping in tail position doesn't change 
 and \rref{T-jump} indicates that jumping to the join point at $[[j]]$
 with a value of type $[[A]]$ indeed has the same $[[B]]$.
 This is why the jump context tracks the type $[[B]]$,
-and having the same type will be crucial later for the logical equivalence in \cref{sec:proof:logrel}.
+and having the same type will be crucial later for the logical equivalence in \zcref{sec:proof:logrel}.
 
 We can then, for example, jump to a join point in only one branch of a case expression
 so long as the join point has the same type as the other branch,
@@ -806,7 +821,7 @@ The important typing lemmas that we need are weakening lemmas for both value and
 In the mechanization, they are proven by induction on the typing derivation via renaming lemmas;
 for now, we ignore issues of renaming de Bruijn indices, as they are standard.
 We don't need syntactic progress and preservation lemmas,
-as type safety will follow from our semantic proofs as \cref{cor:safety}.
+as type safety will follow from our semantic proofs as \zcref{cor:safety}.
 
 \begin{lemma}[Weakening (value contexts)] \label{lem:wk:val} \thmref{Typing}{wtWeakenVal,wtWeakenCom} \leavevmode \\
   Suppose $[[x]]$ is not free in $[[v]]$, $[[m]]$.
@@ -821,7 +836,7 @@ as type safety will follow from our semantic proofs as \cref{cor:safety}.
 
 \section{Commuting Conversion Normalization} \label{sec:ccnf}
 
-In \cref{sec:overview}, we listed four examples of commuting conversions as \crefrange{eq:let-if}{eq:app-if}.
+In \zcref{sec:overview}, we listed four examples of commuting conversions as \zcref[range]{eq:let-if,eq:app-if}.
 The general formulation commutes evaluation contexts with \emph{tail contexts},
 given below, which are elimination forms with holes where computations continue,
 which in our case are the bodies of let expressions and the branches of case expressions.
@@ -838,7 +853,7 @@ Informally, they unnest code because they move evaluation contexts into the ``ne
 and they expose inlining opportunities because these evaluation contexts are no longer
 blocked by tail contexts that still have a ``first step'' to compute.
 The shape of commuting conversions inform the shape of the normal form of computations,
-reproduced in \cref{fig:ccnf-join}, where \Acom{}s $[[n]]$ are computations that don't contain tail contexts,
+reproduced in \zcref{fig:ccnf-join}, where \Acom{}s $[[n]]$ are computations that don't contain tail contexts,
 and configurations $[[m]]$ are all computations that don't contain tail contexts in scrutinee positions,
 \ie where holes appear in evaluation contexts.
 By inspection, CCNF is indeed normal with respect to commuting conversions because no $[[m]]$s appear in $[[n]]$s,
@@ -892,7 +907,7 @@ A continuation $[[K]]$ can be combined with a computation $[[n]]$
 by the plugging operation \fbox{$[[ K[n] ]]$},
 which collapses the stack of $[[k]]$s in the continuation
 and replaces the final hole $[[□]]$ by $[[n]]$,
-defined in \cref{fig:plug}.
+defined in \zcref{fig:plug}.
 Although the operation is defined over all computations,
 as the holes only appear in $[[n]]$ positions,
 we can only plug \Acom{}s into continuations if we want to produce a configuration.
@@ -935,7 +950,7 @@ we can only plug \Acom{}s into continuations if we want to produce a configurati
 \end{figure}
 
 The translation of values \fbox{$[[⟦v⟧]]$} and computations \fbox{$[[⟦m⟧ K]]$}
-are mutually defined in \cref{fig:CC-norm};
+are mutually defined in \zcref{fig:CC-norm};
 we delay the translation of case expressions for the moment.
 The translation of computations takes a continuation as a second argument,
 representing the rest of the computation that expects the result of the translated computation.
@@ -955,17 +970,17 @@ under the continuation extended with application or projection, respectively.
 
 To see how the translation yields CCNFs,
 we can look at how they act on the left-hand side
-of the commuting conversions in \cref{eq:let-let,eq:app-let},
+of the commuting conversions in \zcref{eq:let-let,eq:app-let},
 assuming that $[[n]]$ is already in CCNF,
 and using the fact that $[[⟦n⟧ K]] = [[ K[n] ]]$.
 %
 \begin{align}
-  &  [[⟦let x ← (let y ← n in return v) in m⟧ □]]             \tag{\cref{eq:let-let}} \\
+  &  [[⟦let x ← (let y ← n in return v) in m⟧ □]]             \tag{\zcref{eq:let-let}} \\
   &= [[⟦let y ← n in return v⟧ (let x ← □ in ⟦m⟧ □)]]         \tag{\textit{let}} \\
   &= [[⟦n⟧ (let y ← □ in ⟦return v⟧ (let x ← □ in ⟦m⟧ □))]]   \tag{\textit{let}} \\
   &= [[ (let y ← □ in (let x ← □ in ⟦m⟧ □)[return ⟦v⟧])[n] ]] \tag{\textit{$[[n]]$, ret}} \\
   &= [[let y ← n in (let x ← return ⟦v⟧ in ⟦m⟧ □)]]           \tag{\textit{plug}} \\
-  &  [[⟦(let x ← n in λy. m) v⟧ □]]                           \tag{\cref{eq:app-let}} \\
+  &  [[⟦(let x ← n in λy. m) v⟧ □]]                           \tag{\zcref{eq:app-let}} \\
   &= [[⟦let x ← n in λy. m⟧ (□ ⟦v⟧)]]                         \tag{\textit{app}} \\
   &= [[⟦n⟧ (let x ← □ in ⟦λy. m⟧ (□ ⟦v⟧))]]                   \tag{\textit{let}} \\
   &= [[ (let x ← □ in (□ ⟦v⟧)[λy. ⟦m⟧ □])[n] ]]               \tag{\textit{$[[n]]$, fun}} \\
@@ -1019,7 +1034,7 @@ rather than another extraneous join point $[[j' x = jump j x]]$ in the outer fal
   \label{fig:CC-norm-case}
 \end{figure}
 
-\Cref{fig:CC-norm-case} generalizes this strategy to case expressions and nested continuations;
+\zcref[S]{fig:CC-norm-case} generalizes this strategy to case expressions and nested continuations;
 whether we construct a join point depends on whether the continuation ends in a let continuation
 whose body isn't already a jump to a join point.
 In the mechanization, this is a source-to-source translation
@@ -1039,7 +1054,7 @@ which holds by inspection, \ie mutual induction over the syntax.
 
 \subsection{Commuting Conversion Preserves Typing}
 
-With \cref{lem:ccnf-preservation},
+With \zcref{lem:ccnf-preservation},
 we know that the translation performs all the commuting conversions
 in the directions we desire.
 However, this alone doesn't guarantee that the translation preserves the \emph{meaning}
@@ -1081,7 +1096,7 @@ a translated term must behave like the same kind of term as the original term.
 \end{figure}
 
 To show type preservation, we first need a typing judgement for the continuations,
-given in \cref{fig:typing-K}.
+given in \zcref{fig:typing-K}.
 A continuation $[[K]]$ having type $[[B1 ⇒ B2]]$ means that
 if the hole in $[[K]]$ represents a missing computation of type $[[B1]]$,
 then $[[K]]$ with its hole plugged in would be a computation of type $[[B2]]$.
@@ -1096,7 +1111,7 @@ We also need an inversion lemma for continuations that end in let continuations.
 
 \begin{proof}
   By induction on the typing derivation of $[[K]]$,
-  using \cref{lem:wk:jump} in the \rref*{K-hole} case.
+  using \zcref{lem:wk:jump} in the \rref*{K-hole} case.
 \end{proof}
 
 \begin{lemma}[Let continuation inversion] \label{lem:k-let:inv} \thmref{CCNF}{wtK.jumpify} \leavevmode \\
@@ -1122,10 +1137,10 @@ We also need an inversion lemma for continuations that end in let continuations.
 
 \begin{proof}
   By mutual induction on the typing derivations of $[[v]]$ and $[[m]]$,
-  using \cref{lem:preservation:plug} in the \rref*{T-force,T-fun,T-pair} cases.
+  using \zcref{lem:preservation:plug} in the \rref*{T-force,T-fun,T-pair} cases.
   In the \rref*{T-case} case,
   if $[[K]]$ is a let continuation,
-  use \cref{lem:k-let:inv} and \rref{T-join} to construct the derivation.
+  use \zcref{lem:k-let:inv} and \rref{T-join} to construct the derivation.
 \end{proof}
 
 \section{Commuting Conversion Normalization Preserves Evaluation} \label{sec:proof}
@@ -1173,7 +1188,7 @@ subterms must reduce to canonical terms such as returned values.
 To handle translations with arbitrary translation continuation $[[K]]$,
 we generalize to proving that a translation $[[⟦m⟧ K]]$
 must be equivalent to plugging the computation back in as $[[ K[m] ]]$.
-The proof of \cref{thm:ground-run} then proceeds by:
+The proof of \zcref{thm:ground-run} then proceeds by:
 \begin{enumerate}
   \item \label{item:logrel} Defining a standard logical equivalence over CBPV types;
   \item \label{item:semeq} Closing over term and join point contexts with a semantic equivalence;
@@ -1188,10 +1203,10 @@ The proof of \cref{thm:ground-run} then proceeds by:
     is equivalent to translating the computation using the continuation.
 \end{enumerate}
 The theorem then holds by instantiating with the empty continuation.
-\Cref{sec:proof:logrel} covers \crefrange{item:logrel}{item:fundamental},
-\cref{sec:proof:cc} covers \cref{item:cc},
-\cref{sec:proof:plug} covers \crefrange{item:kont}{item:plug},
-and \cref{sec:proof:end} covers \cref{item:end}.
+\zcref[S]{sec:proof:logrel} covers \zcref[range]{item:logrel,item:fundamental},
+\zcref{sec:proof:cc} covers \zcref{item:cc},
+\zcref{sec:proof:plug} covers \zcref[range]{item:kont,item:plug},
+and \zcref{sec:proof:end} covers \zcref{item:end}.
 
 \subsection{Logical Equivalence and the Fundamental Theorem} \label{sec:proof:logrel}
 
@@ -1302,7 +1317,7 @@ corresponding to the term $[[join j1 x1 = m1 in _]] \dots [[join ji xi = mi in m
 
 We extend logical equivalence to substitution maps and join stacks,
 relating two of them at a particular context.
-\Cref{fig:logeq-subst} gives inductive rules for these logical equivalences.
+\zcref[S]{fig:logeq-subst} gives inductive rules for these logical equivalences.
 \Rref{S-nil,S-cons} are equivalent to stating that
 $[[(s, t) ∈ G]]$ holds when for all $[[x : A ∈ G]]$, $[[(s(x), t(x)) ∈ A]]$ holds.
 \Rref{J-cons} states that we can extend a pair of related join stacks $[[p]]$ and $[[q]]$
@@ -1326,7 +1341,7 @@ We show that substitution maps and join stacks are PERs by induction on their de
 
 Using substitution maps and join stacks, we can define semantic equivalence of open terms.
 They are also partial equivalence relations,
-which follows from \cref{lem:logeq:PER,lem:logeq-subst:PER}.
+which follows from \zcref{lem:logeq:PER,lem:logeq-subst:PER}.
 In all proofs that follow, we freely use symmetry and transitivity without explicit reference.
 
 \begin{definition}[Semantic equivalence of values] \thmref{Equivalence}{semVal} \leavevmode \\
@@ -1371,19 +1386,19 @@ well-typed terms are semantically equivalent to themselves.
       Hold by definition of the logical equivalence,
       using the induction hypotheses on any subterms.
     \item \textbf{Cases} \rref*{T-fun,T-ret,T-prod}:
-      Hold by \cref{lem:logeq:bwds-joins} with no reduction,
+      Hold by \zcref{lem:logeq:bwds-joins} with no reduction,
       using the induction hypotheses on subterms.
     \item \textbf{Cases} \rref*{T-app,T-fst,T-snd}:
       By the induction hypotheses on the scrutinee premises,
       they must reduce to related functions, related first pair projections,
       or related second pair projections, respectively.
-      Then the goal holds by \cref{lem:logeq:bwds-joins} on these relations,
+      Then the goal holds by \zcref{lem:logeq:bwds-joins} on these relations,
       reducing by \rref*{E-app}, \rref*{E-fst}, or \rref*{E-snd}, respectively.
     \item \textbf{Cases} \rref*{T-let,T-case}:
       By the induction hypotheses on the scrutinee premises,
       they must reduce to related returns, related left injections,
       or related right injections, respectively.
-      Then the goal holds by \cref{lem:logeq:bwds} on these relations,
+      Then the goal holds by \zcref{lem:logeq:bwds} on these relations,
       reducing by \rref*{E-ret}, \rref*{E-left}, or \rref*{E-right}, respectively.
     \item \textbf{Case} \rref*{T-join}:
       Holds by the induction hypothesis on the join expression body,
@@ -1411,7 +1426,7 @@ naturally we need to show semantic equivalence of the commuting conversions.
 Recall that with four evaluation contexts and two tail contexts,
 there are eight total commuting conversions to handle,
 each assuming well-typedness of various subterms.
-We present them as derivable rules in \cref{fig:semeq:cc} for legibility.
+We present them as derivable rules in \zcref{fig:semeq:cc} for legibility.
 
 \begin{figure}
   \begin{mathpar}
@@ -1489,10 +1504,10 @@ We present them as derivable rules in \cref{fig:semeq:cc} for legibility.
 \end{lemma}
 \fi
 
-The general strategy to proving these is by using the \cref{thm:semeq} on the typing derivations,
+The general strategy to proving these is by using the \zcref{thm:semeq} on the typing derivations,
 extracting a logical equivalence for the desired type,
-applying \cref{lem:logeq:bwds} or \cref{lem:logeq:bwds-joins},
-then using the evaluation rules and \cref{lem:eval:merging}
+applying \zcref{lem:logeq:bwds} or \zcref{lem:logeq:bwds-joins},
+then using the evaluation rules and \zcref{lem:eval:merging}
 to find the correct evaluation sequence from the left and right sides of the lemma statement
 to the respective sides of the extracted logical equivalence.
 We step through only the proof of \rref*{let-app} as a representative case.
@@ -1503,19 +1518,19 @@ We step through only the proof of \rref*{let-app} as a representative case.
   The goal is then to show that $[[(let x ← n in m) v]]$
   is equivalent to $[[let x ← n in (m v)]]$,
   knowing that all subterms are well typed.
-  By \cref{thm:semeq}, we have that $[[n]]$ reduces to some $[[return w]]$,
+  By \zcref{thm:semeq}, we have that $[[n]]$ reduces to some $[[return w]]$,
   and that $[[m{x ↦ w}]]$ reduces to some $[[λy. m']]$.
   Then we know that the right-hand side reduces by \rref*{E-ret,E-app}
   to $[[m'{y ↦ v}]]$.
   We also have that $[[let x ← n in m]]$ reduces to $[[m{x ↦ w}]]$ by \rref*{E-ret}.
   Then we know that the left-hand side reduces by \rref*{E-app} also to $[[m'{y ↦ v}]]$.
-  Therefore, by \cref{lem:logeq:bwds-joins},
+  Therefore, by \zcref{lem:logeq:bwds-joins},
   the left- and right-hand sides are equivalent.
 \end{proof}
 
 Although our translation doesn't involve commuting join points,
 we do require a corresponding semantic equivalence to unnest join points,
-stated in \cref{fig:semeq:join-join}.
+stated in \zcref{fig:semeq:join-join}.
 
 \begin{figure}[h]
   \begin{mathpar}
@@ -1575,8 +1590,8 @@ as well as congruence of evaluating under plugging.
 
 \begin{proof}
   By induction on the typing derivation of $[[K]]$.
-  In the \rref*{K-app} case, use \cref{thm:semeq} on the value argument,
-  and in the \rref*{K-let} case, use \cref{thm:semeq} on the computation body.
+  In the \rref*{K-app} case, use \zcref{thm:semeq} on the value argument,
+  and in the \rref*{K-let} case, use \zcref{thm:semeq} on the computation body.
   In the \rref*{K-app,K-fst,K-snd} cases,
   use \nameref{lem:E-plug} to reduce under the rest of the continuation.
 \end{proof}
@@ -1594,13 +1609,13 @@ as long as substitution commutes with plugging.
 \begin{lemma}[Semantic equivalence of plugging] \label{lem:semeq:plug} \thmref{Soundness}{semK.plug} \leavevmode \\
   If \/ $[[G | D ⊧ K1 ~ K2 : B1 ⇒ B2]]$ and \/ $[[G | • ⊧ n1 ~ n2 : B1]]$,
   then \/ $[[G | D ⊧ K1[n1] ~ K2[n2] : B2]]$, \linebreak[0]
-  trivially after rewriting by \cref{lem:subst-plug}.
+  trivially after rewriting by \zcref{lem:subst-plug}.
 \end{lemma}
 
 \begin{corollary} \label{cor:semeq:plug} \thmref{Soundness}{semPlug}
   If \/ $[[G | D ⊢ K : B1 ⇒ B2]]$ and \/ $[[G | • ⊧ n1 ~ n2 : B1]]$,
   then \/ $[[G | D ⊧ K[n1] ~ K[n2] : B2]]$,
-  using \cref{lem:semeq:plug} and \cref{thm:semeq:K}.
+  using \zcref{lem:semeq:plug} and \zcref{thm:semeq:K}.
 \end{corollary}
 
 \subsection{Commuting Conversion Normalization is Semantically Equivalent to Plugging} \label{sec:proof:end}
@@ -1615,7 +1630,7 @@ we use them together to show that plugging commutes with tail contexts.
 
 \begin{proof}
   By induction on the typing derivation of $[[K]]$.
-  In the \rref*{K-nil} case, this holds by \cref{thm:semeq}.
+  In the \rref*{K-nil} case, this holds by \zcref{thm:semeq}.
   In all other cases, the left-hand side involves a subterm of the form
   $[[let y ← (let x ← n in m) in m']]$, or
   $[[(let x ← n in m) v]]$, or
@@ -1623,7 +1638,7 @@ we use them together to show that plugging commutes with tail contexts.
   $[[snd (let x ← n in m)]]$,
   so we use derived \rref{let-let,let-app,let-fst,let-snd} respectively to commute them.
   For case \rref*{K-let}, we are done;
-  for the remaining cases, we require \cref{cor:semeq:plug} to commute under a plugged $[[K]]$,
+  for the remaining cases, we require \zcref{cor:semeq:plug} to commute under a plugged $[[K]]$,
   then use the induction hypothesis to transitively connect to the right-hand side.
 \end{proof}
 
@@ -1634,9 +1649,9 @@ we use them together to show that plugging commutes with tail contexts.
 
 \begin{proof}
   By induction on the typing derivation of $[[K]]$,
-  using \cref{thm:semeq,cor:semeq:plug}
+  using \zcref{thm:semeq,cor:semeq:plug}
   along with derived \rref{case-let,case-app,case-fst,case-snd}
-  similarly to \cref{lem:plug-let}.
+  similarly to \zcref{lem:plug-let}.
 \end{proof}
 
 These two lemmas suffice to prove the desired equivalence
@@ -1653,10 +1668,10 @@ between a translation that doesn't use a join point and one that does.
 
 \begin{proof}
   By induction on the typing derivation of $[[K]]$.
-  The \rref{K-let} case uses \cref{thm:semeq} on the typing derivation of $[[n]]$
+  The \rref{K-let} case uses \zcref{thm:semeq} on the typing derivation of $[[n]]$
   to show it must evaluate to some $[[return v]]$;
   then both sides evaluate to $[[m{x ↦ v}]]$,
-  and we get the equivalence from \cref{thm:semeq} on the typing derivation of $[[m]]$.
+  and we get the equivalence from \zcref{thm:semeq} on the typing derivation of $[[m]]$.
   The remaining cases follow from the induction hypotheses.
 \end{proof}
 
@@ -1672,8 +1687,8 @@ between a translation that doesn't use a join point and one that does.
   By induction on the typing derivation of $[[m]]$.
   \begin{itemize}
     \item \textbf{Cases} \rref*{T-force,T-fun,T-ret,T-prod}:
-      Hold directly from \cref{lem:plug-jump},
-      using \cref{lem:preservation} to type translated subterms.
+      Hold directly from \zcref{lem:plug-jump},
+      using \zcref{lem:preservation} to type translated subterms.
     \item \textbf{Cases} \rref*{T-app,T-fst,T-snd}:
       Hold directly from the induction hypotheses.
     \item \textbf{Case} \rref*{T-let}:
@@ -1698,14 +1713,14 @@ between a translation that doesn't use a join point and one that does.
           \[ [[case ⟦v⟧ of inl y ⇒ ⟦m1⟧K; inr y ⇒ ⟦m2⟧K]], \]
           and the right-hand side is
           \[ [[join j x = m' in case ⟦v⟧ of inl y ⇒ ⟦m1⟧K'; inr y ⇒ ⟦m2⟧K']]. \]
-          By \cref{thm:semeq}, we know $[[⟦v⟧]]$ reduces to either some $[[inl w]]$ or $[[inr w]]$.
+          By \zcref{thm:semeq}, we know $[[⟦v⟧]]$ reduces to either some $[[inl w]]$ or $[[inr w]]$.
           WLOG, supposing the former, it then suffices to show that
           $[[⟦m1⟧K {y ↦ w}]]$ is semantically equivalent to $[[join j x = m' in ⟦m1⟧K' {y ↦ w}]]$,
           which holds by the induction hypothesis on $[[m1]]$.
         \item Otherwise, both the left- and right-hand sides are
           \[ [[join j x = m' in case ⟦v⟧ of inl y ⇒ ⟦m1⟧K'; inr y ⇒ ⟦m2⟧K']], \]
-          which are equivalent by \cref{thm:semeq},
-          using \cref{lem:preservation} for the translated subterms. \qedhere
+          which are equivalent by \zcref{thm:semeq},
+          using \zcref{lem:preservation} for the translated subterms. \qedhere
       \end{itemize}
   \end{itemize}
 \end{proof}
@@ -1733,7 +1748,7 @@ The equivalence we want follows from instantiating by the empty continuation.
       Holds by logical equivalence of substitution maps.
     \item \textbf{Case} \rref*{T-unit}: Trivial.
     \item \textbf{Cases} \rref*{T-force,T-fun,T-ret,T-prod}:
-      Hold by \cref{lem:semeq:plug} and the induction hypotheses.
+      Hold by \zcref{lem:semeq:plug} and the induction hypotheses.
     \item \textbf{Cases} \rref*{T-left,T-right,T-thunk,T-app,T-fst,T-snd}:
       Hold by the induction hypotheses.
     \item \textbf{Case} \rref*{T-let}:
@@ -1742,7 +1757,7 @@ The equivalence we want follows from instantiating by the empty continuation.
       which holds by the following chain of equivalences.
       \begin{align*}
         [[ K[let x ← n in m] ]] \nonumber
-        &\sim [[ let x ← n in K[m] ]] \tag{\textit{by \cref{lem:plug-let}}} \\
+        &\sim [[ let x ← n in K[m] ]] \tag{\textit{by \zcref{lem:plug-let}}} \\
         &\sim [[ let x ← n in ⟦m⟧K ]]
         = [[ (let x ← □ in ⟦m⟧K)[n] ]] \tag{\textit{by IH on $[[m]]$}} \\
         &\sim [[⟦n⟧ (let x ← □ in ⟦m⟧K)]]
@@ -1751,7 +1766,7 @@ The equivalence we want follows from instantiating by the empty continuation.
     \item \textbf{Case} \rref*{T-case}:
       The goal is to show that $[[ K[case v of inl y ⇒ m1; inr y ⇒ m2] ]]$
       is equivalent to $[[⟦case v of inl y ⇒ m1; inr y ⇒ m2⟧K]]$.
-      By \cref{lem:plug-case}, the left-hand side is equivalent to
+      By \zcref{lem:plug-case}, the left-hand side is equivalent to
       $[[ case v of inl y ⇒ K[m1]; inr y ⇒ K[m2] ]]$.
       Furthermore, by the induction hypotheses on the subterms,
       this is equivalent to $[[case ⟦v⟧ of inl y ⇒ ⟦m1⟧K; inr y ⇒ ⟦m2⟧K]]$.
@@ -1767,12 +1782,12 @@ The equivalence we want follows from instantiating by the empty continuation.
           Letting $[[K']] \equiv [[ (let x ← □ in jump j x) [k1] - [ki] ]]$,
           the right-hand side is
           \[ [[join j x = m' in case ⟦v⟧ of inl y ⇒ ⟦m1⟧K'; inr y ⇒ ⟦m2⟧K' ]]. \]
-          By \cref{thm:semeq}, we know $[[⟦v⟧]]$ reduces to either some $[[inl w]]$ or $[[inr w]]$.
+          By \zcref{thm:semeq}, we know $[[⟦v⟧]]$ reduces to either some $[[inl w]]$ or $[[inr w]]$.
           WLOG, supposing the former, it then suffices to show that
           $[[⟦m1⟧K {y ↦ w}]]$ is equivalent to $[[join j x = m' in ⟦m1⟧K' {y ↦ w}]]$.
           Extending the substitution map with $[[y ↦ w]]$
           (noting that $[[y]]$ is only free in $[[m1]]$),
-          this equivalence holds by \cref{lem:plug-ccnf}. \qedhere
+          this equivalence holds by \zcref{lem:plug-ccnf}. \qedhere
       \end{itemize}
   \end{itemize}
 \end{proof}
@@ -1782,7 +1797,7 @@ The equivalence we want follows from instantiating by the empty continuation.
   If \/ \mbox{$[[G | • ⊢ m : B]]$} then \/ \mbox{$[[G | • ⊧ m ~ ⟦m⟧ □ : B]]$}.
 \end{corollary}
 
-At last we are able to prove \cref{thm:ground-run}, restated below,
+At last we are able to prove \zcref{thm:ground-run}, restated below,
 with one more minor lemma.
 
 \begin{lemma}[Equivalent ground values are equal] \label{lem:logeq:gval} \thmref{Soundness}{$\mathcal{V}$.ground} \leavevmode \\
@@ -1796,13 +1811,13 @@ with one more minor lemma.
 \end{theorem}
 
 \begin{proof}
-  From \cref{cor:semeq-ccnf}, we have $[[• | • ⊧ m ~ ⟦m⟧ □ : F T]]$.
+  From \zcref{cor:semeq-ccnf}, we have $[[• | • ⊧ m ~ ⟦m⟧ □ : F T]]$.
   Instantiating with empty substitution maps and empty join stacks,
   we have $[[(m, ⟦m⟧ □) ∈* F T]]$.
   By inversion, we know that there exists some $[[(w1, w2) ∈ T]]$
   such that $[[m ⇓ return w1]]$ and $[[⟦m⟧ □ ⇓ return w2]]$.
-  By \cref{lem:norm:det}, we have $[[v]] = [[w1]]$,
-  and by \cref{lem:logeq:gval}, we have $[[w1]] = [[w2]]$.
+  By \zcref{lem:norm:det}, we have $[[v]] = [[w1]]$,
+  and by \zcref{lem:logeq:gval}, we have $[[w1]] = [[w2]]$.
   Therefore, $[[⟦m⟧ □ ⇓ return v]]$.
 \end{proof}
 
@@ -1858,7 +1873,7 @@ whose evaluation will still need to jump to the conditional in the join point
 that could otherwise have been inlined away statically.
 What we would like is to create separate join points for $[[m4]]$ and $[[m5]]$
 and jump to them individually to permit the kind of inlining above,
-similar to the right-hand side of \cref{eq:let-if-if}.
+similar to the right-hand side of \zcref{eq:let-if-if}.
 %
 \usetagform{brack}
 \begin{align}
@@ -1868,7 +1883,7 @@ similar to the right-hand side of \cref{eq:let-if-if}.
 \end{align}
 \usetagform{default}
 
-Therefore, we prove a semantic equivalence between \cref{eq:CC-if-if} and \cref{eq:CC2-if-if},
+Therefore, we prove a semantic equivalence between \zcref{eq:CC-if-if} and \zcref{eq:CC2-if-if},
 generalizing to case expressions.
 Consequently, a transformation from the former to the latter is valid,
 and we recover the desired case-of-case transformation.
@@ -1899,7 +1914,7 @@ This transformation applies generally to case-of-case-of-case and so forth.
 The translation to CBPV gives join points that contain join points
 that contain case expressions and so forth.
 Unnesting these join points with \rref*{join-join}
-followed by \cref{lem:case-case} yields the desired transformation.
+followed by \zcref{lem:case-case} yields the desired transformation.
 
 \subsection{Inlining and CCNF}
 
@@ -1927,7 +1942,7 @@ followed by \cref{lem:case-case} yields the desired transformation.
 
 Inlining opportunities correspond to $\beta$-redexes that appear in subterms.
 They are justified by the equational theory, which in turn is justified by semantic equivalence.
-We extend the equational theory of CBPV with rules for join points and jumps in \cref{fig:equational}
+We extend the equational theory of CBPV with rules for join points and jumps in \zcref{fig:equational}
 and show that syntactically equivalent terms are semantically equivalent.
 
 \TODO: It turns out this requires logical equivalence on open terms,
