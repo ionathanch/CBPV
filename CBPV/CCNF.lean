@@ -205,7 +205,7 @@ notation:1022 "⟦" m "⟧ₘ" k "#" le => CCcom k le m
 
 theorem CCcom.renameJ {δ δ' m m' k k' ξ} (le : δ' ≤ δ + 1) (mj : m.joinless) (e : k.jumpify = .yes k' m') :
   renameJCom ξ (⟦ m ⟧ₘ k # le) = ⟦ m ⟧ₘ renameJK ξ k # .step le := by
-  mutual_induction m generalizing δ k k' mj ξ
+  mutual_induction m generalizing δ k k' ξ
   case force | ret | lam | prod => exact renameJKPlug
   case app ih | fst ih | snd ih =>
     apply ih; simp at mj; simp [mj]; simp; rw [e]
@@ -278,11 +278,11 @@ def isK {δ} : K δ → Prop
   | .fst k | .snd k => isK k
 
 theorem isCom.weakenJ {δ δ'} {n : Com δ} (isc : isCom n) : isCom (weakenJCom δ' n) := by
-  mutual_induction n generalizing isc
+  mutual_induction n
   all_goals simp at * <;> assumption
 
 theorem isCom.isCfg {δ} {n : Com δ} (isc : isCom n) : isCfg n := by
-  mutual_induction n generalizing isc
+  mutual_induction n
   case letin | case => unfold isCom at isc; contradiction
   all_goals simp [isc] at *
 
@@ -334,7 +334,7 @@ theorem isCom.rename {ξ δ} {m : Com δ} : isCom m → isCom (renameCom ξ m) :
 theorem isCfg.rename {ξ δ} {m : Com δ} : isCfg m → isCfg (renameCom ξ m) := (isRenameCfg m).right
 
 theorem isCfg.renameJ {δ δ'} {ξ : Fin δ → Fin δ'} : ∀ m, isCfg m → isCfg (renameJCom ξ m) := by
-  intro m ism; mutual_induction m generalizing δ' ism
+  intro m ism; mutual_induction m generalizing δ'
   all_goals simp at *; try assumption
   case letin ih => let ⟨ism, isn⟩ := ism; exact ⟨ism, ih isn⟩
   case case ihm₁ ihm₂ => let ⟨ism₁, ism₂⟩ := ism; exact ⟨ihm₁ ism₁, ihm₂ ism₂⟩

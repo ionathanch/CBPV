@@ -213,7 +213,7 @@ def renameJCom {δ δ'} (ξ : Fin δ → Fin δ') : Com δ → Com δ'
 
 theorem renameJExt {δ₁ δ₂} (ξ ζ : Fin δ₁ → Fin δ₂) (h : ∀ x, ξ x = ζ x) m :
   renameJCom ξ m = renameJCom ζ m := by
-  mutual_induction m generalizing δ₂ ξ ζ
+  mutual_induction m generalizing δ₂
   all_goals simp; try constructor
   all_goals apply_rules [liftJExt]
 
@@ -226,7 +226,7 @@ theorem renameJId {δ} (m : Com δ) : renameJCom id m = m := by
 
 theorem renameJComp {δ₁ δ₂ δ₃ m} (ξ : Fin δ₂ → Fin δ₃) (ζ : Fin δ₁ → Fin δ₂) :
   renameJCom ξ (renameJCom ζ m) = renameJCom (ξ ∘ ζ) m := by
-  mutual_induction m generalizing δ₂ δ₃ ξ ζ <;> simp
+  mutual_induction m generalizing δ₂ δ₃ <;> simp
   all_goals try constructor
   all_goals try apply_rules
   case join ih =>
@@ -414,7 +414,7 @@ def renameToSubstCom {δ} ξ := @(renameToSubst ξ).right δ
 -- Join point renamings commute with substitution
 theorem renameJSubst {δ δ'} (ξ : Fin δ → Fin δ') σ (m : Com δ) :
   substCom σ (renameJCom ξ m) = renameJCom ξ (substCom σ m) := by
-  mutual_induction m generalizing δ' ξ σ
+  mutual_induction m generalizing δ' σ
   all_goals simp; try repeat' constructor
   all_goals apply_rules
 

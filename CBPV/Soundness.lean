@@ -128,7 +128,7 @@ theorem semKjoin {Γ δ} {Δ : Dtxt δ} {k k' m n B₁ B₂} (hk : Γ ∣ Δ ⊢
 
 theorem soundCCjoin {Γ δ δ'} {Δ : Dtxt δ} {Δ' : Dtxt δ'} {k k' m m' B₁ B₂} (le : δ' ≤ δ) (mj : m.joinless) (hk : Γ ∣ Δ ⊢ k ∶ B₁ ⇒ B₂) (hm : Γ ∣ Δ' ⊢ m ∶ B₁) (e : k.jumpify = .yes k' m') :
   Γ ∣ Δ ⊨ ⟦m⟧ₘ k # le ~ join m' (⟦m⟧ₘ k' # .step le) ∶ B₂ := by
-  mutual_induction hm generalizing δ Δ k k' m' mj
+  mutual_induction hm generalizing δ Δ k k' m'
   all_goals intro σ τ
   -- impossible
   case join | jump => cases mj
@@ -324,7 +324,7 @@ def isGround : ValType → Prop
   | U _ => False
 
 theorem 𝒱.ground {v w A} (h : (v, w) ∈ ⟦A⟧ᵛ) (g : isGround A) : v = w := by
-  mutual_induction A generalizing v w g
+  mutual_induction A generalizing v w
   all_goals unfold 𝒱 at h
   case Unit => simp [h]
   case Sum ihA₁ ihA₂ =>

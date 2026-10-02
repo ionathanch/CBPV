@@ -144,7 +144,7 @@ infix:40 "⇓" => Big
 namespace Big
 
 theorem terminal {δ} {n : Com δ} (nfn : nf n) : n ⇓ n := by
-  mutual_induction n generalizing nfn
+  mutual_induction n
   all_goals simp at nfn <;> constructor
 
 theorem determinism {δ} {m t₁ t₂ : Com δ} (r₁ : m ⇓ t₁) (r₂ : m ⇓ t₂) : t₁ = t₂ := by
@@ -394,7 +394,7 @@ theorem evalBigs {δ} {m n t : Com δ} (r : m ⇒⋆ n) : n ⇓ t → m ⇓ t :=
   case trans r' _ ih => exact evalBig r' (ih r)
 
 theorem bigNf {δ t} (nt : @nf δ t) : t ⇓ t := by
-  mutual_induction t generalizing nt
+  mutual_induction t
   all_goals simp at nt
   all_goals constructor
 

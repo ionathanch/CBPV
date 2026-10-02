@@ -120,7 +120,7 @@ theorem wtWeakenCom₂ {Γ δ Δ A₁ A₂ B} {m : Com δ} :
 
 theorem wtRenameJ {Γ} {δ δ' ξ} {Δ : Dtxt δ} {Φ : Dtxt δ'} {m B} (hξ : Φ ⊢ ξ ∶ Δ)
   (h : Γ ∣ Δ ⊢ m ∶ B) : Γ ∣ Φ ⊢ renameJCom ξ m ∶ B := by
-  mutual_induction h generalizing ξ δ' Φ
+  mutual_induction h generalizing δ' Φ
   all_goals constructor <;> apply_rules [wRenameJLift]
 
 theorem wtWeakenJ {Γ δ Δ A' B' B} {m : Com δ} :
