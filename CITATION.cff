@@ -32,6 +32,6 @@ preferred-citation:
   volume: 10
   issue: "OOPSLA1"
   pages: 25
-  doi: 10.1145/37nnnnn
+  doi: 10.1145/3798210
   repository-code: https://github.com/ionathanch/CBPV/tree/join
   license: CC-BY-4.0
