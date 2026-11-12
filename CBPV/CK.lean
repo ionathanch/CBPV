@@ -142,6 +142,77 @@ theorem BStep.snd {m n t} (h : ∀ t, m ⇓ t → n ⇓ t) : .snd m ⇓ t → .s
 
 end Big
 
+namespace Env
+
+inductive Wal : Type where
+  | unit : Wal
+  | inl : Wal → Wal
+  | inr : Wal → Wal
+  | pair : Wal → Wal → Wal
+  | thunk : (Nat → Wal) → Com → Wal
+
+inductive Term : Type where
+  | ret : Wal → Term
+  | lam : (Nat → Wal) → Com → Term
+  | prod : (Nat → Wal) → Com → Com → Term
+
+@[simp]
+def walue (ρ : Nat → Wal) : Val → Wal
+  | var s => ρ s
+  | unit => .unit
+  | inl v => .inl (walue ρ v)
+  | inr v => .inr (walue ρ v)
+  | pair v₁ v₂ => .pair (walue ρ v₁) (walue ρ v₂)
+  | thunk m => .thunk ρ m
+
+section
+set_option hygiene false
+local notation:40 ρ:41 "⊢" m:41 "⇓" t:41 => EBStep ρ m t
+inductive EBStep : (Nat → Wal) → Com → Term → Prop where
+  | lam {ρ m} : ρ ⊢ lam m ⇓ .lam ρ m
+  | ret {ρ v} : ρ ⊢ ret v ⇓ .ret (walue ρ v)
+  | prod {ρ m₁ m₂} : ρ ⊢ prod m₁ m₂ ⇓ .prod ρ m₁ m₂
+  | μ {ρ m t} :
+    ρ ⊢ m ⇓ t →
+    -----------------------
+    ρ ⊢ force (thunk m) ⇓ t
+  | β {ρ ρ' n t m} {v : Val} :
+    ρ ⊢ n ⇓ .lam ρ' m →
+    (walue ρ v) +: ρ' ⊢ m ⇓ t →
+    ---------------------------
+    ρ ⊢ app n v ⇓ t
+  | ζ {ρ n t w m} :
+    ρ ⊢ n ⇓ .ret w →
+    w +: ρ ⊢ m ⇓ t →
+    ----------------
+    ρ ⊢ letin n m ⇓ t
+  | ιl {ρ m₁ m₂ t} {v : Val} :
+    (walue ρ v) +: ρ ⊢ m₁ ⇓ t →
+    ---------------------------
+    ρ ⊢ case (inl v) m₁ m₂ ⇓ t
+  | ιr {ρ m₁ m₂ t} {v : Val} :
+    (walue ρ v) +: ρ ⊢ m₂ ⇓ t →
+    ---------------------------
+    ρ ⊢ case (inr v) m₁ m₂ ⇓ t
+  | π {ρ v₁ v₂ m t} :
+    (walue ρ v₂) +: (walue ρ v₁) +: ρ ⊢ m ⇓ t →
+    -------------------------------------------
+    ρ ⊢ unpair (pair v₁ v₂) m ⇓ t
+  | π1 {ρ ρ' n t m₁ m₂} :
+    ρ ⊢ n ⇓ .prod ρ' m₁ m₂ →
+    ρ' ⊢ m₁ ⇓ t →
+    ------------------------
+    ρ ⊢ fst n ⇓ t
+  | π2 {ρ ρ' n t m₁ m₂} :
+    ρ ⊢ n ⇓ .prod ρ' m₁ m₂ →
+    ρ' ⊢ m₂ ⇓ t →
+    ------------------------
+    ρ ⊢ snd n ⇓ t
+end
+notation:40 ρ:41 "⊢" m:41 "⇓" t:41 => EBStep ρ m t
+
+end Env
+
 namespace Eq
 
 section
@@ -197,7 +268,55 @@ instance : Trans EqCom EqCom EqCom where
 
 end Eq
 
-open CK Big
+open CK Big Env
+
+/-* Environment-based big-step evaluation semantics is sound wrt substitution-based *-/
+
+@[simp]
+def unwalue : Wal → Val
+  | .unit => unit
+  | .inl w => inl (unwalue w)
+  | .inr w => inr (unwalue w)
+  | .pair w₁ w₂ => pair (unwalue w₁) (unwalue w₂)
+  | .thunk ρ m => thunk (m⦃(unwalue <| ρ ·)⦄)
+
+theorem walunwal {ρ v} : unwalue (walue ρ v) = (v⦃unwalue ∘ ρ⦄) := by
+  mutual_induction v
+  all_goals simp; try constructor
+  all_goals assumption
+
+@[simp]
+def unterm : Term → Com
+  | .ret w => ret (unwalue w)
+  | .lam ρ m => lam (m⦃⇑(unwalue ∘ ρ)⦄)
+  | .prod ρ m₁ m₂ => prod (m₁⦃unwalue ∘ ρ⦄) (m₂⦃unwalue ∘ ρ⦄)
+
+theorem bigEnv {ρ m t} (h : ρ ⊢ m ⇓ t) : m⦃unwalue ∘ ρ⦄ ⇓ unterm t := by
+  induction h
+  case lam => simp; constructor
+  case ret => simp; rw [walunwal]; constructor
+  case prod => simp; constructor
+  case μ => constructor; assumption
+  case π1 => constructor <;> assumption
+  case π2 => constructor <;> assumption
+  case β =>
+    constructor; assumption
+    rwa [← substUnion, ← walunwal, ← substComCons]
+  case ζ =>
+    constructor; assumption
+    rwa [← substUnion, ← substComCons]
+  case ιl ih =>
+    constructor
+    rw [substComCons, walunwal] at ih
+    rwa [← substUnion]
+  case ιr ih =>
+    constructor
+    rw [substComCons, walunwal] at ih
+    rwa [← substUnion]
+  case π ih =>
+    constructor
+    rw [substComCons₂, walunwal, walunwal] at ih
+    rwa [← substUnion₂]
 
 /-* CK machine semantics is sound wrt small-step evaluation semantics *-/
 

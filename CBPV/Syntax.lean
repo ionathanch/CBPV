@@ -325,6 +325,12 @@ by
   Handy dandy derived renaming substitution lemmas
 -------------------------------------------------*-/
 
+theorem substComCons {α} (f : α → Val) σ v m : substCom (f ∘ (v +: σ)) m = substCom (f v +: f ∘ σ) m :=
+  substComExt _ _ (by cases · <;> rfl) m
+
+theorem substComCons₂ {α} (f : α → Val) σ v w m : substCom (f ∘ (v +: w +: σ)) m = substCom (f v +: f w +: f ∘ σ) m :=
+  substComExt _ _ (by rcases · with ⟨⟩ | ⟨⟨⟩⟩ | ⟨n⟩ <;> rfl) m
+
 theorem substDropVal v w : w = substVal (v +: var) (renameVal succ w) := by
   calc
     w = substVal var w                         := by rw [substValId]
