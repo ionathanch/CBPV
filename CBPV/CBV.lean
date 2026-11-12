@@ -385,7 +385,7 @@ theorem CBV.simulation {t u k k'} (r : ⟨t, k⟩ ⤳ᵥ ⟨u, k'⟩) : ⟨⟦ t
     calc
       _ ⤳ _ := .ζ
       _ ⤳ _ := by exact .letin
-      _ = _ := by simp [← substDropCom]; rfl
+      _ = _ := by simp [← substDropCom]; constructor <;> rfl
   case case => exact .once .letin
   case fst => exact .once .letin
   case snd => exact .once .letin

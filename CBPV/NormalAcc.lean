@@ -106,12 +106,12 @@ theorem StepCom.SN.app_lam' {m v} (snm : StepCom.SN m) (snv : StepVal.SN v) (snm
   induction snm
   case sn ihv _ hm ihm =>
   constructor; intro _ r; cases r
-  case a.β => exact snmv
-  case a.app₁ r =>
+  case β => exact snmv
+  case app₁ r =>
     cases r with | lam r =>
     cases snmv with | sn h =>
     exact ihm r (h (.subst _ r))
-  case a.app₂ m _ r =>
+  case app₂ m _ r =>
     let snnv := r.replace.SN snmv
     exact ihv r (.sn hm) snnv
 
@@ -123,12 +123,12 @@ theorem StepCom.SN.letin_ret' {m v} (snm : StepCom.SN m) (snv : StepVal.SN v) (s
   induction snm
   case sn ihv _ hm ihm =>
   constructor; intro _ r; cases r
-  case a.ζ h _ => exact snmv
-  case a.letin₁ ih _ r =>
+  case ζ h _ => exact snmv
+  case letin₁ ih _ r =>
     cases r with | ret r =>
     let snnv := r.replace.SN snmv
     exact ihv r (.sn hm) snnv
-  case a.letin₂ r =>
+  case letin₂ r =>
     cases snmv with | sn h =>
     exact ihm r (h (.subst _ r))
 
@@ -141,15 +141,15 @@ theorem StepCom.SN.case_inl' {v m n} (snv : StepVal.SN v) (snm : StepCom.SN m) (
   induction snn
   case sn ihv _ hm ihm _ hn ihn =>
   constructor; intro _ r; cases r
-  case a.ιl => exact snmv
-  case a.case r =>
+  case ιl => exact snmv
+  case case r =>
     cases r with | inl r =>
     let snnv := r.replace.SN snmv
     exact ihv r (.sn hm) (.sn hn) snnv
-  case a.case₁ r =>
+  case case₁ r =>
     cases snmv with | sn h =>
     exact ihm r (.sn hn) (h (.subst _ r))
-  case a.case₂ r => exact ihn r
+  case case₂ r => exact ihn r
 
 theorem StepCom.SN.case_inl {v m n} (snv : StepVal.SN v) (snmv : StepCom.SN (m⦃v⦄)) (snn : StepCom.SN n) : StepCom.SN (.case (.inl v) m n) :=
   .case_inl' snv (.antisubstitution snmv) snn snmv
@@ -160,13 +160,13 @@ theorem StepCom.SN.case_inr' {v m n} (snv : StepVal.SN v) (snm : StepCom.SN m) (
   induction snn
   case sn ihv _ hm ihm _ hn ihn =>
   constructor; intro _ r; cases r
-  case a.ιr => exact snnv
-  case a.case r =>
+  case ιr => exact snnv
+  case case r =>
     cases r with | inr r =>
     let snnv := r.replace.SN snnv
     exact ihv r (.sn hm) (.sn hn) snnv
-  case a.case₁ r => exact ihm r (.sn hn) snnv
-  case a.case₂ r =>
+  case case₁ r => exact ihm r (.sn hn) snnv
+  case case₂ r =>
     cases snnv with | sn h =>
     exact ihn r (h (.subst _ r))
 
@@ -179,12 +179,12 @@ theorem StepCom.SN.unpair_pair' {v w m} (snv : StepVal.SN v) (snw : StepVal.SN w
   induction snm
   case sn ihv _ hw ihw _ hm ihm =>
   constructor; intro _ r; cases r
-  case a.π => exact snmwv
-  case a.unpair₁ r =>
+  case π => exact snmwv
+  case unpair₁ r =>
     cases r
     case pair₁ r => exact ihv r (.sn hw) (.sn hm) ((StepVal.replace₂ .refl (.once r)).SN snmwv)
     case pair₂ r => apply ihw r (.sn hm) ((StepVal.replace₂ (.once r) .refl ).SN snmwv)
-  case a.unpair₂ r =>
+  case unpair₂ r =>
     cases snmwv with | sn h =>
     apply ihm r (h (.subst _ r))
 
@@ -195,8 +195,8 @@ theorem StepCom.SN.fst_prod {m n} (snm : StepCom.SN m) (snn : StepCom.SN n) : St
   induction snm generalizing n
   induction snn
   constructor; intro _ r; cases r
-  case a.π1 h _ _ _ _ => exact .sn h
-  case a.fst ihm _ hn ihn _ r =>
+  case π1 h _ _ _ _ => exact .sn h
+  case fst ihm _ hn ihn _ r =>
     cases r
     case prod₁ r => exact ihm r (.sn hn)
     case prod₂ r => exact ihn r
@@ -205,8 +205,8 @@ theorem StepCom.SN.snd_prod {m n} (snm : StepCom.SN m) (snn : StepCom.SN n) : St
   induction snn generalizing m
   induction snm
   constructor; intro _ r; cases r
-  case a.π2 h _ _ _ _ => exact .sn h
-  case a.snd ihn _ hm ihm _ r =>
+  case π2 h _ _ _ _ => exact .sn h
+  case snd ihn _ hm ihm _ r =>
     cases r
     case prod₁ r => exact ihm r
     case prod₂ r => exact ihn r (.sn hm)
@@ -336,15 +336,15 @@ theorem closure_app {v m n} (r₁ : m ⤳ⁿ n) (snm : StepCom.SN m) (snv : Step
   induction snm generalizing n
   case sn v _ ihv _ hv ihm =>
   constructor; intro _ r; cases r
-  case a.β => cases r₁
-  case a.app₁ r₂ =>
+  case β => cases r₁
+  case app₁ r₂ =>
     cases confluence r₂ r₁
     case inl h =>
       let ⟨_, r₂', r₁'⟩ := h
       let r₁'' := StepComs.app₁ (v := v) r₁'
       exact ihm r₂ r₂' (r₁''.SN snapp)
     case inr e => subst e; exact snapp
-  case a.app₂ r =>
+  case app₂ r =>
     cases snapp with | sn happ =>
     exact ihv r r₁ (.sn hv) (happ (.app₂ r))
 
@@ -353,15 +353,15 @@ theorem closure_letin {m m' n} (r₁ : m ⤳ⁿ m') (snm : StepCom.SN m) (snn : 
   induction snm generalizing m'
   case sn n _ ihn _ hn ihm =>
   constructor; intro _ r; cases r
-  case a.ζ => cases r₁
-  case a.letin₁ r₂ =>
+  case ζ => cases r₁
+  case letin₁ r₂ =>
     cases confluence r₂ r₁
     case inl h =>
       let ⟨_, r₂', r₁'⟩ := h
       let r₁'' := StepComs.letin₁ (n := n) r₁'
       exact ihm r₂ r₂' (r₁''.SN snlet)
     case inr e => subst e; exact snlet
-  case a.letin₂ r =>
+  case letin₂ r =>
     cases snlet with | sn hlet =>
     exact ihn r r₁ (.sn hn) (hlet (.letin₂ r))
 
@@ -369,8 +369,8 @@ theorem closure_fst {m n} (r₁ : m ⤳ⁿ n) (snn : StepCom.SN m) (snfst : Step
   induction snn generalizing n
   case sn h ih =>
   constructor; intro _ r; cases r
-  case a.π1 => cases r₁
-  case a.fst r₂ =>
+  case π1 => cases r₁
+  case fst r₂ =>
     match confluence r₂ r₁ with
     | .inl ⟨_, r₂', r₁'⟩ => exact ih r₂ r₂' ((StepComs.fst r₁').SN snfst)
     | .inr e => subst e; exact snfst
@@ -379,8 +379,8 @@ theorem closure_snd {m n} (r₁ : m ⤳ⁿ n) (snn : StepCom.SN m) (snsnd : Step
   induction snn generalizing n
   case sn h ih =>
   constructor; intro _ r; cases r
-  case a.π2 => cases r₁
-  case a.snd r₂ =>
+  case π2 => cases r₁
+  case snd r₂ =>
     match confluence r₂ r₁ with
     | .inl ⟨_, r₂', r₁'⟩ => exact ih r₂ r₂' ((StepComs.snd r₁').SN snsnd)
     | .inr e => subst e; exact snsnd
@@ -468,9 +468,9 @@ theorem StepCom.SN.app {m v} (nem : NeCom m) (snm : StepCom.SN m) (snv : StepVal
   case sn.sn ihv _ hv ihm =>
   constructor; intro _ r
   cases r
-  case a.β => cases nem
-  case a.app₁ r => exact ihv r (r.preservation nem) (.sn hv)
-  case a.app₂ r => exact ihm r
+  case β => cases nem
+  case app₁ r => exact ihv r (r.preservation nem) (.sn hv)
+  case app₂ r => exact ihm r
 
 theorem StepCom.SN.letin {m n} (nem : NeCom m) (snm : StepCom.SN m) (snn : StepCom.SN n) : StepCom.SN (letin m n) := by
   induction snm generalizing n
@@ -478,9 +478,9 @@ theorem StepCom.SN.letin {m n} (nem : NeCom m) (snm : StepCom.SN m) (snn : StepC
   case sn.sn ihm _ hm ihn =>
   constructor; intro _ r
   cases r
-  case a.ζ => cases nem
-  case a.letin₁ r => exact ihm r (r.preservation nem) (.sn hm)
-  case a.letin₂ r => exact ihn r
+  case ζ => cases nem
+  case letin₁ r => exact ihm r (r.preservation nem) (.sn hm)
+  case letin₂ r => exact ihn r
 
 theorem StepCom.SN.case {v m n} (nev : NeVal v) (snm : StepCom.SN m) (snn : StepCom.SN n) : StepCom.SN (.case v m n) := by
   induction snm generalizing n
@@ -488,11 +488,11 @@ theorem StepCom.SN.case {v m n} (nev : NeVal v) (snm : StepCom.SN m) (snn : Step
   case sn.sn ihm _ hm ihn =>
   constructor; intro _ r
   cases r
-  case a.ιl => cases nev; contradiction
-  case a.ιr => cases nev; contradiction
-  case a.case r => cases r <;> cases nev <;> contradiction
-  case a.case₁ r => exact ihm r (.sn hm)
-  case a.case₂ r => exact ihn r
+  case ιl => cases nev; contradiction
+  case ιr => cases nev; contradiction
+  case case r => cases r <;> cases nev <;> contradiction
+  case case₁ r => exact ihm r (.sn hm)
+  case case₂ r => exact ihn r
 
 theorem StepCom.SN.unpair {v m} (nev : NeVal v) (snm : StepCom.SN m) : StepCom.SN (.unpair v m) := by
   induction snm with | sn _ ih =>
@@ -508,21 +508,21 @@ theorem StepCom.SN.prod {m n} (snm : StepCom.SN m) (snn : StepCom.SN n) : StepCo
   case sn.sn ihm _ hm ihn =>
   constructor; intro _ r
   cases r
-  case a.prod₁ r => exact ihm r (.sn hm)
-  case a.prod₂ r => exact ihn r
+  case prod₁ r => exact ihm r (.sn hm)
+  case prod₂ r => exact ihn r
 
 theorem StepCom.SN.fst {m} (nem : NeCom m) (snm : StepCom.SN m) : StepCom.SN (.fst m) := by
   induction snm
   case sn h ih =>
   constructor; intro _ r
   cases r
-  case a.π1 => cases nem
-  case a.fst r => exact ih r (r.preservation nem)
+  case π1 => cases nem
+  case fst r => exact ih r (r.preservation nem)
 
 theorem StepCom.SN.snd {m} (nem : NeCom m) (snm : StepCom.SN m) : StepCom.SN (.snd m) := by
   induction snm
   case sn h ih =>
   constructor; intro _ r
   cases r
-  case a.π2 => cases nem
-  case a.snd r => exact ih r (r.preservation nem)
+  case π2 => cases nem
+  case snd r => exact ih r (r.preservation nem)

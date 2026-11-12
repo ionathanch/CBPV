@@ -13,5 +13,5 @@ lean_lib «CBPV» where
     ⟨`autoImplicit, false⟩,
     ⟨`pp.fieldNotation, false⟩,
     ⟨`pp.proofs, true⟩,
-    ⟨`experimental.module, true⟩
+    ⟨`linter.defProp, false⟩
   ]

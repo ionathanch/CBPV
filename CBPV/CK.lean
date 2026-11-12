@@ -13,8 +13,8 @@ inductive F : Type where
   | snd : F
 open F
 
-def K := List F
-def CK := Com × K
+abbrev K := List F
+abbrev CK := Com × K
 
 @[simp]
 def renameK (ξ : Nat → Nat) : K → K
@@ -51,7 +51,7 @@ inductive Step : CK → CK → Prop where
 end
 infix:40 "⤳" => Step
 
-@[reducible] def Steps := RTC Step
+abbrev Steps := RTC Step
 infix:40 "⤳⋆"  => Steps
 
 end CK

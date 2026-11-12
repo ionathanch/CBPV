@@ -315,6 +315,8 @@ theorem expandSubstSingle {t u} : CBN.subst (u +: .var) t ↦ₙ (⟦t⟧ᴺ) �
 
 /-* Translation preserves machine semantics *-/
 
+/-- warning: declaration uses `sorry` -/
+#guard_msgs in
 theorem CBN.simulation {t u k k'} (r : ⟨t, k⟩ ⤳ₙ ⟨u, k'⟩) : ∃ m, ⟨⟦ t ⟧ᴺ, ⟦ k ⟧ᴺ⟩ ⤳⋆ ⟨m, ⟦ k' ⟧ᴺ⟩ ∧ u ↦ₙ m := by
   generalize et : (t, k)  = ck  at r
   generalize eu : (u, k') = ck' at r
