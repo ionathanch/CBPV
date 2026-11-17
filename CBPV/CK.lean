@@ -261,7 +261,7 @@ joint
   @[refl] theorem EqCom.refl {m : Com} : m ≡ m
 by
   mutual_induction v, m
-  all_goals constructor <;> assumption
+  all_goals constructor! <;> assumption
 
 instance : Trans EqCom EqCom EqCom where
   trans := .trans
@@ -453,13 +453,13 @@ theorem eqCongK {m n : Com} {k} (e : m ≡ n) : dismantle m k ≡ dismantle n k 
   induction k generalizing m n
   case nil => simp [e]
   case cons f _ ih =>
-    cases f <;> (apply ih; constructor)
+    cases f <;> (apply ih; constructor!)
     all_goals first | assumption | rfl
 
 theorem stepEq {m n k₁ k₂} (r : ⟨m, k₁⟩ ⤳ ⟨n, k₂⟩) : dismantle m k₁ ≡ dismantle n k₂ := by
   cases r
   case app | letin | fst | snd => rfl
-  all_goals (try simp); apply eqCongK; constructor
+  all_goals (try simp); apply eqCongK; constructor!
 
 theorem stepsEq {m n k₁ k₂} (r : ⟨m, k₁⟩ ⤳⋆ ⟨n, k₂⟩) : dismantle m k₁ ≡ dismantle n k₂ := by
   generalize e₁ : (m, k₁) = ck₁ at r
