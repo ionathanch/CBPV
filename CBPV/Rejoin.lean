@@ -105,7 +105,7 @@ private theorem Eval.wkJoin₂ {δ} {φ : J δ} {m₁ m₂ m₃ m} (r : .rejoin 
     match j with
     | ⟨0, lt⟩ => subst ev; exact .inl ⟨_, rfl, e⟩
   case ret | lam | prod =>
-    subst_vars; exact .inr (.inl ⟨_, rfl, .rejoin (by constructor)⟩)
+    subst_vars; exact .inr (.inl ⟨_, rfl, .rejoin (by constructor!)⟩)
   case join't.jump j' v j _ ej ev =>
     match j, j' with
     | ⟨0, _⟩, _ => simp [liftJ] at ej; cases ej

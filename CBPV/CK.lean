@@ -227,7 +227,7 @@ theorem reflValCom :
   (∀ {δ} {m : Com δ}, m ≡ m) := by
   refine ⟨λ {v} ↦ ?val, λ {δ m} ↦ ?com⟩
   mutual_induction v, m
-  all_goals constructor <;> assumption
+  all_goals constructor! <;> assumption
 
 @[refl] theorem EqVal.refl : ∀ {v : Val}, v ≡ v := reflValCom.left
 @[refl] theorem EqCom.refl : ∀ {δ} {m : Com δ}, m ≡ m := reflValCom.right
@@ -406,13 +406,13 @@ theorem evalStep {m t} (nt : nf t) (r : m ⇒⋆ t) : ⟨0, m, .nil⟩ ⤳⋆ �
 theorem eqCongK {δ} {m n : Com δ} {k} (e : m ≡ n) : dismantle m k ≡ dismantle n k := by
   induction k
   case nil => simp [e]
-  all_goals rename_i ih; (apply ih; constructor)
+  all_goals rename_i ih; (apply ih; constructor!)
   all_goals first | assumption | rfl
 
 theorem stepEq {δ₁ δ₂ m n k₁ k₂} (r : ⟨δ₁, m, k₁⟩ ⤳ ⟨δ₂, n, k₂⟩) : dismantle m k₁ ≡ dismantle n k₂ := by
   cases r
   case app | letin | fst | snd | join => rfl
-  all_goals (try simp); apply eqCongK; constructor
+  all_goals (try simp); apply eqCongK; constructor!
 
 theorem stepsEq {δ₁ δ₂ m n k₁ k₂} (r : ⟨δ₁, m, k₁⟩ ⤳⋆ ⟨δ₂, n, k₂⟩) : dismantle m k₁ ≡ dismantle n k₂ := by
   generalize e₁ : Sigma.mk (β := λ δ ↦ Com δ × K δ) δ₁ (m, k₁) = ck₁ at r

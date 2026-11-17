@@ -113,7 +113,7 @@ theorem antirenameJ {δ δ' m n'} {ξ : Fin δ → Fin δ'} (r : renameJCom ξ m
     cases m <;> injection e
     case join m₁ m₂ _ em₁ em₂ =>
       cases m₂ <;> injection em₂; subst_vars
-      exact ⟨_, rfl, by constructor⟩
+      exact ⟨_, rfl, by constructor!⟩
   case app r _ | letin r _ | fst r _ | snd r _ =>
     cases m <;> injection e; subst_vars
     exact ⟨_, rfl, by constructor; exact r⟩
